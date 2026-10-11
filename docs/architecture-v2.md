@@ -250,17 +250,36 @@ This is the required order, not permission to execute it:
 A wholesale revert is not recommended: it would lose app/data safeguards and
 restore prior deployment hazards. No approval of the merged bridge is implied.
 
-Existing Notoli #905 removes host-wide pruning only; existing MacroMapper #241
-records the audit only. They are independently reviewable and do not authorize
-or complete ingress migration. Keep their PR history rather than duplicating.
-This documentation PR presents v2 for architecture review. After v2 approval:
+The [owner clarification of 2026-10-11](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111526698)
+requires **exactly three new primary implementation PRs, one per repository**.
+Agent 5 owns all three end-to-end. Infrastructure #10 is architecture documentation,
+Notoli #905 removes host-wide pruning only, and MacroMapper #241 records the audit.
+None counts as a primary implementation deliverable. Preserve and build on their
+relevant work and review history, without presenting preparation as implementation.
+Any additional corrective PR beyond the three primary implementation PRs requires
+an explanation first. The clarification does not approve v2.
+
+This documentation PR presents v2 for architecture review. After explicit v2 approval:
 
 1. Infrastructure #1 implementation PR: gateway/network validation, disposable
    routing and failure tests, cutover/rollback runbook and onboarding checklist.
-2. Separate Notoli #904 PR: app-only release/trust/data safeguards; include #905
-   only after its independent approved merge or an explicitly reviewed stack.
-3. Separate MacroMapper #240 PR: app-only release, removal of live shared-proxy
-   responsibilities, locked staging/full recovery/readiness; retain #241 audit.
+2. New primary Notoli #904 PR: substantial app-only Compose/deployment migration,
+   removal of shared Nginx/certificate management, preserved network/proxy/MCP
+   behavior, immutable release images, serialization, complete data/config
+   recovery, readiness and app-only rollback. Build on #905 through an approved
+   merge or an explicitly documented branch dependency; do not count #905 itself.
+3. New primary MacroMapper #240 PR: substantial app-only integration, simplified
+   production Compose, replacement of app-owned proxy/override responsibilities,
+   safe staging/locking, complete recovery and readiness/rollback validation.
+   Retain #241's audit and document any branch dependency without counting it.
+
+Post a three-row implementation status matrix on Infrastructure #4 with each
+primary PR URL, implemented scope, validation evidence, unresolved concerns,
+and dependency/activation order. Do not describe the engagement as implementation
+complete until all three PRs contain meaningful validated implementation and
+Agent 3's host-compatibility observations are reconciled. Before architecture
+approval, only preparation, audits and non-disruptive testing may proceed;
+do not commit to dependent shared design changes.
 
 Review these together for interface compatibility; authorize each merge by
 exact PR separately. Merging to main must not deploy. Do not promote any app
