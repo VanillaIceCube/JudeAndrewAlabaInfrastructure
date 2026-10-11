@@ -1,7 +1,11 @@
 # Shared ingress contract v2
 
 **PROPOSED — explicit owner architecture approval required.**
-Prepared by Agent 5 on 2026-10-11. Agent 3's v2 feasibility review is pending.
+Prepared by Agent 5 on 2026-10-11. Agent 3's
+[v2 feasibility review](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111422055)
+finds the interface feasible against the observed VM with no required
+architecture change. Implementation tests and production prerequisites remain
+open; this is ready for owner architecture review, not production approval.
 The canonical discussion is [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 This document is a review proposal, not executable deployment instructions.
 Architecture approval, each exact PR merge, and each production operation are
@@ -266,6 +270,29 @@ do not implement the deferred bot/security automation stack.
 
 ## Validation and open decisions
 
+Agent 3's review adds the following concrete implementation/runbook obligations
+within v2's existing interface (no v3 required):
+
+- Capture or revalidate the final matched recovery set after the release hold
+  includes queued/in-flight CI uploads and manual operators. Keep the hold
+  through acceptance or reversal; old workflows do not honor new locks.
+- Preserve original project-directory/path interpolation when reconstructing
+  legacy Compose from captured files. Verify expanded bind sources, including
+  the MacroMapper vhost and effective cert directory, before cutover.
+- Keep post-transfer app recovery app-only. Captured legacy scripts may
+  recreate/reload ingress and must not be executed as app rollback procedures.
+- Acquire the host maintenance lock before the app lock, using protected,
+  stable, symlink-checked files in an operator-provisioned directory. Do not
+  assume a predictable file in world-writable `/run/lock` is protected. Preserve
+  the lock inode through promotion and hold it through recovery/success record.
+- Validate actual staging/active filesystems before atomic promotion; bind
+  app image digests across validation, migration and startup so a mutable SHA
+  tag cannot select different content between phases.
+- Prove capacity for simultaneous app releases allowed by shared host locks,
+  or initially serialize releases operationally. Pin readiness expectations,
+  retry limits and failure cutoff; rehearse endpoint conflict and reverse
+  recreation on disposable infrastructure. Verify both apps before releases.
+
 Implementation must prove real Compose expansion with synthetic secrets;
 private network membership and `.2/.3` trust; no published backend ports;
 Nginx syntax and HTTPS route/header/cache/URI behavior; missing-app startup;
@@ -276,7 +303,7 @@ Existing app proxy/settings tests remain part of applicable validation.
 
 Before requesting production approval, resolve:
 
-- Agent 3's v2 feasibility and tested endpoint reversal. The refreshed audit
+- Tested endpoint reversal and implementation of Agent 3's v2 conditions. The refreshed audit
   verifies versions, aliases and image architecture, but not a live handoff.
   Root can access current app paths; non-root deployment ownership/access
   remains unproven. Specify stable locks and reviewed privilege/ownership
