@@ -22,6 +22,11 @@ restore/keep recovery and success records. Docker logs retain the same 10 MiB ×
 cap; recovery artifacts and old images remain private until operator-reviewed
 retention cleanup. It never operates another app or the shared gateway.
 
+Public readiness requests identify the deployment client as `JudeAppRelease/1.0`
+and request uncached responses. This avoids generic Python-client signature
+blocks without impersonating a browser or weakening edge security. Expected
+status, content and authentication challenges remain mandatory.
+
 Allowed route-network members and required members are separate configuration
 fields. Gateway and current-app endpoints are required. Companion absence is
 allowed during app recovery, while unexpected members, address/trust drift and
