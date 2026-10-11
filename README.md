@@ -36,6 +36,15 @@ ports. They do not invoke the production runbook. Common release changes also
 run the same deployment/recovery suites and pinned-source parity gate in both
 application repositories.
 
+## ⏱️ MacroMapper estimation timeout
+
+MacroMapper's backend routes use a 120-second upstream read timeout. Release
+this gateway setting before the companion MacroMapper app change for
+[meal-estimation incident #245](https://github.com/VanillaIceCube/MacroMapper/issues/245).
+The app enforces a 110-second total AI budget with no SDK retries and uses
+threaded request handling. See the [routing contract](docs/architecture-v2.md)
+for rollout checks and the [app release guide](https://github.com/VanillaIceCube/MacroMapper/blob/main/deploy/production/README.md).
+
 ## 🚦 Coordination
 
 [Issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4)

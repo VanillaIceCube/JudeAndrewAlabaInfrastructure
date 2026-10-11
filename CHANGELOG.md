@@ -2,6 +2,12 @@
 
 ## 2026-10-11
 
+### Fixed
+- Give MacroMapper backend responses a two-minute upstream read timeout so slower meal estimation can return within the companion app's 110-second AI budget.
+- Verify a real delayed upstream response beyond the former 60-second proxy limit in the disposable ingress suite.
+
+## 2026-10-11
+
 ### Added
 - Add host-owned ingress Compose, Nginx routes, topology validation and the reviewed cutover/reversal guide.
 - Add SQLite snapshot/restore validation including live container-local WAL, plus disposable ingress/recovery tests.

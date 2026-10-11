@@ -68,6 +68,22 @@ Serve the existing `notoli.judeandrewalaba.com` and
 Retain 25 MiB body limits and existing slash redirects for `/api`, `/auth`, and
 `/admin`. Preserve path, query, and encoded components when proxying.
 
+MacroMapper backend routes use `proxy_read_timeout 120s`. This permits the
+app's 110-second total AI budget to return a result or JSON 503 before the
+proxy deadline. The read timeout is an idle interval, not a background-job
+budget; the synchronous app response sends no heartbeat data. Cloudflare's
+[documented default read timeout is 125 seconds](https://developers.cloudflare.com/fundamentals/reference/connection-limits/);
+confirm the effective zone setting before rollout.
+
+Release the gateway setting before the companion MacroMapper image change for
+[incident #245](https://github.com/VanillaIceCube/MacroMapper/issues/245).
+The operator must verify `nginx -t` before activation and both apps' existing
+readiness checks afterward. Then verify an authorized delayed AI estimate,
+concurrent ordinary API access and a controlled AI timeout without worker
+replacement or late database writes. Gateway activation and the app release
+require separate owner authorization; source/CI approval alone is insufficient.
+Shared application release code, network ownership and Notoli policy are unchanged.
+
 | App | Direct backend routes | Frontend routes |
 | --- | --- | --- |
 | Notoli | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
