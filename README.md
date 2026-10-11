@@ -1,20 +1,51 @@
-# JudeAndrewAlabaInfrastructure
-Source of truth for shared Docker ingress, Nginx routing, security, and operations for judeandrewalaba.com applications.
+# 🏗️ Jude Andrew Alaba Infrastructure
 
-Coordination and owner decisions live in [issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
-Agent 5 owns source changes across this repository, Notoli, and MacroMapper;
-Agent 3 independently inspects the VM and is the sole operator after separate
-production authorization.
+Shared Docker ingress, Nginx routing and the versioned application release
+standard for `judeandrewalaba.com` applications.
 
-The [v2 architecture contract](docs/architecture-v2.md) is
-[owner-approved](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759).
-It reconciles the earlier audits and defines the implementation and validation
-gates. It does not authorize a merge or deployment. The existing live ingress
-remains app-owned until an approved cutover is executed and verified.
+## 🧭 Architecture
 
-Implementation: [Compose](compose.yml), [Nginx](nginx/nginx.conf),
-[cutover/reversal](docs/cutover.md), and [new-app checklist](docs/onboarding.md).
-Run `docker compose -f compose.yml config --quiet` and
-`python -m unittest discover -s tests -v` on a disposable local/CI Docker daemon.
-The integration test uses generated certificates, unique test networks and
-loopback ephemeral ports; it never invokes the production runbook.
+The [owner-approved v2 architecture](docs/architecture-v2.md) separates the
+host-owned gateway from independent Notoli and MacroMapper releases. Existing
+Docker networks, certificate paths and Notoli's exact trusted proxy remain
+preserved through the reviewed migration.
+
+## 📦 What's here
+
+| Area | Source / guide |
+| --- | --- |
+| Host ingress | [Compose](compose.yml), [Nginx](nginx/nginx.conf) |
+| Application releases | [Shared standard and parity matrix](docs/app-release-standard.md), [versioned source](app-release/v1) |
+| Production operations | [Cutover and reversal](docs/cutover.md) |
+| Adding an application | [Onboarding](docs/onboarding.md) |
+| Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
+| Project history | [Changelog](CHANGELOG.md) |
+
+## 🧪 Validation
+
+Run against a disposable local/CI Docker daemon:
+
+```sh
+docker compose -f compose.yml config --quiet
+python scripts/update_release_manifest.py --check
+python -m unittest discover -s tests -v
+```
+
+The tests use temporary fixture certificates, unique networks and loopback
+ports. They do not invoke the production runbook. Common release changes also
+run the same deployment/recovery suites and pinned-source parity gate in both
+application repositories.
+
+## 🚦 Coordination
+
+[Issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4)
+records owner decisions and PR/rollout status. Architecture approval does not
+authorize a merge or deployment; the host operator needs separate approval for
+the exact production plan. Existing ingress remains app-owned until the approved
+cutover is executed and verified. Advanced automation work in #5–#9 remains deferred.
+
+## 📜 License
+
+[Modified MIT License (Non-Commercial Use Only)](LICENSE.md), matching the owner's
+application/template repositories. See the license for terms and commercial
+licensing contact.

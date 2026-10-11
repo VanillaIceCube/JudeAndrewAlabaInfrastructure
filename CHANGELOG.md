@@ -1,0 +1,15 @@
+# 📝 Changelog
+
+## 2026-10-11
+
+### Added
+- Add host-owned ingress Compose, Nginx routes, topology validation and the reviewed cutover/reversal guide.
+- Add SQLite snapshot/restore validation including live container-local WAL, plus disposable ingress/recovery tests.
+- Add versioned common app release tools, workflow template, shared deployment tests and pinned-source parity enforcement for Notoli and MacroMapper.
+- Add repository contribution/agent guidance, a pull-request template, editor conventions and the owner's Modified MIT non-commercial license.
+
+### Changed
+- Document the approved architecture, app-specific deployment contract and intentional parity differences.
+- Align repository documentation with the emoji headings and navigation used by the application repositories.
+
+No production changes are implied by this source release; merges and operations require separate owner approval.

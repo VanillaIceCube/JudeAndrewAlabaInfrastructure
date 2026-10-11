@@ -1,4 +1,4 @@
-# Adding an application
+# 🌱 Adding an application
 
 1. Obtain owner architecture/admission approval after measuring peak CPU/RAM,
    disk plus retained releases/backups and concurrent-release headroom. The

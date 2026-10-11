@@ -1,4 +1,4 @@
-# Shared ingress contract v2
+# 🧭 Shared ingress contract v2
 
 **APPROVED FOR IMPLEMENTATION** by the
 [owner's architecture approval](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759).
@@ -352,3 +352,10 @@ Issues remain open until observed production acceptance and recovery evidence.
 Primary references: [Docker external networks](https://docs.docker.com/compose/how-tos/networking/#use-an-existing-external-network),
 [Compose env files](https://docs.docker.com/reference/compose-file/services/#env_file),
 and [Nginx proxy semantics](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass).
+
+## 📦 Shared application release implementation
+
+Both applications adopt the [versioned release standard](app-release-standard.md).
+App policy remains explicit configuration; common behavior and tests are vendored
+from one pinned source and checked in CI. This changes source organization, not
+network ownership, recovery semantics or production authorization.
