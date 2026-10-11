@@ -1,0 +1,17 @@
+name: Validate infrastructure
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate Compose and disposable ingress/reversal
+        run: |
+          docker compose -f compose.yml config --quiet
+          python3 -m unittest discover -s tests -v

@@ -1,11 +1,13 @@
 # Shared ingress contract v2
 
-**PROPOSED — explicit owner architecture approval required.**
+**APPROVED FOR IMPLEMENTATION** by the
+[owner's architecture approval](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759).
+Each PR merge and production operation still requires separate authorization.
 Prepared by Agent 5 on 2026-10-11. Agent 3's
 [v2 feasibility review](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111422055)
 finds the interface feasible against the observed VM with no required
 architecture change. Implementation tests and production prerequisites remain
-open; this is ready for owner architecture review, not production approval.
+open; this approval permits implementation, not production operations.
 The canonical discussion is [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 This document is a review proposal, not executable deployment instructions.
 Architecture approval, each exact PR merge, and each production operation are
