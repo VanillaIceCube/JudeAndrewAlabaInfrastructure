@@ -16,10 +16,12 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 OPENSSL = shutil.which("openssl") or "C:/Program Files/Git/usr/bin/openssl.exe"
-STUB = """import json, os
+STUB = """import json, os, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == '/api/slow-estimate-test/':
+            time.sleep(65)
         self.send_response(200)
         self.send_header('Cache-Control','public, max-age=300')
         self.end_headers()
@@ -240,6 +242,27 @@ class IngressTests(unittest.TestCase):
                         "service"
                     ],
                     "macromapper-backend",
+                )
+                # Real delayed upstream response exceeds Nginx's old 60s cap.
+                port = (
+                    docker("port", prefix + "-legacy", "443/tcp")
+                    .stdout.strip()
+                    .rsplit(":", 1)[1]
+                )
+                slow_request = urllib.request.Request(
+                    "https://127.0.0.1:" + port + "/api/slow-estimate-test/",
+                    headers={"Host": "macromapper.judeandrewalaba.com"},
+                )
+                with urllib.request.urlopen(
+                    slow_request, context=ssl._create_unverified_context(), timeout=75
+                ) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(
+                        json.loads(response.read())["service"], "macromapper-backend"
+                    )
+                self.assertIn(
+                    "proxy_read_timeout 120s;",
+                    docker("exec", prefix + "-legacy", "nginx", "-T").stdout,
                 )
                 backend = prefix + "-macromapper-backend"
                 docker("rm", "-f", backend)
