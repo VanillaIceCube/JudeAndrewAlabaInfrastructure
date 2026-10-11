@@ -41,8 +41,8 @@ application repositories.
 [Issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4)
 records owner decisions and PR/rollout status. Architecture approval does not
 authorize a merge or deployment; the host operator needs separate approval for
-the exact production plan. Existing ingress remains app-owned until the approved
-cutover is executed and verified. Advanced automation work in #5–#9 remains deferred.
+the exact production plan. This repository owns shared ingress; the runbook
+transfers legacy ingress only within that approved plan. Consult #4 for live status. Advanced automation work in #5–#9 remains deferred.
 
 ## 📜 License
 

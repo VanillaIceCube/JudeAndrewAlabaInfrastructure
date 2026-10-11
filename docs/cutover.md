@@ -6,6 +6,18 @@ Do not execute merely because code is merged. Agent 3 must insert exact approved
 commits, maintenance time, credential/backup evidence and acceptance operators
 in the plan on #4. Both already-running apps share the brief gateway outage.
 
+Navigation: [conditions](#conditions-before-a-production-plan) ·
+[private prerequisites](#private-prerequisites-only-within-authorized-preparation) ·
+[capture](#capture-and-validate-under-the-release-hold) ·
+[transfer/reversal](#transfer-and-immediate-reversal) ·
+[app activation](#activate-app-only-releases-sequentially).
+
+This is the one-time ingress migration runbook. `scripts/snapshot_sqlite.py`
+provides cutover-only backup/restore evidence while legacy apps are running;
+it is not a scheduled backup system or a second app release mechanism.
+Subsequent app releases use their canonical production guides and the
+[shared release standard](app-release-standard.md).
+
 ## Conditions before a production plan
 
 - All three primary implementation PRs separately approved and merged; hold

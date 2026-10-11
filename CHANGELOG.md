@@ -9,6 +9,7 @@
 - Add repository contribution/agent guidance, a pull-request template, editor conventions and the owner's Modified MIT non-commercial license.
 
 ### Changed
+- Archive preparation chronology in coordination #4, correct approval/implementation status and clarify cutover-only snapshot ownership.
 - Document the approved architecture, app-specific deployment contract and intentional parity differences.
 - Align repository documentation with the emoji headings and navigation used by the application repositories.
 

@@ -3,55 +3,18 @@
 **APPROVED FOR IMPLEMENTATION** by the
 [owner's architecture approval](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759).
 Each PR merge and production operation still requires separate authorization.
-Prepared by Agent 5 on 2026-10-11. Agent 3's
-[v2 feasibility review](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111422055)
-finds the interface feasible against the observed VM with no required
-architecture change. Implementation tests and production prerequisites remain
-open; this approval permits implementation, not production operations.
-The canonical discussion is [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
-This document is a review proposal, not executable deployment instructions.
-Architecture approval, each exact PR merge, and each production operation are
-separate gates. No shared-interface implementation is finalized before approval.
-
-## Reconciliation and source evidence
-
-The [owner directive](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111334394)
-consolidates Agents 1/2/4 into Agent 5 and retains Agent 3 as independent VM
-inspector and sole separately authorized operator. The infrastructure repository
-is already selected; the former proposed `host-infrastructure` repository is
-superseded. Advanced automation in Infrastructure #5–#9 is deferred.
-
-Carry forward, rather than discard:
-
-- [Historical VM audit, 01:21–01:22 PDT](https://github.com/VanillaIceCube/Notoli/issues/904#issuecomment-6107091928).
-- [Notoli reconciliation](https://github.com/VanillaIceCube/Notoli/issues/904#issuecomment-6107111199).
-- [Prior v1 proposal](https://github.com/VanillaIceCube/Notoli/issues/904#issuecomment-6107124549),
-  [MacroMapper conditional review](https://github.com/VanillaIceCube/Notoli/issues/904#issuecomment-6107138862),
-  and [release-staging clarification](https://github.com/VanillaIceCube/Notoli/issues/904#issuecomment-6107132678).
-
-Agent 5 inspected Notoli `main` at
-`b4586362d5797e6da44f0a6dcaaaa37ada747113`, MacroMapper `main` at
-`a510a3a5ad9cc3f70304f451bbbac72f3cc7c139`, their Compose/vhost/release code,
-Notoli ASGI trust middleware, MacroMapper production settings, and existing
-PRs [Notoli #905](https://github.com/VanillaIceCube/Notoli/pull/905) and
-[MacroMapper #241](https://github.com/VanillaIceCube/MacroMapper/pull/241).
-Both PRs remain unmerged. Their existing CI results are not runtime acceptance.
-
-The [refreshed VM audit, 09:49–09:53 PDT](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111383750)
-confirms no topology/image drift: both apps already running, with `notoli-proxy`
-owning 80/443 and mounting MacroMapper's vhost from its release directory.
-Notoli frontend also publishes 3000. This establishes the migration baseline,
-not approval of previous deployment or feature acceptance. Agent 3 reports
-Engine 28.2.2, Compose 2.40.3, linux/amd64 images, successful external-network
-syntax validation, and all four unique upstream names resolving from the
-current proxy. Notoli's exact source revision is still unknown; preserve
-observed image digests for recovery. Repository code cannot establish live state.
+This is the approved technical contract. The [cutover runbook](cutover.md)
+contains the candidate operational procedure; neither document authorizes execution.
+Current operators, approval evidence, implementation status and remaining gates
+are maintained in [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
+The [preparation history](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6112646500)
+preserves the original audits, PR dispositions and approval chronology.
 
 ## Ownership and files
 
 This repository alone owns the replacement Nginx Compose definition, vhosts,
 network registry, offline validation, and host cutover/recovery runbooks.
-Proposed runtime directory `/opt/host-ingress`, project `host-ingress`, service
+Runtime directory `/opt/host-ingress`, project `host-ingress`, service
 `proxy`, container `host-ingress-proxy`. The website remains an independent app;
 this change does not invent or transfer an apex-domain route. Inventory any
 additional hostname routing before enabling a default-host rejection policy.
@@ -73,7 +36,7 @@ adversarial tenant isolation from an administrator.
 
 ## Networks and names
 
-Adopt these historical networks in place, subject to Agent 3's refreshed
+Adopt these historical networks in place, subject to the operator's refreshed
 membership/IPAM verification. Keep existing labels; do not recreate or rename
 networks merely to transfer lifecycle ownership. Validate external network
 properties separately: an external Compose declaration cannot assert IPAM.
@@ -197,13 +160,15 @@ release-branch push occurs without specific owner authorization.
    image rollback alone cannot repair a changed schema. Restoring a snapshot
    can lose later writes and requires the approved recovery decision.
 
-Retain prior verified images and recovery sets. No generic deployment engine
-or automatic host cleanup is introduced. Exact lock paths/permissions and
-recovery commands require Agent 3 feasibility and the later approved runbook.
+Retain prior verified images and recovery sets. The shared release standard
+implements the app transaction; automatic host cleanup is excluded. The app
+guides and cutover runbook specify lock paths,
+permissions and recovery commands for the separately approved operator plan.
 
 ## Migration order and reversal
 
-Agent 3 must produce a separately approved command-level deployment plan.
+The designated operator must produce a separately approved command-level
+deployment plan.
 This is the required order, not permission to execute it:
 
 1. Validate current topology, routes, images, aliases, certificates, available
@@ -214,11 +179,12 @@ This is the required order, not permission to execute it:
    approved ingress and app-only candidates. Do not change app images/schema
    during gateway transfer.
 3. In the approved maintenance window, disable old proxy automatic restart,
-   stop it, and remove only the stopped legacy proxy container, as recommended
-   by Agent 3. Inspect to confirm `.2` and 80/443 are vacant before replacement.
+   stop it, and remove only the stopped legacy proxy container. Inspect to
+   confirm `.2` and 80/443 are vacant before replacement.
    Never remove app containers, networks or data for this handoff. Stopping
    alone is not treated as freeing `.2`. The exact removal/recreation commands
-   still require disposable testing and the separately approved operator plan.
+   are covered by disposable tests and still require a separately approved
+   operator plan.
 4. Start the replacement as sole 80/443 owner and sole `.2` proxy peer. Keep
    both current apps attached to their existing networks. Expect a brief outage
    to both sites. Verify routing and exact trust immediately, then Notoli
@@ -238,61 +204,28 @@ This is the required order, not permission to execute it:
    Reboot, restore drills, email/AI and other mutating functional tests require
    inclusion in the separately approved operator plan.
 
-## PR #239 disposition and PR ordering
+## Implementation and authorization
 
-| PR #239 component | Agent 5 recommendation |
-| --- | --- |
-| Production Django safeguards and tests | Keep |
-| SHA selection, raw credentials, SQLite checks, ownership tests | Keep; strengthen recovery and readiness gates |
-| Shared Compose profile/extends/reset layers | Simplify to explicit app-only production Compose after approval |
-| MacroMapper-owned Notoli override/vhost and proxy reload | Replace with infrastructure ownership only after verified transfer |
-| Standalone local Compose/proxy | Retain for local use, excluded from shared production release |
-| Claim of approved/verified deployment | Correct in existing audit PR #241; source/CI never substitutes for live evidence |
+The standalone implementation PRs target `main`:
 
-A wholesale revert is not recommended: it would lose app/data safeguards and
-restore prior deployment hazards. No approval of the merged bridge is implied.
+- [Infrastructure #11](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/11): gateway, shared release standard, validation and reversible cutover.
+- [Notoli #906](https://github.com/VanillaIceCube/Notoli/pull/906): independent application release and recovery, preserving proxy trust and MCP.
+- [MacroMapper #242](https://github.com/VanillaIceCube/MacroMapper/pull/242): independent application release and recovery, replacing app-owned shared ingress.
 
-The [owner clarification of 2026-10-11](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111526698)
-requires **exactly three new primary implementation PRs, one per repository**.
-Agent 5 owns all three end-to-end. Infrastructure #10 is architecture documentation,
-Notoli #905 removes host-wide pruning only, and MacroMapper #241 records the audit.
-None counts as a primary implementation deliverable. Preserve and build on their
-relevant work and review history, without presenting preparation as implementation.
-Any additional corrective PR beyond the three primary implementation PRs requires
-an explanation first. The clarification does not approve v2.
+Preparation PRs are closed unmerged; their useful changes and Git history are
+retained in these implementations. Existing production settings and recovery
+tests remain; standalone Compose/proxy definitions are local-only. Removing
+obsolete bridge source does not authorize deleting installed recovery files.
 
-This documentation PR presents v2 for architecture review. After explicit v2 approval:
-
-1. Infrastructure #1 implementation PR: gateway/network validation, disposable
-   routing and failure tests, cutover/rollback runbook and onboarding checklist.
-2. New primary Notoli #904 PR: substantial app-only Compose/deployment migration,
-   removal of shared Nginx/certificate management, preserved network/proxy/MCP
-   behavior, immutable release images, serialization, complete data/config
-   recovery, readiness and app-only rollback. Build on #905 through an approved
-   merge or an explicitly documented branch dependency; do not count #905 itself.
-3. New primary MacroMapper #240 PR: substantial app-only integration, simplified
-   production Compose, replacement of app-owned proxy/override responsibilities,
-   safe staging/locking, complete recovery and readiness/rollback validation.
-   Retain #241's audit and document any branch dependency without counting it.
-
-Post a three-row implementation status matrix on Infrastructure #4 with each
-primary PR URL, implemented scope, validation evidence, unresolved concerns,
-and dependency/activation order. Do not describe the engagement as implementation
-complete until all three PRs contain meaningful validated implementation and
-Agent 3's host-compatibility observations are reconciled. Before architecture
-approval, only preparation, audits and non-disruptive testing may proceed;
-do not commit to dependent shared design changes.
-
-Review these together for interface compatibility; authorize each merge by
-exact PR separately. Merging to main must not deploy. Do not promote any app
-to `env-prod` during preparation; production activation follows the sequence
-above and Agent 3's exact plan. Infrastructure tests remain basic validation;
-do not implement the deferred bot/security automation stack.
+Review the three implementations together for compatibility and authorize each
+merge separately. Merging to `main` must not deploy. App promotion to `env-prod`
+and production activation require a separately approved operator plan, following
+the migration order above. Advanced infrastructure automation in issues #5–#9
+remains deferred. Live status belongs in coordination #4, not this contract.
 
 ## Validation and open decisions
 
-Agent 3's review adds the following concrete implementation/runbook obligations
-within v2's existing interface (no v3 required):
+The following implementation and operational requirements remain mandatory:
 
 - Capture or revalidate the final matched recovery set after the release hold
   includes queued/in-flight CI uploads and manual operators. Keep the hold
@@ -314,7 +247,7 @@ within v2's existing interface (no v3 required):
   retry limits and failure cutoff; rehearse endpoint conflict and reverse
   recreation on disposable infrastructure. Verify both apps before releases.
 
-Implementation must prove real Compose expansion with synthetic secrets;
+Disposable regression suites cover real Compose expansion with synthetic secrets;
 private network membership and `.2/.3` trust; no published backend ports;
 Nginx syntax and HTTPS route/header/cache/URI behavior; missing-app startup;
 DNS recovery after app recreation; release concurrency and failure recovery;
@@ -324,13 +257,14 @@ Existing app proxy/settings tests remain part of applicable validation.
 
 Before requesting production approval, resolve:
 
-- Tested endpoint reversal and implementation of Agent 3's v2 conditions. The refreshed audit
-  verifies versions, aliases and image architecture, but not a live handoff.
+- Live endpoint handoff/reversal acceptance and verification of the approved
+  runbook conditions. Disposable tests do not establish live host readiness.
   Root can access current app paths; non-root deployment ownership/access
   remains unproven. Specify stable locks and reviewed privilege/ownership
   arrangements before release implementation is activated. Read-only
   feasibility is not a successful rollback rehearsal.
-- Owner architecture approval and later each PR-specific merge approval.
+- Each PR-specific merge approval and the exact production-plan approval.
+  Architecture approval is already recorded above.
 - Named operational owner, maintenance window, port-3000 consumers/disposition,
   release hold and activation authority.
 - Backup destination/credentials, retention and restore evidence. Proposed

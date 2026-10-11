@@ -1,4 +1,4 @@
-"""Capture and restore-check SQLite into a NEW private recovery directory.
+"""Cutover-only helper: capture and restore-check SQLite into a NEW private recovery directory.
 
 Run only within the separately authorized hold. Never modifies the source DB.
 This is local recovery evidence; off-host protection remains an operator step.
