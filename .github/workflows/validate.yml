@@ -1,0 +1,19 @@
+name: Validate infrastructure
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify shared release source manifest
+        run: python3 scripts/update_release_manifest.py --check
+      - name: Validate Compose and disposable ingress/reversal
+        run: |
+          docker compose -f compose.yml config --quiet
+          python3 -m unittest discover -s tests -v
