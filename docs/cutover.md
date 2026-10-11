@@ -93,16 +93,22 @@ The full proxy inspection contains environment data: keep it private. Capture
 and verify DB snapshots, app configs/env/image identities and their matching
 release records in the same hold as described above; Agent 3 must include the
 exact snapshot/restore choices in the approved plan. The following captures
-consistent SQLite snapshots with isolated restore checks (60-second copy budget)
-without replacing either live DB; errors stop preparation and no verified marker
+consistent SQLite snapshots inside each running backend namespace, including
+container-local WAL, with isolated restore checks (60-second copy budget)
+without replacing either live DB. It creates/removes one private `/tmp` snapshot
+inside each container and copies it to the private recovery directory; this
+is an explicit approved preparation action. Errors stop preparation and no verified marker
 is written. Run under the same hold, after recording both app identities:
 
 ```bash
-python3 scripts/snapshot_sqlite.py /root/apps/notoli/db.sqlite3 "$recovery/notoli-data"
-python3 scripts/snapshot_sqlite.py /opt/apps/macromapper/db.sqlite3 "$recovery/macromapper-data"
+python3 scripts/snapshot_sqlite.py notoli-backend "$recovery/notoli-data"
+python3 scripts/snapshot_sqlite.py macromapper-backend "$recovery/macromapper-data"
 ```
 
-The helper records source ownership/mode and snapshot checksum privately.
+Do not substitute a host-only backup of the single bind-mounted DB file: its
+WAL/rollback journal can be inside the container. A backend that cannot run the
+snapshot helper requires an approved stopped-container DB/journal capture using
+the app recovery tool before any recreation. The helper records source ownership/mode and snapshot checksum privately.
 App rollback restores through each app's production release tool; gateway-only
 reversal does not restore data. Off-host copy/retention remains a separately
 specified operator step. Do not proceed with an

@@ -2,8 +2,11 @@ from contextlib import closing
 import importlib.util
 from pathlib import Path
 import sqlite3
+import subprocess
 import tempfile
+import time
 import unittest
+import uuid
 
 spec = importlib.util.spec_from_file_location(
     "snapshot", Path(__file__).resolve().parents[1] / "scripts/snapshot_sqlite.py"
@@ -13,6 +16,64 @@ spec.loader.exec_module(snapshot)
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_live_container_snapshot_includes_wal_outside_single_file_bind(self):
+        name = "snapshot-wal-" + uuid.uuid4().hex[:10]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "app.sqlite3"
+            with closing(sqlite3.connect(source)) as db:
+                db.execute("CREATE TABLE data(value TEXT)")
+                db.commit()
+            script = (
+                "import sqlite3,time; db=sqlite3.connect('/backend/db.sqlite3'); "
+                "db.execute('PRAGMA journal_mode=WAL'); "
+                "db.execute(\"INSERT INTO data VALUES ('container-wal')\"); "
+                "db.commit(); print('ready',flush=True); time.sleep(600)"
+            )
+
+            def docker(*args):
+                return subprocess.run(
+                    ["docker", *args],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                ).stdout
+
+            try:
+                docker(
+                    "run",
+                    "-d",
+                    "--name",
+                    name,
+                    "--network",
+                    "none",
+                    "--mount",
+                    "type=bind,source=" + str(source) + ",target=/backend/db.sqlite3",
+                    "python:3.12-alpine",
+                    "python",
+                    "-c",
+                    script,
+                )
+                deadline = time.monotonic() + 15
+                while "ready" not in docker("logs", name):
+                    if time.monotonic() >= deadline:
+                        self.fail("Container WAL fixture did not initialize")
+                    time.sleep(0.1)
+                self.assertFalse(Path(str(source) + "-wal").exists())
+                snapshot.capture_container(name, root / "recovery")
+                with closing(sqlite3.connect(root / "recovery/db.sqlite3")) as db:
+                    self.assertEqual(
+                        db.execute("SELECT * FROM data").fetchall(),
+                        [("container-wal",)],
+                    )
+                self.assertEqual(
+                    docker("inspect", "--format", "{{.State.Running}}", name).strip(),
+                    "true",
+                )
+            finally:
+                docker("rm", "-f", name)
+
     def test_captures_committed_wal_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
