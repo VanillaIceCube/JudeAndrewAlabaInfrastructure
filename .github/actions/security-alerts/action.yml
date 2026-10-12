@@ -72,7 +72,7 @@ runs:
           const fields = new Map(result.node.fields.nodes.map(field => [field.name, field]));
           for (const [name, options] of Object.entries({
             Status: ['Backlog', 'Done'], Domain: ['CI/CD'], 'Work type': ['Security'],
-            Priority: ['P1', 'P2'], Size: ['M'],
+            Priority: ['P0', 'P1', 'P2'], Size: ['M'],
           })) {
             const field = fields.get(name);
             if (field?.dataType !== 'SINGLE_SELECT' || options.some(option => !field.options.some(value => value.name === option))) {
@@ -126,11 +126,14 @@ runs:
             if (feed === 'vulnerability') {
               alerts = dependabotAlerts;
             } else if (feed === 'malware') {
-              const advisories = await github.paginate('GET /advisories', {
-                type: 'malware', per_page: 100,
-                headers: { 'X-GitHub-Api-Version': '2022-11-28' },
-              });
-              const malwareGhsas = new Set(advisories.map((advisory) => advisory.ghsa_id).filter(Boolean));
+              const malwareGhsas = new Set();
+              for (const ghsa of new Set(dependabotAlerts.map(alert => alert.ghsa))) {
+                const { data: advisory } = await github.request('GET /advisories/{ghsa_id}', {
+                  ghsa_id: ghsa,
+                  headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+                });
+                if (advisory.type === 'malware') malwareGhsas.add(ghsa);
+              }
               // Dependabot does not expose a malware category itself. The advisory feed supplies
               // that classification; matching GHSA IDs keeps Dependabot alert data authoritative.
               alerts = dependabotAlerts.filter((alert) => malwareGhsas.has(alert.ghsa));

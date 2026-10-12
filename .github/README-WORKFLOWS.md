@@ -27,7 +27,7 @@ image/advisory assessment and production authorization.
 
 ## 🔒 Required checks and permissions
 
-`CI / Required CI` requires independent gates and all applicable reviews.
+`Required CI` in the CI workflow requires independent gates and all applicable reviews.
 Failed/cancelled/unexpectedly skipped checks block it. REQUEST_CHANGES,
 unavailable AI output and diff overflow fail reviewer checks. Inline placement,
 prior-history and duplicate suppression are tested. Bot approval never

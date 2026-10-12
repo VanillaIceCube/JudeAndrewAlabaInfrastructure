@@ -31,12 +31,12 @@ advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
 Project #13 uses Status (Backlog/Done), Domain (CI/CD), Work type (Security),
-Priority (P1/P2), Size (M) and numeric Estimate. End date is optional. Reused
+Priority (P0/P1/P2), Size (M) and numeric Estimate. End date is optional. Reused
 items retain human planning fields. Existing labels: `codeql`, `vulnerability`,
 `malware`, `dependencies`, `github_actions`, `docker`. Validate Project
 access/schema before issue writes; RoboCop alone mutates issues.
 
-Require `CI / Required CI` after its first green run using the owner's review
+Require `Required CI` in the CI workflow after its first green run using the owner's review
 policy. Do not weaken protections to accept a PR.
 
 ## ✅ Acceptance

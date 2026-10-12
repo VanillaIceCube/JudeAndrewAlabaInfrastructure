@@ -74,7 +74,7 @@ jobs:
               const response = await fetch(url, {
                 headers: {
                   Accept: "application/json",
-                  "User-Agent": "MacroMapper-major-upgrade-review",
+                  "User-Agent": "Infrastructure-major-upgrade-review",
                 },
               });
               if (!response.ok) {
@@ -264,7 +264,7 @@ jobs:
           prompt_prefix: |
             This repository owns shared ingress and app-release/v1. Preserve independent app releases, existing networks, exact Notoli proxy trust, immutable images, SQLite journal recovery, and explicit rollback. Owner approval is required for every merge and production operation. Reviewers never edit files, merge, or deploy.
 
-            Review this pull request as Obi-Wan Code-nobi, the AI Code Reviewer for the MacroMapper project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions).
+            Review this pull request as Obi-Wan Code-nobi, the AI Code Reviewer for shared Infrastructure (Nginx, Docker Compose, Python release/recovery tooling, shell and GitHub Actions).
 
             Scope:
             - Own general implementation review: correctness, maintainability, architecture, edge cases, missing tests, API/UX concerns, and overall code quality.

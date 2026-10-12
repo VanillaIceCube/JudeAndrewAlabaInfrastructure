@@ -255,7 +255,7 @@ function addedLinesByFile(files) {
 
 function unavailableReviewMarker(personaName, headSha) {
   const persona = personaName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  return `<!-- macromapper-ai-review-unavailable:${persona}:${headSha} -->`;
+  return `<!-- infrastructure-ai-review-unavailable:${persona}:${headSha} -->`;
 }
 
 async function publishUnavailableReview({
@@ -287,6 +287,7 @@ async function publishUnavailableReview({
         owner,
         repo,
         pull_number,
+        commit_id: pull.head?.sha,
         event: "COMMENT",
         body: [
           marker,
@@ -562,6 +563,7 @@ async function publishAiReview({
     owner,
     repo,
     pull_number,
+    commit_id: context.payload.pull_request.head.sha,
     event,
     body,
     comments: comments.length ? comments : undefined,

@@ -21,6 +21,13 @@ function alertRefKey(refs) {
   return normalizeAlertRefs(refs).join("|");
 }
 
+function alertPriority(feed, alerts) {
+  const severities = new Set(alerts.map(alert => alert.severity));
+  if (severities.has("critical")) return "P0";
+  if (severities.has("high") || severities.has("unknown")) return "P1";
+  return feed === "vulnerability" ? "P2" : "P1";
+}
+
 function markerFor(feed, refs) {
   const signature = crypto
     .createHash("sha256")
@@ -426,7 +433,7 @@ async function synchronizeSecurityAlerts({
           Status: "Backlog",
           Domain: "CI/CD",
           "Work type": "Security",
-          Priority: config.priority,
+          Priority: alertPriority(source.feed, group.alert_refs.map(ref => alertByRef.get(ref))),
           Size: "M",
           Estimate: 3,
         },
@@ -488,6 +495,7 @@ async function synchronizeSecurityAlerts({
 }
 
 module.exports = {
+  alertPriority,
   alertRefKey,
   alertRefsFromBody,
   managedFeedFromBody,

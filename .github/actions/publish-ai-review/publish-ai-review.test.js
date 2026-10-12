@@ -80,7 +80,7 @@ function createCore() {
 
 function context({ number = 626, sha = "abc123" } = {}) {
   return {
-    repo: { owner: "VanillaIceCube", repo: "MacroMapper" },
+    repo: { owner: "VanillaIceCube", repo: "JudeAndrewAlabaInfrastructure" },
     payload: {
       pull_request: {
         number,
@@ -102,6 +102,22 @@ function review(overrides = {}) {
     ...overrides,
   };
 }
+
+test("native reviews remain bound to the event commit when the PR advances", async () => {
+  const { github, createdReviews } = createGitHubMock();
+  const { core } = createCore();
+  await publishAiReview({ github, context: context({ sha: "reviewed-head" }), core,
+    raw: JSON.stringify(review()), personaName: "Obi-Wan Code-nobi" });
+  assert.equal(createdReviews[0].commit_id, "reviewed-head");
+});
+
+test("unavailable notices also identify the reviewed event commit", async () => {
+  const { github, createdReviews } = createGitHubMock();
+  const { core } = createCore();
+  await publishAiReview({ github, context: context({ sha: "reviewed-head" }), core,
+    raw: "OpenAI response unavailable", personaName: "Obi-Wan Code-nobi" });
+  assert.equal(createdReviews[0].commit_id, "reviewed-head");
+});
 
 test("renders clean approvals with persona-specific identity and no empty groups", () => {
   const cases = [
@@ -586,7 +602,7 @@ test("publishes one concise native fallback review when OpenAI is unavailable", 
   assert.equal(createdReviews[0].event, "COMMENT");
   assert.match(
     createdReviews[0].body,
-    /macromapper-ai-review-unavailable:lint-eastwood:abc123/,
+    /infrastructure-ai-review-unavailable:lint-eastwood:abc123/,
   );
   assert.match(createdReviews[0].body, /## 🤠 Lint Eastwood/);
   assert.match(createdReviews[0].body, /\*\*Review unavailable\.\*\*/);
