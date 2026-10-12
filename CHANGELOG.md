@@ -2,6 +2,19 @@
 
 ## 2026-10-11
 
+### Added
+- Add infrastructure Obi-Wan, Lint Eastwood and RoboCop reviews with tested inline publishing, prior-review history and visible failure gates.
+- Add Python, JavaScript and Actions CodeQL analysis, Dependency Review, Gitleaks, actionlint/ShellCheck and explicit package scanner applicability checks.
+- Add weekly Actions/Compose Dependabot updates and daily/manual security-alert issue reconciliation for Infrastructure Project #13.
+- Document credentials, least-privilege tokens, scanner scope and activation acceptance.
+
+### Changed
+- Require independent checks and applicable reviewers without auto-merge, source mutation or production workflows.
+- Include all alert severities and adapt security metadata to Project #13's Work type field.
+
+
+## 2026-10-11
+
 ### Fixed
 - Give MacroMapper backend responses a two-minute upstream read timeout so slower meal estimation can return within the companion app's 110-second AI budget.
 - Verify a real delayed upstream response beyond the former 60-second proxy limit in the disposable ingress suite.

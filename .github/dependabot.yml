@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    assignees: [VanillaIceCube]
+    labels: [dependencies, github_actions]
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 2
+    assignees: [VanillaIceCube]
+    labels: [dependencies, docker]

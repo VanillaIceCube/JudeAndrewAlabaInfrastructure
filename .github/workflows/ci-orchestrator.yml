@@ -1,0 +1,107 @@
+name: CI
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  lints:
+    name: Lints
+    uses: ./.github/workflows/gate-lint.yml
+  tests:
+    name: Tests
+    uses: ./.github/workflows/validate.yml
+  codeql:
+    name: CodeQL
+    uses: ./.github/workflows/gate-codeql.yml
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+  dependency-vulnerability:
+    name: Vulnerability
+    uses: ./.github/workflows/gate-vulnerability.yml
+    permissions:
+      contents: read
+      pull-requests: read
+  dependency-malware:
+    name: Dependency scope
+    uses: ./.github/workflows/gate-malware.yml
+  secrets:
+    name: Secret scan
+    uses: ./.github/workflows/gate-secrets.yml
+  code-review:
+    name: AI Code Review
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    uses: ./.github/workflows/review-code.yml
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OBI_WAN_CODE_NOBI_PRIVATE_KEY: ${{ secrets.OBI_WAN_CODE_NOBI_PRIVATE_KEY }}
+    permissions:
+      contents: read
+      pull-requests: write
+  build-review:
+    name: AI Build Sheriff Review
+    needs: [lints, tests]
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    uses: ./.github/workflows/review-build.yml
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      lint_result: ${{ needs.lints.result }}
+      test_result: ${{ needs.tests.result }}
+      lint_infrastructure_status: ${{ needs.lints.result }}
+      lint_infrastructure_log: ${{ needs.lints.outputs.log }}
+      test_ingress_status: ${{ needs.tests.outputs.ingress_status }}
+      test_ingress_log: ${{ needs.tests.outputs.ingress_log }}
+      test_recovery_status: ${{ needs.tests.outputs.recovery_status }}
+      test_recovery_log: ${{ needs.tests.outputs.recovery_log }}
+      test_automation_status: ${{ needs.tests.outputs.automation_status }}
+      test_automation_log: ${{ needs.tests.outputs.automation_log }}
+  security-review:
+    name: AI Security Review
+    needs: [codeql, dependency-vulnerability, dependency-malware, secrets]
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    uses: ./.github/workflows/review-security.yml
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+      security-events: read
+    with:
+      codeql_result: ${{ needs.codeql.result }}
+      codeql_scope_status: ${{ needs.codeql.outputs.scope_status }}
+      codeql_scope_python: ${{ needs.codeql.outputs.scope_python }}
+      codeql_scope_javascript: ${{ needs.codeql.outputs.scope_javascript }}
+      codeql_scope_actions: ${{ needs.codeql.outputs.scope_actions }}
+      dependency_vulnerability_result: ${{ needs.dependency-vulnerability.result }}
+      dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
+      dependency_malware_result: ${{ needs.dependency-malware.result }}
+      dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
+      secret_scan_result: ${{ needs.secrets.result }}
+  result:
+    name: Required CI
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Require independent gates and applicable reviews
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          REVIEWS_APPLICABLE: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        run: python3 scripts/check_ci_result.py

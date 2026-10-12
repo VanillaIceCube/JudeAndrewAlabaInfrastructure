@@ -22,4 +22,6 @@ and the [release standard](docs/app-release-standard.md) before related changes.
 Owner decisions are recorded on [issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Architecture approval does not authorize merging, release-branch promotion or
 production operations. Use issue #4 for the designated operator and exact
-production authorization; do not infer either from source approval. Advanced repository automation in issues #5–#9 remains deferred.
+production authorization; do not infer either from source approval. Repository automation in issues #5–#9 is owner-prioritized; follow the
+[workflow guide](.github/README-WORKFLOWS.md). Implementation approval still
+does not authorize merging or production operations.

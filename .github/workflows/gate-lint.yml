@@ -1,0 +1,42 @@
+name: Infrastructure Lint Gate
+on:
+  workflow_call:
+    outputs:
+      log:
+        description: Bounded diagnostic log for Lint Eastwood.
+        value: ${{ jobs.lint.outputs.log }}
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: Infrastructure lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      log: ${{ steps.report.outputs.log }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Install verified actionlint
+        run: bash scripts/install_actionlint.sh
+      - name: Validate workflow, shell, Python, JavaScript and Compose
+        id: lint
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash scripts/lint_infrastructure.sh 2>&1 | tee "$RUNNER_TEMP/lint.log"
+      - name: Report diagnostics
+        id: report
+        if: always()
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+        run: python3 scripts/ci_report.py log "$RUNNER_TEMP/lint.log" "$LINT_OUTCOME"
+      - name: Enforce lint result
+        if: steps.lint.outcome != 'success'
+        run: exit 1
