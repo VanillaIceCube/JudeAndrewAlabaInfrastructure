@@ -19,6 +19,7 @@ preserved through the reviewed migration.
 | Production operations | [Cutover and reversal](docs/cutover.md) |
 | Adding an application | [Onboarding](docs/onboarding.md) |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
+| Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
 | Project history | [Changelog](CHANGELOG.md) |
 
 ## 🧪 Validation
@@ -51,7 +52,9 @@ for rollout checks and the [app release guide](https://github.com/VanillaIceCube
 records owner decisions and PR/rollout status. Architecture approval does not
 authorize a merge or deployment; the host operator needs separate approval for
 the exact production plan. This repository owns shared ingress; the runbook
-transfers legacy ingress only within that approved plan. Consult #4 for live status. Advanced automation work in #5–#9 remains deferred.
+transfers legacy ingress only within that approved plan. Consult #4 for live status.
+Issues #5–#9 track the owner-prioritized automation implementation and acceptance.
+CI and reviewer approval never authorize automatic merging or production operations.
 
 ## 📜 License
 

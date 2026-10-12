@@ -14,6 +14,7 @@ or CI daemon. Run from the repository root:
 docker compose -f compose.yml config --quiet
 python scripts/update_release_manifest.py --check
 python -m unittest discover -s tests -v
+node --test .github/actions/*/*.test.js
 ```
 
 Tests create uniquely named temporary containers/networks and local fixture
@@ -22,6 +23,10 @@ release implementation also require both apps' tests and
 [parity verification](docs/app-release-standard.md#-automated-parity-and-updates).
 
 ## 📚 Documentation and review
+
+Automation changes also run actionlint and ShellCheck through
+[`scripts/lint_infrastructure.sh`](scripts/lint_infrastructure.sh). See the
+[workflow guide](.github/README-WORKFLOWS.md) for events, evidence and permissions.
 
 Keep the README, relevant operational guide and changelog current. Use
 `Added`, `Fixed`, `Changed`, `Removed` changelog groups as needed, matching the

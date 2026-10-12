@@ -236,8 +236,8 @@ obsolete bridge source does not authorize deleting installed recovery files.
 Review the three implementations together for compatibility and authorize each
 merge separately. Merging to `main` must not deploy. App promotion to `env-prod`
 and production activation require a separately approved operator plan, following
-the migration order above. Advanced infrastructure automation in issues #5–#9
-remains deferred. Live status belongs in coordination #4, not this contract.
+the migration order above. Repository automation in issues #5–#9 is now owner-prioritized; its
+[workflow guide](../.github/README-WORKFLOWS.md) defines source scope and acceptance. Live status belongs in coordination #4, not this contract.
 
 ## Validation and open decisions
 
