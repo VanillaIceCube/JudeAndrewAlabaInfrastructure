@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-10-18
+
+### Changed
+
+- Updated Nora and Marty to v3: one open PR per agent, with repeat runs maintaining the existing PR and integrating current main.
+
 ## 2026-10-11
 
 ### Added
