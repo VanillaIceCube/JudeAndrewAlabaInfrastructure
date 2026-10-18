@@ -56,7 +56,12 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          { python3 -m unittest discover -s tests -p test_snapshot.py -v && python3 -m unittest discover -s tests -p test_release_profiles.py -v; } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
+          {
+            status=0
+            python3 -m unittest discover -s tests -p test_snapshot.py -v || status=1
+            python3 -m unittest discover -s tests -p test_release_profiles.py -v || status=1
+            exit "$status"
+          } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
       - name: Validate automation policy and review regressions
         id: automation
         continue-on-error: true
