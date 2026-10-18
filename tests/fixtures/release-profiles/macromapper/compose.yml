@@ -1,0 +1,37 @@
+name: macromapper
+services:
+  macromapper-backend:
+    image: ${BACKEND_IMAGE:?Set the reviewed backend digest}
+    container_name: macromapper-backend
+    restart: always
+    env_file:
+      - path: .backend.env
+        format: raw
+    volumes:
+      - type: bind
+        source: ${APP_DB_PATH:?Set the absolute existing SQLite file}
+        target: /backend/db.sqlite3
+        bind:
+          create_host_path: false
+    networks:
+      ingress:
+        aliases: [macromapper-backend]
+      default:
+        aliases: [backend]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  macromapper-frontend:
+    image: ${FRONTEND_IMAGE:?Set the reviewed frontend digest}
+    container_name: macromapper-frontend
+    restart: always
+    networks:
+      ingress:
+        aliases: [macromapper-frontend]
+      default:
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  ingress: {external: true, name: macromapper-ingress}
+  default: {external: true, name: macromapper_default}

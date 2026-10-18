@@ -61,3 +61,6 @@ CI and reviewer approval never authorize automatic merging or production operati
 [Modified MIT License (Non-Commercial Use Only)](LICENSE.md), matching the owner's
 application/template repositories. See the license for terms and commercial
 licensing contact.
+
+The release standard also supports template onboarding through an explicit app
+policy and disposable profile fixtures; see [template adoption](docs/app-release-standard.md#-template-adoption).
