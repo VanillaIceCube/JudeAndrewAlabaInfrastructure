@@ -45,7 +45,7 @@ def authorization():
             "Only the owner may authorize production promotion or retry")
     source = os.environ["GITHUB_SHA"]
     require(SHA.fullmatch(source), "Invalid source identity")
-    require(os.environ.get("GATEWAY_DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
+    require(os.environ.get("DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
     require(run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch")
     require(api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
             "Promotion advanced; approve a fresh run")
@@ -65,23 +65,30 @@ def authorization():
 
 
 def ssh_configuration(directory, env):
-    host, user, port = env["GATEWAY_SSH_HOST"], env["GATEWAY_SSH_USER"], env["GATEWAY_SSH_PORT"]
+    host, user, port = env["DEPLOY_HOST"], env["DEPLOY_USER"], env["DEPLOY_PORT"]
     require(re.fullmatch(r"[a-zA-Z0-9.:\-]+", host) and re.fullmatch(r"[a-z_][a-z0-9_-]*", user)
             and port.isdecimal() and 1 <= int(port) <= 65535, "Invalid SSH destination")
-    key = directory / "key"
-    key.write_text(env["GATEWAY_SSH_KEY"] + "\n")
-    key.chmod(0o600)
     known = directory / "known_hosts"
-    lines = env["GATEWAY_SSH_KNOWN_HOST"].strip().splitlines()
-    require(len(lines) == 1, "Pin exactly one SSH host key")
-    fields = lines[0].split()
-    require(len(fields) == 3 and fields[0] == "gateway-host"
-            and fields[1] in {"ssh-ed25519", "ssh-rsa", "ecdsa-sha2-nistp256"}, "Invalid pinned host key")
-    known.write_text(lines[0] + "\n")
-    fingerprint = run(["ssh-keygen", "-lf", known, "-E", "sha256"]).split()[1]
-    require(fingerprint == env["GATEWAY_SSH_FINGERPRINT"], "Host key fingerprint mismatch")
+    # Discovery is untrusted until its key matches the independently configured
+    # fingerprint. Never authenticate or upload using an unverified scanned key.
+    scanned = run(["ssh-keyscan", "-T", "10", "-p", port, "-t", "ed25519,ecdsa,rsa", host], timeout=40)
+    matches = set()
+    for line in scanned.splitlines():
+        fields = line.split()
+        if len(fields) != 3 or fields[1] not in {"ssh-ed25519", "ssh-rsa", "ecdsa-sha2-nistp256"}:
+            continue
+        known.write_text("gateway-host " + " ".join(fields[1:]) + "\n")
+        fingerprint = run(["ssh-keygen", "-lf", known, "-E", "sha256"]).split()[1]
+        if fingerprint == env["DEPLOY_HOST_FINGERPRINT"]:
+            matches.add((fields[1], fields[2]))
+    require(len(matches) == 1, "Expected one SSH host key matching the configured fingerprint")
+    encoding, public_key = matches.pop()
+    known.write_text(f"gateway-host {encoding} {public_key}\n")
+    key = directory / "key"
+    key.write_text(env["DEPLOY_SSH_KEY"].replace("\r\n", "\n").rstrip("\n") + "\n")
+    key.chmod(0o600)
     # RSA public key encoding is ssh-rsa; negotiate a SHA-2 signature explicitly.
-    algorithm = "rsa-sha2-512" if fields[1] == "ssh-rsa" else fields[1]
+    algorithm = "rsa-sha2-512" if encoding == "ssh-rsa" else encoding
     config = directory / "config"
     config.write_text(f"Host gateway\n  HostName {host}\n  User {user}\n  Port {port}\n"
                       f"  IdentityFile {key}\n  IdentitiesOnly yes\n  BatchMode yes\n"

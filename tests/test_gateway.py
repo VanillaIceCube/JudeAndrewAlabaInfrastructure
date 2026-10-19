@@ -235,10 +235,10 @@ class AuthorizationTests(unittest.TestCase):
 
     def test_authorization_rejects_main_pr_stale_source_and_disabled_deployment(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
-               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "DEPLOY_ENABLED": "true",
                "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
         for key, value in (("GITHUB_REF", "refs/heads/main"), ("GITHUB_EVENT_NAME", "pull_request"),
-                           ("GATEWAY_DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
+                           ("DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
                            ("GITHUB_TRIGGERING_ACTOR", "other-user")):
             with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
                     self.assertRaises(release.ReleaseError):
@@ -250,7 +250,7 @@ class AuthorizationTests(unittest.TestCase):
 
     def test_promotion_merge_requires_exact_reviewed_tree_when_not_in_main_history(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
-               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "DEPLOY_ENABLED": "true",
                "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
         for relationship, matching, allowed in (("behind", True, True), ("diverged", True, True),
                                                 ("behind", False, False), ("diverged", False, False),
@@ -281,17 +281,32 @@ class AuthorizationTests(unittest.TestCase):
     def test_ssh_pins_the_negotiated_host_key_including_rsa_sha2(self):
         for encoding, algorithm in (("ssh-ed25519", "ssh-ed25519"), ("ssh-rsa", "rsa-sha2-512")):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as temporary:
-                env = {"GATEWAY_SSH_HOST": "host.example", "GATEWAY_SSH_USER": "root", "GATEWAY_SSH_PORT": "22",
-                       "GATEWAY_SSH_KEY": "fixture", "GATEWAY_SSH_KNOWN_HOST": "gateway-host " + encoding + " AAAA",
-                       "GATEWAY_SSH_FINGERPRINT": "SHA256:fixture"}
-                with patch.object(transport, "run", return_value="256 SHA256:fixture comment"):
+                env = {"DEPLOY_HOST": "host.example", "DEPLOY_USER": "root", "DEPLOY_PORT": "22",
+                       "DEPLOY_SSH_KEY": "fixture\r\n",
+                       "DEPLOY_HOST_FINGERPRINT": "SHA256:fixture"}
+                def discovery(args, **kwargs):
+                    if args[0] == "ssh-keyscan":
+                        return "host.example " + encoding + " AAAA\nhost.example ssh-ed25519 BBBB\n"
+                    return "256 SHA256:" + ("fixture" if "AAAA" in (Path(args[2]).read_text()) else "other") + " comment"
+                with patch.object(transport, "run", side_effect=discovery):
                     path = transport.ssh_configuration(Path(temporary), env)
                 self.assertIn("HostKeyAlgorithms " + algorithm, path.read_text())
                 self.assertIn("StrictHostKeyChecking yes", path.read_text())
-                env["GATEWAY_SSH_FINGERPRINT"] = "SHA256:wrong"
-                with patch.object(transport, "run", return_value="256 SHA256:fixture comment"), \
+                self.assertEqual((Path(temporary) / "key").read_bytes(), b"fixture\n")
+                self.assertEqual((Path(temporary) / "known_hosts").read_text(), "gateway-host " + encoding + " AAAA\n")
+                env["DEPLOY_HOST_FINGERPRINT"] = "SHA256:wrong"
+                with patch.object(transport, "run", side_effect=discovery), \
                         self.assertRaises(release.ReleaseError):
                     transport.ssh_configuration(Path(temporary), env)
+        with tempfile.TemporaryDirectory() as temporary, patch.object(transport, "run", return_value=""), \
+                self.assertRaises(release.ReleaseError):
+            transport.ssh_configuration(Path(temporary), env)
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.dict(os.environ, {**env, "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1"}), \
+                patch.object(transport, "run", return_value="") as commands, \
+                self.assertRaises(release.ReleaseError):
+            transport.execute(SOURCE, "deploy", "", Path(temporary))
+        self.assertEqual([call.args[0][0] for call in commands.call_args_list], ["ssh-keyscan"])
 
     def test_bundle_rejects_traversal_symlink_and_duplicate(self):
         for kind in ("traversal", "symlink", "duplicate"):
