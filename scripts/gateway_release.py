@@ -33,10 +33,15 @@ APPS = ("notoli-backend", "notoli-frontend", "macromapper-backend", "macromapper
 TARGETS = {"/etc/nginx/nginx.conf": "nginx/nginx.conf",
            "/etc/nginx/conf.d": "nginx/vhosts", "/etc/nginx/snippets": "nginx/snippets"}
 DOMAINS = ("notoli.judeandrewalaba.com", "macromapper.judeandrewalaba.com")
+DIAGNOSTICS = None
 
 
 class ReleaseError(RuntimeError):
     pass
+
+
+class CommandTimeout(ReleaseError):
+    """A Docker mutation may still be running inside the daemon."""
 
 
 def require(condition, message):
@@ -48,8 +53,15 @@ def run(args, timeout=120):
     try:
         result = subprocess.run(list(map(str, args)), capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as error:
-        raise ReleaseError("Command deadline exceeded; inspect private host evidence") from error
-    require(result.returncode == 0, "Command failed; output withheld")
+        raise CommandTimeout("Command deadline exceeded; inspect private host evidence") from error
+    if result.returncode:
+        if DIAGNOSTICS is not None and DIAGNOSTICS.is_dir():
+            atomic(DIAGNOSTICS / (uuid.uuid4().hex + ".json"),
+                   {"command": list(map(str, args)), "exit": result.returncode,
+                    "stdout": result.stdout[-8192:], "stderr": result.stderr[-8192:]})
+        tool = Path(str(args[0])).name
+        phase = str(args[1]) if tool == "docker" and args[1] in {"compose", "pull", "run", "image", "container", "network"} else "command"
+        raise ReleaseError(f"Command failed: {tool} {phase} (exit {result.returncode}); inspect private diagnostics")
     return result.stdout
 
 
@@ -59,6 +71,16 @@ def docker(*args, timeout=120):
 
 def inspect(kind, name):
     return json.loads(docker(kind, "inspect", name))[0]
+
+
+def ensure_image(image):
+    try:
+        inspect("image", image)
+    except CommandTimeout:
+        raise
+    except ReleaseError:
+        docker("pull", image, timeout=180)
+    require(image in inspect("image", image)["RepoDigests"], "Cached image digest mismatch")
 
 
 def private(path):
@@ -93,7 +115,7 @@ def read(path):
 
 
 def durable_tree(directory):
-    for path in sorted(directory.rglob("*"), reverse=True) + [directory]:
+    for path in sorted(directory.rglob("*"), reverse=True) + [directory, directory.parent]:
         require(not path.is_symlink(), "Symlinked release evidence")
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
         try:
@@ -285,10 +307,14 @@ def healthy(ca=None):
 
 class Gateway:
     def __init__(self, root=ROOT):
+        global DIAGNOSTICS
         self.root = root
         private(root)
         for name in ("releases", "attempts", "incoming"):
             private(root / name)
+        DIAGNOSTICS = root / "diagnostics"
+        DIAGNOSTICS.mkdir(mode=0o700, exist_ok=True)
+        private(DIAGNOSTICS)
 
     def compose(self, directory, *args):
         return docker("compose", "-p", "host-ingress", "-f", directory / "model.json", *args)
@@ -353,7 +379,8 @@ class Gateway:
         require(not (self.root / "current.json").exists() and not (self.root / "pending.json").exists(),
                 "Gateway baseline already initialized or interrupted")
         require(run(["git", "-C", directory, "rev-parse", "HEAD"]).strip() == source, "Baseline source mismatch")
-        run(["git", "-C", directory, "diff", "--exit-code", "HEAD", "--", "compose.yml", "nginx"])
+        require(not run(["git", "-C", directory, "status", "--porcelain", "--untracked-files=all", "--",
+                         "compose.yml", "nginx"]).strip(), "Baseline gateway checkout is not clean")
         model = json.loads(docker("compose", "-p", "host-ingress", "-f", directory / "compose.yml", "config", "--format", "json"))
         live = runtime()
         certs = next(m["Source"] for m in live["Mounts"] if m["Destination"] == "/etc/nginx/certs")
@@ -440,6 +467,7 @@ class Gateway:
                    "actions_run": run_url, "configuration": configuration,
                    "image": model["services"]["proxy"]["image"]}
         atomic(attempt / "journal.json", journal)
+        durable_tree(attempt)
         # Validate baseline even for a no-op: a broken gateway is never accepted by skipping it.
         healthy(ca)
         if configuration == previous["configuration"]:
@@ -447,7 +475,7 @@ class Gateway:
                                             "running_source": previous["source"]})
             return {"status": "unchanged", "running_source": previous["source"]}
         self.capacity()
-        docker("pull", model["services"]["proxy"]["image"], timeout=180)
+        ensure_image(model["services"]["proxy"]["image"])
         self.capacity()
         self.syntax(model)
         self.compose(directory, "config", "--quiet")
@@ -462,6 +490,10 @@ class Gateway:
             atomic(attempt / "result.json", {"status": "success", "running_source": identity[:40]})
             (self.root / "pending.json").unlink()
             return {"status": "success", "running_source": identity[:40]}
+        except CommandTimeout:
+            # Killing the CLI does not prove the Docker daemon stopped its request.
+            # Retain the barrier rather than racing an indeterminate activation.
+            raise ReleaseError("Activation timed out; pending barrier retained for explicit recovery") from None
         except Exception:
             self.restore(journal, ca)
             raise ReleaseError("Candidate failed; previous gateway restored; evidence retained") from None

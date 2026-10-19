@@ -5,6 +5,7 @@ substituted. The transaction, Docker commands, config hashing and journal are re
 """
 
 import copy
+from contextlib import contextmanager
 import hashlib
 import http.client
 import json
@@ -133,6 +134,19 @@ class GatewayDockerTests(unittest.TestCase):
                     archive.add(fixture / "nginx", arcname="nginx")
                 return target
 
+            @contextmanager
+            def expect_restored():
+                try:
+                    yield
+                except release.ReleaseError as error:
+                    # These commands concern only this test's synthetic resources.
+                    # Production diagnostics remain private and are never published.
+                    diagnostics = [release.read(path) for path in (root / "diagnostics").glob("*.json")]
+                    self.assertIn("previous gateway restored", str(error),
+                                  "Disposable fixture diagnostics: " + json.dumps(diagnostics))
+                else:
+                    self.fail("Expected rejected candidate and verified restoration")
+
             try:
                 for network in config["networks"].values():
                     docker("network", "create", network["name"])
@@ -171,7 +185,7 @@ class GatewayDockerTests(unittest.TestCase):
                     with self.assertRaises(release.ReleaseError):
                         gateway.deploy(bundle("c", invalid=True), "c" * 40 + "-2-1", "run/2", None)
                     self.assertEqual(runtime()["Id"], live_before)
-                    with self.assertRaisesRegex(release.ReleaseError, "previous gateway restored"):
+                    with expect_restored():
                         gateway.deploy(bundle("d", marker="unhealthy"), "d" * 40 + "-3-1", "run/3", None)
                     self.assertEqual(release.read(root / "current.json")["source"], "a" * 40)
                     self.assertFalse((root / "pending.json").exists())
@@ -179,6 +193,16 @@ class GatewayDockerTests(unittest.TestCase):
                         result = gateway.deploy(bundle(revision), revision * 40 + f"-{run_id}-1", f"run/{run_id}", None)
                         self.assertEqual(result["running_source"], revision * 40)
                     gateway.rollback("f" * 40 + "-5-1", None)
+                    self.assertEqual(release.read(root / "current.json")["source"], "e" * 40)
+                    original_compose = gateway.compose
+                    failed_directory = root / "releases" / ("9" * 40 + "-6-1")
+                    def activate_then_fail(directory, *args):
+                        result = original_compose(directory, *args)
+                        if directory == failed_directory and args[0] == "up":
+                            raise release.ReleaseError("Injected activation failure after container recreation")
+                        return result
+                    with patch.object(gateway, "compose", side_effect=activate_then_fail), expect_restored():
+                        gateway.deploy(bundle("9"), failed_directory.name, "run/6", None)
                     self.assertEqual(release.read(root / "current.json")["source"], "e" * 40)
                     healthy()
                     self.assertEqual(invariants(), before)

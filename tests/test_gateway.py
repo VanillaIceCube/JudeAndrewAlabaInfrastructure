@@ -2,7 +2,6 @@
 
 import copy
 import io
-import http.client
 import json
 import os
 from pathlib import Path
@@ -30,6 +29,46 @@ def archive(path, content="events {}\nhttp {}\n"):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_cached_immutable_image_needs_no_registry_pull(self):
+        image = "nginx@sha256:" + "c" * 64
+        with patch.object(release, "inspect", return_value={"RepoDigests": [image]}), \
+                patch.object(release, "docker") as docker:
+            release.ensure_image(image)
+        docker.assert_not_called()
+        with patch.object(release, "inspect", return_value={"RepoDigests": []}), \
+                self.assertRaises(release.ReleaseError):
+            release.ensure_image(image)
+
+    @unittest.skipIf(os.name == "nt", "Linux evidence ownership contract")
+    def test_failed_command_retains_bounded_private_diagnostics_without_public_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with patch.object(release, "DIAGNOSTICS", directory):
+                with self.assertRaises(release.ReleaseError) as error:
+                    release.run([sys.executable, "-c", "import sys; sys.stderr.write('fixture-only-' * 2000); sys.exit(7)"])
+            self.assertNotIn("fixture-only", str(error.exception))
+            files = list(directory.glob("*.json"))
+            self.assertEqual(len(files), 1)
+            self.assertEqual(len(release.read(files[0])["stderr"]), 8192)
+            self.assertEqual(files[0].stat().st_mode & 0o777, 0o600)
+
+    def test_exact_status_payload_and_explicit_retirement_of_production_successes(self):
+        calls = []
+        def api(endpoint, method="GET", data=None):
+            calls.append((endpoint, method, data))
+            if "?environment=" in endpoint:
+                return [{"id": 10, "production_environment": True}, {"id": 11}]
+            if endpoint.endswith("?per_page=1"):
+                return [{"state": "success"}]
+        with patch.dict(os.environ, {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "42"}), \
+                patch.object(transport, "api", side_effect=api):
+            transport.status(11, "success", "Verified running gateway")
+        payloads = [data for endpoint, method, data in calls if method == "POST"]
+        self.assertEqual(payloads[0], {"state": "success", "description": "Verified running gateway",
+                         "log_url": "https://github.com/" + transport.REPOSITORY + "/actions/runs/42", "auto_inactive": False})
+        self.assertEqual(payloads[1]["state"], "inactive")
+        self.assertIn("/deployments/10/statuses", calls[-1][0])
+
     def test_deployment_tracking_uses_restored_source_and_never_labels_failed_promotion_successful(self):
         env = {"GITHUB_OUTPUT": "", "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
                "GATEWAY_OPERATION": "rollback", "GATEWAY_RECOVERY": SECOND + "-1-1"}
@@ -191,6 +230,7 @@ class TransactionTests(unittest.TestCase):
                    patch.object(release, "validate_model"), patch.object(release, "healthy"),
                    patch.object(release, "inspect", return_value={"Id": "new-image"}),
                    patch.object(release, "docker"),
+                   patch.object(release, "ensure_image"),
                    patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(self.model)))]
         self.mocks = [self.enterContext(item) for item in patches]
 
@@ -252,6 +292,16 @@ class TransactionTests(unittest.TestCase):
         self.prepare_old()
         self.mocks[9].side_effect = [None, release.ReleaseError("unhealthy"), release.ReleaseError("recovery unhealthy")]
         with self.assertRaises(release.ReleaseError):
+            self.deploy()
+        self.assertTrue((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+
+    def test_indeterminate_docker_timeout_keeps_barrier_instead_of_racing_rollback(self):
+        def timeout(directory, *args):
+            if args[0] == "up":
+                raise release.CommandTimeout("daemon request outcome unknown")
+        self.gateway.compose.side_effect = timeout
+        with self.assertRaisesRegex(release.ReleaseError, "timed out"):
             self.deploy()
         self.assertTrue((self.root / "pending.json").exists())
         self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)

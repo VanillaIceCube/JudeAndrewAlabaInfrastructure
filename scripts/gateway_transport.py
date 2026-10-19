@@ -86,9 +86,24 @@ def ssh_configuration(directory, env):
 
 def status(deployment, state, description):
     api(f"repos/{REPOSITORY}/deployments/{deployment}/statuses", "POST",
-        {"state": state, "description": description, "environment": ENVIRONMENT,
+        {"state": state, "description": description,
          "log_url": os.environ["GITHUB_SERVER_URL"] + "/" + REPOSITORY + "/actions/runs/" + os.environ["GITHUB_RUN_ID"],
-         "auto_inactive": state == "success"})
+         "auto_inactive": False})
+    if state == "success":
+        # GitHub auto_inactive explicitly excludes production deployments.
+        # Retire prior verified successes only after this observed success exists.
+        page = 1
+        while True:
+            deployments = api(f"repos/{REPOSITORY}/deployments?environment={ENVIRONMENT}&per_page=100&page={page}")
+            for previous in deployments:
+                if previous["id"] == deployment:
+                    continue
+                latest = api(f"repos/{REPOSITORY}/deployments/{previous['id']}/statuses?per_page=1")
+                if latest and latest[0]["state"] == "success":
+                    status(previous["id"], "inactive", "Superseded by verified gateway deployment " + str(deployment))
+            if len(deployments) < 100:
+                break
+            page += 1
 
 
 def execute(source, operation, recovery, directory):
@@ -117,7 +132,7 @@ def execute(source, operation, recovery, directory):
     # A dropped/cancelled runner cannot kill the transaction or release its lock.
     # The durable pending barrier handles machine failure/SIGKILL separately.
     command = " ".join(["systemd-run", "--quiet", "--wait", "--pipe", "--unit=gateway-" + identity,
-                        "--property=UMask=0077", "--property=RuntimeMaxSec=1200", *arguments])
+                        "--property=UMask=0077", *arguments])
     output = run([*ssh, command], timeout=1250)
     result = json.loads(output.splitlines()[-1])
     require(result["status"] in {"success", "unchanged", "rolled_back"} and SHA.fullmatch(result["running_source"]),

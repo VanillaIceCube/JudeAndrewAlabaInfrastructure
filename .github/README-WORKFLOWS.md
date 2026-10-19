@@ -42,8 +42,9 @@ separately authorized trusted review runs. Dependabot requires manual owner merg
 GITHUB_TOKEN begins with contents read. Only CodeQL upload/review jobs request
 additional permissions. App tokens name this repository and explicit permissions;
 Lint Eastwood receives contents read despite its existing broader account
-installation. Checkout does not persist credentials. No workflow requests
-contents write, commits fixes, merges or deploys.
+installation. Checkout does not persist credentials. Review/scanner workflows
+never request contents write, commit fixes, merge or deploy. The separately
+approved gateway workflow below uses isolated production credentials.
 
 Alerts serialize each feed, validate every source ref exactly once, and manage
 only `infrastructure-security-alert` issues. Missing credentials, unavailable

@@ -82,15 +82,17 @@ new `<sha>-<run-id>-<attempt>` identity and requires a fresh approval.
 
 Actions serializes runs with cancellation disabled. SSH uploads a bounded,
 checksummed Git archive into private incoming storage. A persistent systemd
-unit runs the transaction independently of the SSH session, with a 20-minute
-outer deadline. Cancelling/losing the runner does not stop the host unit.
+unit runs the transaction independently of the SSH session. Host commands and
+probe suites have bounded deadlines; the unit has no automatic mutation cancellation.
+Cancelling/losing the runner does not stop the host unit.
 Do not cancel an active release as a recovery mechanism. Inspect its host
 journal and systemd unit before another approved retry.
 
 The exclusive lock covers topology validation, previous-state verification,
 capacity, syntax checks, activation, bounded health, success recording and any
 rollback. Capacity requires at least 512 MiB available memory and 20% free disk
-(at least 1 GiB), rechecked after the immutable candidate image pull. This is a
+(at least 1 GiB), rechecked after immutable image availability verification.
+Cached matching repository digests are reused; only absent images are pulled. This is a
 minimum check; representative host load and image/recovery retention budgets
 remain operator prerequisites.
 
@@ -129,7 +131,10 @@ certificate identities and Actions run. `pending.json` is fsynced before any
 activation. Pre-activation rejection leaves the accepted runtime unchanged.
 Failed activation/health automatically recreates only the captured previous
 gateway, validates both apps again, and reports **failure**, even when recovery
-succeeds. Failed recovery keeps the pending barrier and private evidence.
+succeeds. An indeterminate Docker activation timeout retains the pending barrier
+instead of racing rollback against a still-running daemon request. Failed recovery
+also keeps the barrier and private evidence. Verify the original host unit and
+Docker request have finished before authorizing explicit recovery.
 
 An interrupted mutation, including SIGKILL or host reboot, leaves the pending
 barrier; a new deployment cannot bypass it. With separate recovery authorization,
@@ -166,6 +171,9 @@ Only verified success deactivates previous successful deployment records.
 The durable host `current.json` is authoritative for the accepted running source,
 image digest, configuration identity, Actions run and recovery reference.
 Private attempt journals/results preserve promoted versus running identities.
+Failed command context and bounded output are retained as mode 0600 files in
+the private host `diagnostics` directory; Actions receives only the tool/phase
+and exit code. Inspect those files on the host, never paste their raw contents.
 Never publish full Docker inspect, journal/config contents, credentials or keys.
 If a runner disappears, GitHub may show failure/in-progress while the independent
 host unit completes: inspect systemd and `pending.json`/`current.json` privately,
