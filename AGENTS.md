@@ -26,6 +26,16 @@ production authorization; do not infer either from source approval. Repository a
 [workflow guide](.github/README-WORKFLOWS.md). Implementation approval still
 does not authorize merging or production operations.
 
+## 🚀 Gateway promotion authorization
+
+The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
+authorizes automatic gateway deployment when the owner promotes reviewed main
+source to `env-prod`. The owner-triggered promotion is production authorization;
+no second reviewer or per-release approval variable is required. Manual retries
+must also be owner-triggered. Initial host setup and explicit gateway recovery
+retain their separately authorized operator scope. Application release rules
+and the one-time cutover are unchanged.
+
 ## Jules recurring agents
 
 Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open
