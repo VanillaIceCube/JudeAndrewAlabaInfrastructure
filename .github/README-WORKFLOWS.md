@@ -50,6 +50,17 @@ only `infrastructure-security-alert` issues. Missing credentials, unavailable
 feeds, malformed AI JSON or absent Project metadata fail visibly. Source links
 remain; secret and private host/recovery contents are excluded.
 
+## 🚦 Gateway release workflow
+
+`deploy-gateway.yml` handles only separately authorized `env-prod` promotions
+and explicit manual retries/rollback on that branch. It is disabled until the
+repository enable variable, exact source approval, protected approval environment
+and private host adoption prerequisites are established. It uses separate
+production credentials, persistent host transactions, exclusive maintenance
+locking and gateway-only recovery. Review/scanner workflows cannot deploy.
+See [gateway releases](../docs/gateway-releases.md) for setup, bounded probes,
+relevant-change policy, deployment records, interruptions and retention.
+
 ## 🧪 Validation and activation
 
 ```sh

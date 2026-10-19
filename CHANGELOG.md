@@ -3,6 +3,14 @@
 ## 2026-10-18
 
 ### Added
+- Add disabled-by-default gateway deployment from separately approved `env-prod` revisions, protected environment policy checks and pinned SSH host-key negotiation.
+- Add private versioned gateway staging, exclusive maintenance locking, bounded public/origin readiness, durable interruption barriers and gateway-only rollback.
+- Add promoted/running-source tracking, no-restart handling for unchanged gateway configuration, and disposable release/recovery regression coverage.
+- Document operator adoption, production approval prerequisites, retry, rollback and recovery retention.
+
+## 2026-10-18
+
+### Added
 - Exercise all shared release suites for the two existing app policies and an isolated FullStackTemplate onboarding fixture.
 
 ### Fixed

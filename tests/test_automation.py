@@ -20,7 +20,7 @@ class AutomationPolicyTests(unittest.TestCase):
             with self.subTest(manifest=manifest):
                 self.assertEqual(scope.unsupported_manifests([manifest]), [manifest])
 
-    def test_external_actions_are_immutable_and_workflows_cannot_merge_or_deploy(self):
+    def test_external_actions_are_immutable_and_review_workflows_cannot_merge_or_deploy(self):
         for path in (ROOT / ".github").rglob("*.yml"):
             text = path.read_text(encoding="utf-8")
             with self.subTest(path=path):
@@ -28,6 +28,8 @@ class AutomationPolicyTests(unittest.TestCase):
                 self.assertNotIn("ci-auto-merge.yml", text)
                 self.assertNotRegex(text, r"gh\s+pr\s+merge|enablePullRequestAutoMerge|mergePullRequest|DEPLOY_SSH_KEY")
                 self.assertNotRegex(text, r"contents:\s*write")
+                if path.name != "deploy-gateway.yml":
+                    self.assertNotIn("GATEWAY_SSH_KEY", text)
                 for action in re.findall(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)", text, re.M):
                     if not action.startswith("./"):
                         self.assertRegex(action, r"^[\w./-]+@[a-f0-9]{40}$")
