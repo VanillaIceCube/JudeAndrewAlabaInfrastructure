@@ -13,8 +13,8 @@ narrowed without changing other repositories. Bots never edit, merge or deploy.
 | --- | --- |
 | `OBI_WAN_CODE_NOBI_APP_ID`, `LINT_EASTWOOD_APP_ID`, `ROBOCOP_APP_ID` | Actions variables for identities |
 | Corresponding `*_PRIVATE_KEY` | Actions secrets for App authentication |
-| `OPENAI_PROJECT_ID` | Existing review project variable |
-| `OPENAI_API_KEY` | Infrastructure-only restricted Responses write key, Actions secret |
+| `OPENAI_REVIEWERS_PROJECT_ID` | OpenAI reviewer project ID shared by this repository's three reviewer keys |
+| `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY` | Separate Infrastructure-only reviewer keys, Actions secrets; RoboCop also runs all alert feeds |
 | `SECURITY_ALERTS_PROJECT_ID` | Project #13 variable: `PVT_kwHOAYDAa84BmitT` |
 | `SECURITY_ALERTS_TOKEN` | Separate Project v2 read/write secret, never used for issue/alert APIs |
 
@@ -50,3 +50,7 @@ blocking findings and unavailable output; do not invent an inline finding.
 After owner merge, verify the default-branch baseline, manually run the three
 alert workflows and observe Dependabot's first PR. Keep tickets open for
 acceptance evidence still dependent on default-branch activation.
+
+## 🔑 Deferred OpenAI migration
+
+Follow the [exact key mapping and cutover sequence](README-WORKFLOWS.md#-separate-openai-reviewer-credentials). Configure the three new secrets before merging the source change; retain the legacy key until usage and all consumers are verified.

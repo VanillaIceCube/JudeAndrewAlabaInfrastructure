@@ -65,3 +65,9 @@ licensing contact.
 
 The release standard also supports template onboarding through an explicit app
 policy and disposable profile fixtures; see [template adoption](docs/app-release-standard.md#-template-adoption).
+
+## 🔑 AI reviewer credentials
+
+Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this
+repository. See the [workflow setup and deferred migration](.github/README-WORKFLOWS.md#-separate-openai-reviewer-credentials)
+for exact secret names, project configuration, verification, and rollback.

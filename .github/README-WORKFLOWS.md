@@ -87,3 +87,56 @@ activation. No merge, promotion or production operation is implied.
 The recovery gate also runs `tests/test_release_profiles.py`: all five shared
 release suites execute against Notoli, MacroMapper, and the template fixture on
 the disposable CI Docker daemon. No live host or application onboarding occurs.
+
+## 🔑 Separate OpenAI reviewer credentials
+
+Credential provisioning is a separate operator step. Configure the new secrets
+and project variable before activating these workflows. Missing keys fail
+visibly; there is no fallback to the old shared `OPENAI_API_KEY`.
+
+Use a dedicated **JudeAndrewAlabaInfrastructure · AI Reviewers** OpenAI project (or the
+repository's existing reviewer-only project). Never share credentials between
+repositories. Create three distinct keys with these exact display names:
+
+| OpenAI key display name | GitHub secret | Consumer |
+| --- | --- | --- |
+| `CI · Obi-Wan · Code Review` | `OBI_WAN_OPENAI_API_KEY` | Obi-Wan PR reviews |
+| `CI · Lint Eastwood · Build Review` | `LINT_EASTWOOD_OPENAI_API_KEY` | Lint Eastwood PR reviews |
+| `CI · RoboCop · Security Review` | `ROBOCOP_OPENAI_API_KEY` | RoboCop PR reviews and all three scheduled/manual alert feeds |
+
+In this repository, add all three keys as **Actions repository secrets**.
+Infrastructure excludes Dependabot from secret-dependent reviews; do not add
+Dependabot secrets here.
+
+1. In OpenAI Platform, select the repository's reviewer project, open its API
+   keys page, and create the three keys above. Restrict each key to the API
+   permissions needed for Responses requests; retain model access and Obi-Wan's
+   existing semver-major web-search capability. Choose an expiration under your
+   rotation policy and record when replacement is due.
+2. In GitHub **Settings → Secrets and variables → Actions → Secrets**, add the
+   exact secret names in the table. Each value is the full secret key from its
+   matching OpenAI entry, not its display name or key ID. Use Dependabot's
+   separate secret settings too where specified above.
+3. In **Actions → Variables**, set `OPENAI_REVIEWERS_PROJECT_ID` to that same OpenAI
+   project's actual `proj_...` ID. All three keys and the project header must
+   match. This is an OpenAI project ID; `SECURITY_ALERTS_PROJECT_ID` is a separate
+   GitHub Project node ID and stays unchanged. App identity variables/private
+   keys and deployment credentials also stay unchanged.
+4. Run a same-repository PR smoke test for all three reviewers. Where supported,
+   also verify a Dependabot PR using its separate secret store. After an
+   approved merge, manually run CodeQL Alert, Vulnerability Alert, and Malware
+   Alert on the default branch and observe their next scheduled runs. Do not
+   run production deployment to test reviewer credentials.
+5. In OpenAI Usage, filter by the reviewer project and individual API key to
+   confirm each persona's attribution. An empty alert feed may make no model
+   call; record that outcome rather than assuming usage was verified.
+6. Stage the new secrets and `OPENAI_REVIEWERS_PROJECT_ID` while leaving the
+   legacy `OPENAI_API_KEY` and `OPENAI_PROJECT_ID` unchanged. Existing default-
+   branch jobs can continue using the legacy pair until the source is merged.
+   Keep old keys valid until every affected consumer has verified the new keys;
+   retain any Default-project key still used elsewhere. To reverse the source
+   change, revert the workflow change; the retained legacy pair remains usable.
+   Do not place a shared legacy key into the three new secret slots or expose
+   key values in logs/issues.
+
+See [OpenAI key security, expiration and usage guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys).
