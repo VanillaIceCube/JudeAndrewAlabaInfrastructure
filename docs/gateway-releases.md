@@ -5,6 +5,8 @@ not the [one-time cutover](cutover.md). The owner's October 19 policy makes an
 authorized promotion of reviewed source to `env-prod` the release authorization:
 it automatically deploys without another human reviewer or per-release approval
 variable. Source/CI approval alone still does not authorize branch promotion.
+GitHub's original actor and retrying actor must both be the repository owner;
+another collaborator or bot cannot authorize a production operation.
 Record initial setup, the designated operator, rollout/recovery scope and results
 on [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Independent Notoli/MacroMapper workflows and shared release code are unchanged.

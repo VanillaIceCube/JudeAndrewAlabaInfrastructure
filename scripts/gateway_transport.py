@@ -39,6 +39,10 @@ def authorization():
     require(os.environ["GITHUB_REPOSITORY"] == REPOSITORY and os.environ["GITHUB_REF"] == "refs/heads/env-prod",
             "Only this repository's env-prod branch may deploy")
     require(os.environ["GITHUB_EVENT_NAME"] in {"push", "workflow_dispatch"}, "Unsupported release event")
+    owner = REPOSITORY.split("/")[0]
+    require(os.environ.get("GITHUB_ACTOR") == owner
+            and os.environ.get("GITHUB_TRIGGERING_ACTOR", owner) == owner,
+            "Only the owner may authorize production promotion or retry")
     source = os.environ["GITHUB_SHA"]
     require(SHA.fullmatch(source), "Invalid source identity")
     require(os.environ.get("GATEWAY_DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")

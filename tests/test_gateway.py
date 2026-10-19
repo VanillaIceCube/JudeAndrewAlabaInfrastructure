@@ -235,9 +235,11 @@ class AuthorizationTests(unittest.TestCase):
 
     def test_authorization_rejects_main_pr_stale_source_and_disabled_deployment(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
-               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true"}
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
         for key, value in (("GITHUB_REF", "refs/heads/main"), ("GITHUB_EVENT_NAME", "pull_request"),
-                           ("GATEWAY_DEPLOY_ENABLED", "false")):
+                           ("GATEWAY_DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
+                           ("GITHUB_TRIGGERING_ACTOR", "other-user")):
             with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
                     self.assertRaises(release.ReleaseError):
                 transport.authorization()
@@ -248,7 +250,8 @@ class AuthorizationTests(unittest.TestCase):
 
     def test_promotion_merge_requires_exact_reviewed_tree_when_not_in_main_history(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
-               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true"}
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
         for relationship, matching, allowed in (("behind", True, True), ("diverged", True, True),
                                                 ("behind", False, False), ("diverged", False, False),
                                                 ("ahead", False, True), ("identical", False, True)):
