@@ -55,10 +55,13 @@ remain; secret and private host/recovery contents are excluded.
 
 `deploy-gateway.yml` handles only separately authorized `env-prod` promotions
 and explicit manual retries/rollback on that branch. It is disabled until the
-repository enable variable, exact source approval, protected approval environment
+repository enable variable, reviewed source validation, branch-restricted environment
 and private host adoption prerequisites are established. It uses separate
 production credentials, persistent host transactions, exclusive maintenance
 locking and gateway-only recovery. Review/scanner workflows cannot deploy.
+Like the Notoli and MacroMapper deployment workflows, an authorized promotion
+to `env-prod` starts deployment without a second reviewer or per-release
+approval variable. Source PRs still require the normal main-branch checks.
 See [gateway releases](../docs/gateway-releases.md) for setup, bounded probes,
 relevant-change policy, deployment records, interruptions and retention.
 

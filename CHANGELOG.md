@@ -1,5 +1,13 @@
 # 📝 Changelog
 
+## 2026-10-19
+
+### Changed
+- Deploy reviewed gateway source automatically when the authorized operator promotes it to env-prod, without a second reviewer or per-release approval variable; retain the environment branch restriction and exact current-source checks.
+
+### Fixed
+- Accept regular gateway promotion merge commits only when their complete Git tree matches reviewed main, while preserving exact-source and environment approval checks.
+
 ## 2026-10-18
 
 ### Added

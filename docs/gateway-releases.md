@@ -1,29 +1,35 @@
 # 🚦 Subsequent gateway releases
 
 This is the release procedure for the already adopted `host-ingress` gateway,
-not the [one-time cutover](cutover.md). Implementation and CI do not authorize
-environment setup, promotion, host preparation or production execution. Record
-the designated operator, exact SHA, window, release/recovery scope and approval
+not the [one-time cutover](cutover.md). The owner's October 19 policy makes an
+authorized promotion of reviewed source to `env-prod` the release authorization:
+it automatically deploys without another human reviewer or per-release approval
+variable. Source/CI approval alone still does not authorize branch promotion.
+Record initial setup, the designated operator, rollout/recovery scope and results
 on [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Independent Notoli/MacroMapper workflows and shared release code are unchanged.
 
 ## 🔒 Approval and prerequisites
 
-Keep repository variable `GATEWAY_DEPLOY_ENABLED` unset until the operator plan
-is approved. Setup is an explicit owner operation; this PR does not configure
-live settings or credentials. Configure:
+Keep repository variable `GATEWAY_DEPLOY_ENABLED` unset until initial host setup
+and adoption are ready. Initial setup remains an explicit owner operation. Configure:
 
 - Protect `main` and `env-prod`, require reviewed green PRs for source changes,
   and restrict `env-prod` promotion to the designated release operator. Promote
   an existing reviewed `main` commit, never an independent production commit.
+  A regular promotion merge may have a different commit ID only when its entire
+  Git tree exactly matches current reviewed `main`; this includes workflows and
+  release helpers, not only Nginx configuration. Divergent file contents fail.
 - Environment **gateway-approval**: selected deployment branches, exactly
-  `env-prod` (branch, no tags); required human reviewers; prevent self-review;
-  disable administrator bypass. Name a reviewer other than the initiating
-  operator. The workflow checks these settings through GitHub's API before SSH.
+  `env-prod` (branch, no tags); no required reviewers or wait timer;
+  disable administrator bypass. The historical environment name remains the
+  credential boundary; it does not impose a separate human approval.
+  The workflow checks branch restrictions through GitHub's API before SSH.
   Its token needs Actions read in addition to contents read/deployments write.
-- Put `GATEWAY_APPROVED_SHA` in that environment, selecting the full, separately
-  authorized `env-prod` SHA. Set repository `GATEWAY_DEPLOY_ENABLED=true` only
-  after prerequisites and the initial baseline adoption below pass.
+- No `GATEWAY_APPROVED_SHA` variable is needed. The workflow verifies its exact
+  checkout is still the current `env-prod` head and contains reviewed source.
+  Set repository `GATEWAY_DEPLOY_ENABLED=true` after prerequisites and initial
+  baseline adoption below pass. Setting the flag does not replay a skipped run.
 - Environment-only secrets: `GATEWAY_SSH_HOST`, `GATEWAY_SSH_USER`,
   `GATEWAY_SSH_PORT`, `GATEWAY_SSH_KEY`, `GATEWAY_SSH_KNOWN_HOST`,
   `GATEWAY_SSH_FINGERPRINT`. Use a dedicated production credential, not review
@@ -72,13 +78,12 @@ resolve it privately, do not fabricate or edit release records to bypass checks.
 
 ## 🚀 Promotion and retry
 
-After source review/green CI, record exact production authorization on #4,
-set the environment's approved SHA, and promote that reviewed `main` commit
-to `env-prod`. The push starts **Deploy gateway**, which waits for a different
-required human reviewer. `main`/PRs never invoke deployment. Manual dispatch
+After source review/green CI, the authorized operator promotes that reviewed
+`main` commit to `env-prod`. The push starts **Deploy gateway** automatically;
+there is no second approval step. `main`/PRs never invoke deployment. Manual dispatch
 must select **env-prod**, operation **deploy**, empty recovery field; it uses
 the branch's exact current SHA, not a user-supplied revision. Each retry has a
-new `<sha>-<run-id>-<attempt>` identity and requires a fresh approval.
+new `<sha>-<run-id>-<attempt>` identity and revalidates the current branch/source.
 
 Actions serializes runs with cancellation disabled. SSH uploads a bounded,
 checksummed Git archive into private incoming storage. A persistent systemd
@@ -139,7 +144,7 @@ Docker request have finished before authorizing explicit recovery.
 An interrupted mutation, including SIGKILL or host reboot, leaves the pending
 barrier; a new deployment cannot bypass it. With separate recovery authorization,
 dispatch **Deploy gateway** on **env-prod**, operation **rollback**, supplying
-the exact failed/current release ID. The source approval still selects the
+the exact failed/current release ID. The branch/source checks still select the
 current env-prod helper; the recovery identity selects only retained host state.
 Rollback uploads only the reviewed helpers; it neither builds nor uploads a
 candidate source archive.
@@ -165,7 +170,7 @@ recovery baseline, which must remain unchanged through restoration.
 
 ## 🧾 Evidence and retention
 
-**gateway-approval** is GitHub's automatic approval/job history.
+**gateway-approval** is GitHub's automatic job/environment history and credential boundary.
 **gateway-production** contains explicit pending/in-progress/success/failure
 deployment records tied to the exact promoted SHA. A promotion that changes no
 gateway configuration becomes `inactive`, with the actually running SHA in its

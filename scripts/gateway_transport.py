@@ -32,9 +32,6 @@ def policy(environment, branches):
             "Production environment must use selected branches")
     require([(item["name"], item["type"]) for item in branches["branch_policies"]] == [("env-prod", "branch")],
             "Only env-prod may access production credentials")
-    require(any(rule["type"] == "required_reviewers" and rule.get("reviewers")
-                and rule.get("prevent_self_review") for rule in environment["protection_rules"]),
-            "Production environment needs required reviewers and prevention of self approval")
     require(environment.get("can_admins_bypass") is False, "Disable environment protection bypass")
 
 
@@ -44,14 +41,20 @@ def authorization():
     require(os.environ["GITHUB_EVENT_NAME"] in {"push", "workflow_dispatch"}, "Unsupported release event")
     source = os.environ["GITHUB_SHA"]
     require(SHA.fullmatch(source), "Invalid source identity")
-    require(os.environ.get("GATEWAY_DEPLOY_ENABLED") == "true"
-            and os.environ.get("GATEWAY_APPROVED_SHA") == source, "Exact production source approval required")
+    require(os.environ.get("GATEWAY_DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
     require(run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch")
     require(api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
             "Promotion advanced; approve a fresh run")
     main = api(f"repos/{REPOSITORY}/git/ref/heads/main")["object"]["sha"]
     compare = api(f"repos/{REPOSITORY}/compare/{source}...{main}")
-    require(compare["status"] in {"ahead", "identical"}, "Promotion must already belong to reviewed main history")
+    reviewed = compare["status"] in {"ahead", "identical"}
+    if not reviewed:
+        # A regular promotion merge has a new commit ID but must carry exactly
+        # the reviewed main tree, including workflow and helper bytes.
+        candidate = api(f"repos/{REPOSITORY}/git/commits/{source}")
+        accepted = api(f"repos/{REPOSITORY}/git/commits/{main}")
+        reviewed = candidate["tree"]["sha"] == accepted["tree"]["sha"]
+    require(reviewed, "Promotion must belong to reviewed main history or exactly match its current tree")
     policy(api(f"repos/{REPOSITORY}/environments/{APPROVAL_ENVIRONMENT}"),
            api(f"repos/{REPOSITORY}/environments/{APPROVAL_ENVIRONMENT}/deployment-branch-policies"))
     return source
