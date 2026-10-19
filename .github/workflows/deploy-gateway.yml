@@ -20,7 +20,7 @@ permissions:
   contents: read
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/env-prod' && vars.GATEWAY_DEPLOY_ENABLED == 'true'
+    if: github.ref == 'refs/heads/env-prod' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -38,15 +38,14 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
-          GATEWAY_DEPLOY_ENABLED: ${{ vars.GATEWAY_DEPLOY_ENABLED }}
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
           GATEWAY_OPERATION: ${{ inputs.operation || 'deploy' }}
           GATEWAY_RECOVERY: ${{ inputs.recovery }}
-          GATEWAY_SSH_HOST: ${{ secrets.GATEWAY_SSH_HOST }}
-          GATEWAY_SSH_USER: ${{ secrets.GATEWAY_SSH_USER }}
-          GATEWAY_SSH_PORT: ${{ secrets.GATEWAY_SSH_PORT }}
-          GATEWAY_SSH_KEY: ${{ secrets.GATEWAY_SSH_KEY }}
-          GATEWAY_SSH_KNOWN_HOST: ${{ secrets.GATEWAY_SSH_KNOWN_HOST }}
-          GATEWAY_SSH_FINGERPRINT: ${{ secrets.GATEWAY_SSH_FINGERPRINT }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_FINGERPRINT: ${{ vars.DEPLOY_HOST_FINGERPRINT }}
         run: python3 scripts/gateway_transport.py
       - name: Record a failed or cancelled runner without asserting the running source
         if: always() && steps.release.outcome != 'success' && steps.release.outputs.deployment != ''
