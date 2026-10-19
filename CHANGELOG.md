@@ -2,6 +2,12 @@
 
 ## 2026-10-18
 
+### Added
+- Exercise all shared release suites for the two existing app policies and an isolated FullStackTemplate onboarding fixture.
+
+### Fixed
+- Derive release preflight test networks and containers from app policy instead of assuming every non-Notoli consumer is MacroMapper; retain explicit existing-app trust and secret assertions.
+
 ### Changed
 
 - Updated Nora and Marty to v3: one open PR per agent, with repeat runs maintaining the existing PR and integrating current main.

@@ -1,0 +1,99 @@
+{
+  "contract_version": 1,
+  "database": {
+    "filename": "db.sqlite3",
+    "target": "/backend/db.sqlite3"
+  },
+  "backend_addresses": {},
+  "backend_required_env": [],
+  "frontend_port_bindings": [
+    []
+  ],
+  "readiness": {
+    "direct_url": "http://127.0.0.1:8000/api/notifications/",
+    "direct_status": 401,
+    "public": [
+      {
+        "path": "/",
+        "status": 200,
+        "body_contains": "<html",
+        "ignore_case": true
+      },
+      {
+        "path": "/api/notifications/",
+        "status": 401,
+        "content_type": "application/json",
+        "body_contains": "detail"
+      }
+    ]
+  },
+  "app": "fullstacktemplate",
+  "domain": "app.example.com",
+  "root_hint": "/opt/apps/fullstacktemplate",
+  "services": {
+    "backend": "backend",
+    "frontend": "frontend"
+  },
+  "containers": {
+    "backend": "fullstacktemplate-backend",
+    "frontend": "fullstacktemplate-frontend"
+  },
+  "egress": "fullstacktemplate_default",
+  "backend_networks": [
+    "fullstacktemplate-ingress",
+    "fullstacktemplate_default"
+  ],
+  "frontend_networks": [
+    "fullstacktemplate-ingress",
+    "fullstacktemplate_default"
+  ],
+  "gateway": {
+    "container": "host-ingress-proxy",
+    "project": "host-ingress",
+    "addresses": {},
+    "networks": {
+      "fullstacktemplate-ingress": {
+        "internal": false,
+        "subnet": "172.31.240.0/24",
+        "allowed": [
+          "host-ingress-proxy",
+          "fullstacktemplate-backend",
+          "fullstacktemplate-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy",
+          "fullstacktemplate-backend",
+          "fullstacktemplate-frontend"
+        ]
+      }
+    }
+  },
+  "environment": {
+    "required": [
+      "DJANGO_SECRET_KEY",
+      "DJANGO_EMAIL_BACKEND",
+      "DJANGO_EMAIL_HOST_KEY",
+      "DJANGO_DEFAULT_FROM_EMAIL"
+    ],
+    "defaults": {
+      "DJANGO_EMAIL_HOST": "smtp.resend.com",
+      "DJANGO_EMAIL_PORT": "587",
+      "DJANGO_EMAIL_USE_TLS": "1",
+      "DJANGO_EMAIL_HOST_USER": "resend",
+      "DJANGO_EMAIL_TIMEOUT": "10"
+    },
+    "fixed": {
+      "DJANGO_DEBUG": "0",
+      "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
+      "DJANGO_ALLOWED_HOSTS": "app.example.com",
+      "DJANGO_CORS_ALLOWED_ORIGINS": "https://app.example.com",
+      "DJANGO_CSRF_TRUSTED_ORIGINS": "https://app.example.com",
+      "DJANGO_FRONTEND_BASE_URL": "https://app.example.com",
+      "DJANGO_FORCE_SCRIPT_NAME": ""
+    }
+  },
+  "workflow": {
+    "frontend_build_arg": "VITE_API_BASE_URL",
+    "extra_env": {}
+  }
+}

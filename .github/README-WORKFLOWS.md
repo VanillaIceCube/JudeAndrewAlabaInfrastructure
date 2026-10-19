@@ -63,8 +63,12 @@ PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash scripts/lint_infrast
 
 Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
 actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
-while enforcing original exit status. Shared release files/manifest are unchanged.
+while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
 
 See [setup](GITHUB_SETUP.md). Default-branch Dependabot/schedules activate after
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
 activation. No merge, promotion or production operation is implied.
+
+The recovery gate also runs `tests/test_release_profiles.py`: all five shared
+release suites execute against Notoli, MacroMapper, and the template fixture on
+the disposable CI Docker daemon. No live host or application onboarding occurs.
