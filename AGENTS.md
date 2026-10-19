@@ -25,3 +25,9 @@ production operations. Use issue #4 for the designated operator and exact
 production authorization; do not infer either from source approval. Repository automation in issues #5–#9 is owner-prioritized; follow the
 [workflow guide](.github/README-WORKFLOWS.md). Implementation approval still
 does not authorize merging or production operations.
+
+## Jules recurring agents
+
+Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open
+PR per agent per repository. Repeat runs maintain the existing PR, integrate
+current main, and verify its latest head instead of opening another PR.
