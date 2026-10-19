@@ -10,6 +10,7 @@
 
 ### Fixed
 - Revalidate current app identities during interrupted gateway recovery after reboot, while preserving route-network IDs and exact proxy trust.
+- Preserve verified deployment success when retiring older records fails or a later runner finalizer executes.
 
 ## 2026-10-18
 

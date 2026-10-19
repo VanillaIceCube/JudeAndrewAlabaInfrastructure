@@ -113,6 +113,47 @@ class AuthorizationTests(unittest.TestCase):
             self.assertEqual(status.call_args_list[-1].args[1], "success")
             self.assertIn(SOURCE, status.call_args_list[-1].args[2])
 
+    def test_cleanup_api_failures_preserve_accepted_deployment_success(self):
+        for failure_stage in ("list", "inspect", "deactivate"):
+            with self.subTest(stage=failure_stage), tempfile.TemporaryDirectory() as temporary:
+                states = []
+                def api(endpoint, method="GET", data=None):
+                    if endpoint.endswith("/deployments"):
+                        return {"id": 11}
+                    if "?environment=" in endpoint:
+                        if failure_stage == "list":
+                            raise release.ReleaseError("private API detail")
+                        return [{"id": 10}]
+                    if endpoint.endswith("?per_page=1"):
+                        if failure_stage == "inspect":
+                            raise release.ReleaseError("private API detail")
+                        return [{"state": "success"}]
+                    if endpoint.endswith("/10/statuses"):
+                        raise release.ReleaseError("private API detail")
+                    if method == "POST":
+                        states.append(data["state"])
+                    return None
+                env = {"GITHUB_OUTPUT": str(Path(temporary) / "output"), "GITHUB_RUN_ID": "42",
+                       "GITHUB_RUN_ATTEMPT": "1", "GITHUB_SERVER_URL": "https://github.com",
+                       "GATEWAY_OPERATION": "deploy", "GATEWAY_RECOVERY": ""}
+                with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SOURCE), \
+                        patch.object(transport, "api", side_effect=api), patch("sys.stdout", new_callable=io.StringIO) as output, \
+                        patch.object(transport, "execute", return_value={"status": "success", "running_source": SOURCE}):
+                    transport.main()
+                self.assertEqual(states, ["pending", "in_progress", "success"])
+                self.assertIn("::warning::", output.getvalue())
+                self.assertNotIn("private API detail", output.getvalue())
+
+    def test_failure_finalizer_preserves_a_success_already_published(self):
+        for state in ("success", "in_progress"):
+            with self.subTest(state=state), patch.object(transport, "api", return_value=[{"state": state}]), \
+                    patch.object(transport, "status") as writer, patch("sys.stdout", new_callable=io.StringIO):
+                transport.record_failure(11, "runner interrupted")
+            if state == "success":
+                writer.assert_not_called()
+            else:
+                writer.assert_called_once_with(11, "failure", "runner interrupted")
+
     def test_health_checks_edge_and_origin_with_tls_assertions_and_honest_identity(self):
         connections = []
         class Connection:

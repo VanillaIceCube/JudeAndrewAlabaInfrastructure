@@ -172,6 +172,9 @@ A rollback attempt is `inactive` and names the restored SHA; a separate verified
 recovery deployment selects the restored SHA and marks it successful. These operation
 records never assert that a different attempted source is the running gateway.
 Only verified success deactivates previous successful deployment records.
+Retirement of older records is best-effort: an API failure emits a warning while
+preserving the newly accepted deployment's success. Failure finalizers also
+preserve an already published success; reconcile older metadata separately.
 
 The durable host `current.json` is authoritative for the accepted running source,
 image digest, configuration identity, Actions run and recovery reference.

@@ -84,26 +84,41 @@ def ssh_configuration(directory, env):
     return config
 
 
+def retire_previous(deployment):
+    # GitHub auto_inactive explicitly excludes production deployments.
+    page = 1
+    while True:
+        deployments = api(f"repos/{REPOSITORY}/deployments?environment={ENVIRONMENT}&per_page=100&page={page}")
+        for previous in deployments:
+            if previous["id"] == deployment:
+                continue
+            latest = api(f"repos/{REPOSITORY}/deployments/{previous['id']}/statuses?per_page=1")
+            if latest and latest[0]["state"] == "success":
+                status(previous["id"], "inactive", "Superseded by verified gateway deployment " + str(deployment))
+        if len(deployments) < 100:
+            break
+        page += 1
+
+
 def status(deployment, state, description):
     api(f"repos/{REPOSITORY}/deployments/{deployment}/statuses", "POST",
         {"state": state, "description": description,
          "log_url": os.environ["GITHUB_SERVER_URL"] + "/" + REPOSITORY + "/actions/runs/" + os.environ["GITHUB_RUN_ID"],
          "auto_inactive": False})
     if state == "success":
-        # GitHub auto_inactive explicitly excludes production deployments.
-        # Retire prior verified successes only after this observed success exists.
-        page = 1
-        while True:
-            deployments = api(f"repos/{REPOSITORY}/deployments?environment={ENVIRONMENT}&per_page=100&page={page}")
-            for previous in deployments:
-                if previous["id"] == deployment:
-                    continue
-                latest = api(f"repos/{REPOSITORY}/deployments/{previous['id']}/statuses?per_page=1")
-                if latest and latest[0]["state"] == "success":
-                    status(previous["id"], "inactive", "Superseded by verified gateway deployment " + str(deployment))
-            if len(deployments) < 100:
-                break
-            page += 1
+        try:
+            retire_previous(deployment)
+        except Exception:
+            # Optional metadata cleanup cannot reclassify verified host acceptance.
+            print("::warning::Gateway accepted; prior deployment retirement incomplete. Reconcile older metadata separately.")
+
+
+def record_failure(deployment, description):
+    latest = api(f"repos/{REPOSITORY}/deployments/{deployment}/statuses?per_page=1")
+    if latest and latest[0]["state"] == "success":
+        print("::warning::Preserving verified gateway success despite a later runner or metadata failure.")
+    else:
+        status(deployment, "failure", description)
 
 
 def execute(source, operation, recovery, directory):
@@ -170,7 +185,7 @@ def main():
                 status(restored, "success", "Verified restored gateway " + result["running_source"])
         print(json.dumps(result))
     except Exception:
-        status(deployment, "failure", "Operation failed/interrupted; inspect host journal before retry or recovery")
+        record_failure(deployment, "Operation failed/interrupted; inspect host journal before retry or recovery")
         raise
 
 
@@ -179,7 +194,7 @@ if __name__ == "__main__":
         if sys.argv[1:] == ["finalize-failure"]:
             deployment = os.environ["GATEWAY_DEPLOYMENT_ID"]
             require(deployment.isdecimal(), "Invalid deployment identity")
-            status(deployment, "failure", "Runner failed/cancelled; inspect durable host record before recovery")
+            record_failure(deployment, "Runner failed/cancelled; inspect durable host record before recovery")
         else:
             main()
     except (ReleaseError, OSError, ValueError, KeyError, subprocess.SubprocessError):
