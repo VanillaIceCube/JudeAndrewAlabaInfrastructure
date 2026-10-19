@@ -29,6 +29,31 @@ def archive(path, content="events {}\nhttp {}\n"):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_pending_preflight_allows_absent_gateway_without_weakening_app_trust(self):
+        objects = {}
+        for name, (internal, subnet, apps) in release.check_host.NETWORKS.items():
+            objects[("network", name)] = {"Internal": internal, "IPAM": {"Config": [{"Subnet": subnet}]},
+                "Containers": {app: {"Name": app, "IPv4Address": "172.30.88.3/29"} for app in apps}}
+        for name in ("notoli-backend", "macromapper-backend"):
+            objects[("container", name)] = {"Config": {"Env": ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"]},
+                                           "HostConfig": {"PortBindings": {}}}
+        with patch.object(release.check_host, "inspect", side_effect=lambda kind, name: copy.deepcopy(objects[(kind, name)])), \
+                patch("sys.stdout", new_callable=io.StringIO):
+            release.check_host.verify("host", allow_missing_proxy=True)
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host")
+            # An interrupted creation may have attached the proxy to only one network.
+            members = objects[("network", "notoli_backend_private")]["Containers"]
+            members["gateway"] = {"Name": "host-ingress-proxy", "IPv4Address": "172.30.88.2/29"}
+            release.check_host.verify("host", allow_missing_proxy=True)
+            members["gateway"]["IPv4Address"] = "172.30.88.4/29"
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host", allow_missing_proxy=True)
+            del members["gateway"]
+            objects[("container", "notoli-backend")]["Config"]["Env"] = []
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host", allow_missing_proxy=True)
+
     def test_cached_immutable_image_needs_no_registry_pull(self):
         image = "nginx@sha256:" + "c" * 64
         with patch.object(release, "inspect", return_value={"RepoDigests": [image]}), \
@@ -308,6 +333,36 @@ class TransactionTests(unittest.TestCase):
             self.deploy()
         self.assertTrue((self.root / "pending.json").exists())
         self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+
+    def test_pending_recovery_refreshes_rebooted_app_identities_before_restoration(self):
+        self.prepare_old()
+        def kill(directory, *args):
+            if args[0] == "up":
+                raise KeyboardInterrupt()
+        self.gateway.compose.side_effect = kill
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy()
+        self.mocks[5].return_value = {"apps": "restarted-after-reboot", "networks": "unchanged"}
+        self.gateway.compose.side_effect = self.compose
+        self.gateway.rollback(self.identity, None)
+        self.assertFalse((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+        self.assertIn(unittest.mock.call(allow_missing_proxy=True), self.mocks[5].call_args_list)
+
+    def test_pending_recovery_rejects_recreated_networks_before_gateway_mutation(self):
+        self.prepare_old()
+        def kill(directory, *args):
+            if args[0] == "up":
+                raise KeyboardInterrupt()
+        self.gateway.compose.side_effect = kill
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy()
+        self.mocks[5].return_value = {"apps": "restarted-after-reboot", "networks": "recreated"}
+        self.gateway.compose.side_effect = self.compose
+        with self.assertRaisesRegex(release.ReleaseError, "network IDs changed"):
+            self.gateway.rollback(self.identity, None)
+        self.assertFalse(any(args[0] == "up" for _, args in self.calls))
+        self.assertTrue((self.root / "pending.json").exists())
 
     def test_indeterminate_docker_timeout_keeps_barrier_instead_of_racing_rollback(self):
         def timeout(directory, *args):

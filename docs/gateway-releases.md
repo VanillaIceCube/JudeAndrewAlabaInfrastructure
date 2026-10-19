@@ -154,7 +154,12 @@ predecessor may be restored. Rollback takes the same exclusive lock and performs
 syntax, invariant and health checks. No app database rollback is involved.
 After accepted rollback, the host record identifies the restored source, not
 the attempted promotion. Later app releases are allowed before an explicit
-gateway rollback; their current identities are captured under the lock.
+gateway rollback; their current identities are captured under the lock. Pending
+recovery also refreshes app identities after reboot/restart, validates app trust
+and network policy even if the gateway is absent or partially attached, and
+rejects changed route-network IDs before recreating the gateway. The original
+attempt journal remains historical evidence; the pending record holds the new
+recovery baseline, which must remain unchanged through restoration.
 
 ## 🧾 Evidence and retention
 

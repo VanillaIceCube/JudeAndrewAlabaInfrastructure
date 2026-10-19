@@ -8,6 +8,9 @@
 - Add promoted/running-source tracking, no-restart handling for unchanged gateway configuration, and disposable release/recovery regression coverage.
 - Document operator adoption, production approval prerequisites, retry, rollback and recovery retention.
 
+### Fixed
+- Revalidate current app identities during interrupted gateway recovery after reboot, while preserving route-network IDs and exact proxy trust.
+
 ## 2026-10-18
 
 ### Added

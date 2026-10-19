@@ -101,8 +101,10 @@ class GatewayDockerTests(unittest.TestCase):
                 value["Mounts"] = sorted(value["Mounts"], key=lambda mount: mount["Destination"])
                 return {key: value[key] for key in ("Id", "Image", "Config", "HostConfig", "Mounts")}
 
-            def invariants():
-                return {"apps": {name: release.inspect("container", name)["Id"] for name in names if name != prefix + "-proxy"},
+            def invariants(allow_missing_proxy=False):
+                return {"apps": {name: [release.inspect("container", name)["Id"],
+                                       release.inspect("container", name)["State"]["StartedAt"]]
+                                 for name in names if name != prefix + "-proxy"},
                         "networks": {name: release.inspect("network", name)["Id"] for name in networks},
                         "data": hashlib.sha256((root / "db.sqlite3").read_bytes()).hexdigest()}
 
@@ -207,6 +209,27 @@ class GatewayDockerTests(unittest.TestCase):
                     healthy()
                     self.assertEqual(invariants(), before)
                     self.assertEqual(release.certificate_identity(str(certs)), cert_before)
+                    interrupted_directory = root / "releases" / ("8" * 40 + "-7-1")
+                    def interrupt_after_activation(directory, *args):
+                        result = original_compose(directory, *args)
+                        if directory == interrupted_directory and args[0] == "up":
+                            raise KeyboardInterrupt()
+                        return result
+                    with patch.object(gateway, "compose", side_effect=interrupt_after_activation), \
+                            self.assertRaises(KeyboardInterrupt):
+                        gateway.deploy(bundle("8"), interrupted_directory.name, "run/7", None)
+                    # Reproduce reboot/restart identities and a missing gateway.
+                    for name in names:
+                        if name != prefix + "-proxy":
+                            docker("restart", "--time", "1", name)
+                    docker("rm", "-f", prefix + "-proxy")
+                    rebooted = invariants(allow_missing_proxy=True)
+                    self.assertNotEqual(rebooted["apps"], before["apps"])
+                    gateway.rollback(interrupted_directory.name, None)
+                    self.assertEqual(invariants(), rebooted)
+                    self.assertFalse((root / "pending.json").exists())
+                    self.assertEqual(release.read(root / "current.json")["source"], "e" * 40)
+                    healthy()
             finally:
                 for name in reversed(names):
                     subprocess.run(["docker", "rm", "-f", name], capture_output=True)

@@ -26,7 +26,9 @@ def inspect(kind, name):
     return json.loads(result.stdout)[0]
 
 
-def verify(phase):
+def verify(phase, allow_missing_proxy=False):
+    if allow_missing_proxy and phase != "host":
+        raise ValueError("Optional gateway is only valid during host recovery")
     proxy = {"legacy": "notoli-proxy", "host": "host-ingress-proxy", "vacant": None}[
         phase
     ]
@@ -38,12 +40,12 @@ def verify(phase):
         if [p["Subnet"] for p in network["IPAM"]["Config"]] != [subnet]:
             raise ValueError("IPAM changed")
         members = {v["Name"]: v for v in network["Containers"].values()}
-        if set(members) != expected:
+        if set(members) != expected and not (allow_missing_proxy and set(members) == apps):
             raise ValueError("Unexpected/missing route-network member")
         if name == "notoli_backend_private":
             if members["notoli-backend"]["IPv4Address"].split("/")[0] != "172.30.88.3":
                 raise ValueError("Topology invariant failed")
-            if proxy:
+            if proxy and proxy in members:
                 if members[proxy]["IPv4Address"].split("/")[0] != "172.30.88.2":
                     raise ValueError("Topology invariant failed")
     backend = inspect("container", "notoli-backend")
@@ -53,7 +55,7 @@ def verify(phase):
         raise ValueError("Notoli backend exposed")
     if inspect("container", "macromapper-backend")["HostConfig"]["PortBindings"]:
         raise ValueError("MacroMapper backend exposed")
-    if proxy:
+    if proxy and not allow_missing_proxy:
         ingress = inspect("container", proxy)
         if not ingress["State"]["Running"]:
             raise ValueError("Ingress is not running")

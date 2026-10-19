@@ -227,10 +227,10 @@ def runtime():
     return {key: value[key] for key in ("Id", "Image", "Config", "HostConfig", "Mounts")}
 
 
-def invariants():
+def invariants(allow_missing_proxy=False):
     # Never let a disconnected Actions pipe interrupt host mutation/recovery.
     with redirect_stdout(io.StringIO()):
-        check_host.verify("host")
+        check_host.verify("host", allow_missing_proxy=allow_missing_proxy)
     apps = {}
     for name in APPS:
         value = inspect("container", name)
@@ -430,13 +430,20 @@ class Gateway:
         require(IDENTITY.fullmatch(identity), "Invalid recovery identity")
         journal = read(self.root / "attempts" / identity / "journal.json")
         pending = self.root / "pending.json"
-        if pending.exists():
+        interrupted = pending.exists()
+        if interrupted:
             require(read(pending)["id"] == identity, "Another interrupted release requires recovery")
         else:
             require(self.current()["recovery"] == identity, "Only the current release may be rolled back")
-            # Refresh app identities: independent app releases may have occurred since acceptance.
-            journal["invariants"] = invariants()
-            atomic(pending, journal)
+        # Reboot or an independent app release can change app identities while
+        # an interrupted gateway journal remains. Revalidate them under the lock;
+        # the gateway itself may be absent or only partially attached.
+        current = invariants(allow_missing_proxy=interrupted)
+        if interrupted:
+            require(current["networks"] == journal["invariants"]["networks"],
+                    "Route network IDs changed since interruption")
+        journal["invariants"] = current
+        atomic(pending, journal)
         return self.restore(journal, ca)
 
     def deploy(self, archive, identity, run_url, ca):
