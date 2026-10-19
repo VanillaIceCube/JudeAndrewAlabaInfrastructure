@@ -3,6 +3,7 @@
 ## 2026-10-19
 
 ### Changed
+- Standardize gateway SSH configuration on DEPLOY_* names, one private-key secret and four connection variables; derive known-host pinning only after exact fingerprint verification and retain the renamed dedicated key's identity.
 - Deploy reviewed gateway source automatically when the owner promotes it to env-prod, without a second reviewer or per-release approval variable; verify original/retrying owner identity, the environment branch restriction and exact current source.
 - Align repository reviewer policy with owner-authorized gateway promotion while preserving independent scans, required source reviews and explicit recovery authorization.
 
