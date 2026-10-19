@@ -13,7 +13,7 @@ Independent Notoli/MacroMapper workflows and shared release code are unchanged.
 
 ## 🔒 Approval and prerequisites
 
-Keep repository variable `GATEWAY_DEPLOY_ENABLED` unset until initial host setup
+Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
 and adoption are ready. Initial setup remains an explicit owner operation. Configure:
 
 - Protect `main` and `env-prod`, require reviewed green PRs for source changes,
@@ -30,17 +30,21 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
   Its token needs Actions read in addition to contents read/deployments write.
 - No `GATEWAY_APPROVED_SHA` variable is needed. The workflow verifies its exact
   checkout is still the current `env-prod` head and contains reviewed source.
-  Set repository `GATEWAY_DEPLOY_ENABLED=true` after prerequisites and initial
+  Set repository `DEPLOY_ENABLED=true` after prerequisites and initial
   baseline adoption below pass. Setting the flag does not replay a skipped run.
-- Environment-only secrets: `GATEWAY_SSH_HOST`, `GATEWAY_SSH_USER`,
-  `GATEWAY_SSH_PORT`, `GATEWAY_SSH_KEY`, `GATEWAY_SSH_KNOWN_HOST`,
-  `GATEWAY_SSH_FINGERPRINT`. Use a dedicated production credential, not review
-  credentials. The initial supported identity is root; a restricted alternative
-  requires a separately reviewed privilege arrangement.
-- Supply one independently verified OpenSSH known-host line, with host alias
-  `gateway-host`, algorithm and public key. Supply its `SHA256:...` fingerprint
-  separately. OpenSSH negotiates only that algorithm; `ssh-rsa` public keys use
-  `rsa-sha2-512` signatures. No TOFU, keyscan acceptance or disabled host checking.
+- Environment secret: `DEPLOY_SSH_KEY`. Environment variables: `DEPLOY_HOST`,
+  `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_HOST_FINGERPRINT`. These names and the
+  secret/variable split match Notoli/MacroMapper. Supply an independently verified
+  `SHA256:...` server fingerprint. No separate known-host entry is configured.
+- Use the dedicated `judeandrewalaba-infrastructure-actions` SSH key; retain its
+  `restrict` options and separate identity from the app and desktop keys. The
+  initial supported login is root. Upload private-key secrets as exact LF bytes;
+  Windows text-mode pipes can introduce CRLF. The helper normalizes CRLF too.
+- The transport discovers public host keys with bounded `ssh-keyscan`, verifies
+  each locally against the configured fingerprint, then pins only the matching
+  key and its negotiated algorithm before any SSH authentication or SCP upload.
+  Unmatched/empty results fail closed. RSA keys use `rsa-sha2-512` signatures.
+  Discovery never establishes trust by itself; strict host checking stays enabled.
 - The Linux host needs Python 3.12+, Docker Compose, systemd and cached accepted
   Nginx images. Verify the deployment identity can run persistent systemd units.
   Origin TLS is always verified using the hostname/SNI. If using a private

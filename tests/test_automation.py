@@ -26,10 +26,11 @@ class AutomationPolicyTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertNotIn("pull_request_target", text)
                 self.assertNotIn("ci-auto-merge.yml", text)
-                self.assertNotRegex(text, r"gh\s+pr\s+merge|enablePullRequestAutoMerge|mergePullRequest|DEPLOY_SSH_KEY")
+                self.assertNotRegex(text, r"gh\s+pr\s+merge|enablePullRequestAutoMerge|mergePullRequest")
                 self.assertNotRegex(text, r"contents:\s*write")
                 if path.name != "deploy-gateway.yml":
                     self.assertNotIn("GATEWAY_SSH_KEY", text)
+                    self.assertNotIn("DEPLOY_SSH_KEY", text)
                 for action in re.findall(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)", text, re.M):
                     if not action.startswith("./"):
                         self.assertRegex(action, r"^[\w./-]+@[a-f0-9]{40}$")
