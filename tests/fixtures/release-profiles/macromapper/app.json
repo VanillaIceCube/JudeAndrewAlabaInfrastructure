@@ -1,0 +1,130 @@
+{
+  "contract_version": 1,
+  "app": "macromapper",
+  "domain": "macromapper.judeandrewalaba.com",
+  "root_hint": "/opt/apps/macromapper",
+  "services": {
+    "backend": "macromapper-backend",
+    "frontend": "macromapper-frontend"
+  },
+  "containers": {
+    "backend": "macromapper-backend",
+    "frontend": "macromapper-frontend"
+  },
+  "database": {
+    "filename": "db.sqlite3",
+    "target": "/backend/db.sqlite3"
+  },
+  "egress": "macromapper_default",
+  "backend_networks": [
+    "macromapper-ingress",
+    "macromapper_default"
+  ],
+  "frontend_networks": [
+    "macromapper-ingress",
+    "macromapper_default"
+  ],
+  "backend_addresses": {},
+  "backend_required_env": [],
+  "frontend_port_bindings": [
+    []
+  ],
+  "gateway": {
+    "container": "host-ingress-proxy",
+    "project": "host-ingress",
+    "addresses": {
+      "notoli_backend_private": "172.30.88.2"
+    },
+    "networks": {
+      "notoli_backend_private": {
+        "internal": true,
+        "subnet": "172.30.88.0/29",
+        "allowed": [
+          "host-ingress-proxy",
+          "notoli-backend"
+        ],
+        "required": [
+          "host-ingress-proxy"
+        ]
+      },
+      "notoli_default": {
+        "internal": false,
+        "subnet": "172.18.0.0/16",
+        "allowed": [
+          "host-ingress-proxy",
+          "notoli-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy"
+        ]
+      },
+      "macromapper-ingress": {
+        "internal": false,
+        "subnet": "172.20.0.0/16",
+        "allowed": [
+          "host-ingress-proxy",
+          "macromapper-backend",
+          "macromapper-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy",
+          "macromapper-backend",
+          "macromapper-frontend"
+        ]
+      }
+    }
+  },
+  "environment": {
+    "required": [
+      "DJANGO_SECRET_KEY",
+      "DJANGO_EMAIL_BACKEND",
+      "DJANGO_EMAIL_HOST_KEY",
+      "DJANGO_DEFAULT_FROM_EMAIL",
+      "MACROMAPPER_OPENAI_API_KEY"
+    ],
+    "defaults": {
+      "DJANGO_EMAIL_HOST": "smtp.resend.com",
+      "DJANGO_EMAIL_PORT": "587",
+      "DJANGO_EMAIL_USE_TLS": "1",
+      "DJANGO_EMAIL_HOST_USER": "resend",
+      "DJANGO_EMAIL_TIMEOUT": "10",
+      "OPENAI_MEAL_ESTIMATION_MODEL": "gpt-5.6-luna",
+      "OPENAI_MEAL_ESTIMATION_TIMEOUT": "110"
+    },
+    "fixed": {
+      "DJANGO_DEBUG": "0",
+      "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
+      "DJANGO_ALLOWED_HOSTS": "macromapper.judeandrewalaba.com",
+      "DJANGO_CORS_ALLOWED_ORIGINS": "https://macromapper.judeandrewalaba.com",
+      "DJANGO_CSRF_TRUSTED_ORIGINS": "https://macromapper.judeandrewalaba.com",
+      "DJANGO_FRONTEND_BASE_URL": "https://macromapper.judeandrewalaba.com",
+      "DJANGO_FORCE_SCRIPT_NAME": ""
+    }
+  },
+  "readiness": {
+    "direct_url": "http://127.0.0.1:8000/api/notifications/",
+    "direct_status": 401,
+    "public": [
+      {
+        "path": "/",
+        "status": 200,
+        "body_contains": "<html",
+        "ignore_case": true
+      },
+      {
+        "path": "/api/notifications/",
+        "status": 401,
+        "content_type": "application/json",
+        "body_contains": "detail"
+      }
+    ]
+  },
+  "workflow": {
+    "frontend_build_arg": "VITE_API_BASE_URL",
+    "extra_env": {
+      "MACROMAPPER_OPENAI_API_KEY": "${{ secrets.MACROMAPPER_OPENAI_API_KEY }}",
+      "OPENAI_MEAL_ESTIMATION_MODEL": "${{ vars.OPENAI_MEAL_ESTIMATION_MODEL }}",
+      "OPENAI_MEAL_ESTIMATION_TIMEOUT": "${{ vars.OPENAI_MEAL_ESTIMATION_TIMEOUT }}"
+    }
+  }
+}

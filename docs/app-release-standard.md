@@ -92,3 +92,18 @@ lives in `deploy/README.md`. Architecture/merge/production approvals and rollout
 status stay in [coordination issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 The approved order remains gateway acceptance → Notoli → MacroMapper, each with
 separate authorization and repeat-release/recovery verification.
+
+## 🧩 Template adoption
+
+FullStackTemplate may vendor this standard using its own app policy, without
+inheriting Notoli's MCP/proxy trust or MacroMapper's OpenAI requirements. Common
+contract/preflight regressions derive fixtures from the selected policy; explicit
+checks still preserve the two existing applications' trust and secret boundaries.
+`tests/fixtures/release-profiles` runs the same five release suites for Notoli,
+MacroMapper, and the isolated template example in Linux/disposable-Docker CI.
+
+The template profile is an onboarding example, not a third application approved
+for the shared host. It does not add gateway routes, networks, certificates,
+capacity, or deployment authorization. An operator must review the actual full
+gateway topology, chosen subnet, bootstrap, locks, and capacity before activation.
+All consumers must pin the same reviewed source commit when adopting this change.
