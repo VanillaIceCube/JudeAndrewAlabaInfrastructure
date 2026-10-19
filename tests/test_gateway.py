@@ -144,6 +144,26 @@ class AuthorizationTests(unittest.TestCase):
                 self.assertIn("::warning::", output.getvalue())
                 self.assertNotIn("private API detail", output.getvalue())
 
+    def test_rollback_transport_uploads_helpers_without_building_a_source_archive(self):
+        calls = []
+        def run(args, timeout=120):
+            calls.append(list(map(str, args)))
+            if str(args[-1]).startswith("systemd-run "):
+                return json.dumps({"status": "rolled_back", "running_source": SOURCE})
+            return ""
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with patch.dict(os.environ, {"GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_SERVER_URL": "https://github.com"}), \
+                    patch.object(transport, "ssh_configuration", return_value=directory / "config"), \
+                    patch.object(transport, "run", side_effect=run):
+                result = transport.execute(SOURCE, "rollback", SECOND + "-9-1", directory)
+            self.assertEqual(result["status"], "rolled_back")
+            self.assertFalse(any(args[0] == "git" for args in calls))
+            self.assertEqual([Path(args[-2]).as_posix() for args in calls if args[0] == "scp"],
+                             ["scripts/gateway_release.py", "scripts/check_host.py"])
+            self.assertFalse((directory / "source.tar").exists())
+            self.assertIn("--id " + SECOND + "-9-1", calls[-1][-1])
+
     def test_failure_finalizer_preserves_a_success_already_published(self):
         for state in ("success", "in_progress"):
             with self.subTest(state=state), patch.object(transport, "api", return_value=[{"state": state}]), \

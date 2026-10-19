@@ -141,6 +141,8 @@ barrier; a new deployment cannot bypass it. With separate recovery authorization
 dispatch **Deploy gateway** on **env-prod**, operation **rollback**, supplying
 the exact failed/current release ID. The source approval still selects the
 current env-prod helper; the recovery identity selects only retained host state.
+Rollback uploads only the reviewed helpers; it neither builds nor uploads a
+candidate source archive.
 For SSH/Actions unavailability, the approved operator can invoke the same
 reviewed helper on the host:
 

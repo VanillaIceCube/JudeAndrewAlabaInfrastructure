@@ -134,9 +134,12 @@ def execute(source, operation, recovery, directory):
     remote = REMOTE + identity
     run([*ssh, "umask 077; mkdir " + remote])
     archive = directory / "source.tar"
-    run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
-         "compose.yml", "nginx", "scripts/gateway_release.py", "scripts/check_host.py"])
-    for path in (archive, Path("scripts/gateway_release.py"), Path("scripts/check_host.py")):
+    uploads = [Path("scripts/gateway_release.py"), Path("scripts/check_host.py")]
+    if operation == "deploy":
+        run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
+             "compose.yml", "nginx", "scripts/gateway_release.py", "scripts/check_host.py"])
+        uploads.insert(0, archive)
+    for path in uploads:
         run([*scp, path, "gateway:" + remote + "/" + path.name])
     run_url = os.environ["GITHUB_SERVER_URL"] + "/" + REPOSITORY + "/actions/runs/" + os.environ["GITHUB_RUN_ID"]
     require(re.fullmatch(r"https://github\.com/[A-Za-z0-9_/.-]+", run_url), "Invalid Actions URL")
