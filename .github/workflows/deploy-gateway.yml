@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Separately approved gateway operation (select env-prod above).
+        description: Gateway operation (select env-prod above; rollback requires explicit authorization).
         type: choice
         options: [deploy, rollback]
         default: deploy
@@ -34,12 +34,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Validate approval policy and execute gateway transaction
+      - name: Validate promotion policy and execute gateway transaction
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
           GATEWAY_DEPLOY_ENABLED: ${{ vars.GATEWAY_DEPLOY_ENABLED }}
-          GATEWAY_APPROVED_SHA: ${{ vars.GATEWAY_APPROVED_SHA }}
           GATEWAY_OPERATION: ${{ inputs.operation || 'deploy' }}
           GATEWAY_RECOVERY: ${{ inputs.recovery }}
           GATEWAY_SSH_HOST: ${{ secrets.GATEWAY_SSH_HOST }}

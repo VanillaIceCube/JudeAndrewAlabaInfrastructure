@@ -1,5 +1,14 @@
 # 📝 Changelog
 
+## 2026-10-19
+
+### Changed
+- Deploy reviewed gateway source automatically when the owner promotes it to env-prod, without a second reviewer or per-release approval variable; verify original/retrying owner identity, the environment branch restriction and exact current source.
+- Align repository reviewer policy with owner-authorized gateway promotion while preserving independent scans, required source reviews and explicit recovery authorization.
+
+### Fixed
+- Accept regular gateway promotion merge commits only when their complete Git tree matches reviewed main, while preserving exact-source and environment approval checks.
+
 ## 2026-10-18
 
 ### Added

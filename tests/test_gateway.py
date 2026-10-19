@@ -219,31 +219,27 @@ class AuthorizationTests(unittest.TestCase):
                 self.assertRaises(release.ReleaseError):
             release.health_once()
 
-    def test_production_policy_rejects_missing_reviewers_self_approval_and_broad_branches(self):
+    def test_production_policy_accepts_automatic_release_only_on_restricted_branch(self):
         environment = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True},
                        "can_admins_bypass": False,
-                       "protection_rules": [{"type": "required_reviewers", "prevent_self_review": True,
-                                             "reviewers": [{"id": 1}]}]}
+                       "protection_rules": []}
         branches = {"branch_policies": [{"name": "env-prod", "type": "branch"}]}
         transport.policy(environment, branches)
-        for key, value in (("can_admins_bypass", True), ("protection_rules", []),
-                           ("deployment_branch_policy", None)):
+        for key, value in (("can_admins_bypass", True), ("deployment_branch_policy", None)):
             with self.subTest(key=key), self.assertRaises(release.ReleaseError):
                 transport.policy({**environment, key: value}, branches)
-        for field in ("reviewers", "prevent_self_review"):
-            altered = copy.deepcopy(environment)
-            altered["protection_rules"][0][field] = False
-            with self.assertRaises(release.ReleaseError):
-                transport.policy(altered, branches)
         with self.assertRaises(release.ReleaseError):
             transport.policy(environment, {"branch_policies": [{"name": "*", "type": "branch"}]})
+        with self.assertRaises(release.ReleaseError):
+            transport.policy(environment, {"branch_policies": [{"name": "env-prod", "type": "tag"}]})
 
-    def test_authorization_rejects_main_pr_stale_source_and_missing_exact_approval(self):
+    def test_authorization_rejects_main_pr_stale_source_and_disabled_deployment(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
                "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
-               "GATEWAY_APPROVED_SHA": SOURCE}
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
         for key, value in (("GITHUB_REF", "refs/heads/main"), ("GITHUB_EVENT_NAME", "pull_request"),
-                           ("GATEWAY_APPROVED_SHA", SECOND), ("GATEWAY_DEPLOY_ENABLED", "false")):
+                           ("GATEWAY_DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
+                           ("GITHUB_TRIGGERING_ACTOR", "other-user")):
             with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
                     self.assertRaises(release.ReleaseError):
                 transport.authorization()
@@ -251,6 +247,36 @@ class AuthorizationTests(unittest.TestCase):
                 patch.object(transport, "api", return_value={"object": {"sha": SECOND}}), \
                 self.assertRaises(release.ReleaseError):
             transport.authorization()
+
+    def test_promotion_merge_requires_exact_reviewed_tree_when_not_in_main_history(self):
+        env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
+        for relationship, matching, allowed in (("behind", True, True), ("diverged", True, True),
+                                                ("behind", False, False), ("diverged", False, False),
+                                                ("ahead", False, True), ("identical", False, True)):
+            with self.subTest(relationship=relationship, matching=matching):
+                def api(endpoint):
+                    if endpoint.endswith("/heads/env-prod"):
+                        return {"object": {"sha": SOURCE}}
+                    if endpoint.endswith("/heads/main"):
+                        return {"object": {"sha": SECOND}}
+                    if "/compare/" in endpoint:
+                        return {"status": relationship}
+                    if endpoint.endswith("/git/commits/" + SOURCE):
+                        return {"tree": {"sha": "c" * 40}}
+                    if endpoint.endswith("/git/commits/" + SECOND):
+                        return {"tree": {"sha": ("c" if matching else "d") * 40}}
+                    return {}
+                with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
+                        patch.object(transport, "api", side_effect=api), patch.object(transport, "policy") as policy:
+                    if allowed:
+                        self.assertEqual(transport.authorization(), SOURCE)
+                        policy.assert_called_once()
+                    else:
+                        with self.assertRaises(release.ReleaseError):
+                            transport.authorization()
+                        policy.assert_not_called()
 
     def test_ssh_pins_the_negotiated_host_key_including_rsa_sha2(self):
         for encoding, algorithm in (("ssh-ed25519", "ssh-ed25519"), ("ssh-rsa", "rsa-sha2-512")):
