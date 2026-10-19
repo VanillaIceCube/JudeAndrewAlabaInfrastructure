@@ -170,6 +170,8 @@ Only verified success deactivates previous successful deployment records.
 
 The durable host `current.json` is authoritative for the accepted running source,
 image digest, configuration identity, Actions run and recovery reference.
+While `pending.json` exists, `current.json` describes the last accepted state;
+inspect the pending attempt and actual runtime before asserting what is running.
 Private attempt journals/results preserve promoted versus running identities.
 Failed command context and bounded output are retained as mode 0600 files in
 the private host `diagnostics` directory; Actions receives only the tool/phase

@@ -154,6 +154,9 @@ def unpack(archive, destination):
             path = Path(name)
             require(not path.is_absolute() and ".." not in path.parts, "Unsafe archive path")
             if item.isdir():
+                require(name.rstrip("/") in {"nginx", "nginx/vhosts", "nginx/snippets", "scripts"},
+                        "Unexpected payload directory")
+                (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
                 continue
             require(item.isfile() and name not in seen and
                     (name == "compose.yml" or name in {"scripts/check_host.py", "scripts/gateway_release.py"}
@@ -205,6 +208,7 @@ def config_identity(model):
         if volume["target"] not in TARGETS:
             continue
         path = Path(volume["source"])
+        require(path.is_file() or path.is_dir(), "Missing configuration mount source")
         entries = [path] if path.is_file() else sorted(path.rglob("*"))
         require(not path.is_symlink(), "Symlinked configuration")
         for entry in entries:

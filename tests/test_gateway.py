@@ -60,6 +60,7 @@ class AuthorizationTests(unittest.TestCase):
                 return [{"id": 10, "production_environment": True}, {"id": 11}]
             if endpoint.endswith("?per_page=1"):
                 return [{"state": "success"}]
+            return None
         with patch.dict(os.environ, {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "42"}), \
                 patch.object(transport, "api", side_effect=api):
             transport.status(11, "success", "Verified running gateway")
@@ -196,6 +197,18 @@ class AuthorizationTests(unittest.TestCase):
                 with self.assertRaises(release.ReleaseError):
                     release.unpack(root / "source.tar", root / "out")
                 self.assertFalse((root.parent / "escape").exists())
+
+    def test_bundle_preserves_allowed_empty_configuration_directories(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive(root / "source.tar")
+            with tarfile.open(root / "source.tar", "a") as target:
+                item = tarfile.TarInfo("nginx/snippets")
+                item.type = tarfile.DIRTYPE
+                target.addfile(item)
+            (root / "out").mkdir()
+            release.unpack(root / "source.tar", root / "out")
+            self.assertTrue((root / "out/nginx/snippets").is_dir())
 
 
 @unittest.skipIf(os.name == "nt", "Linux ownership, locking and fsync contract")
