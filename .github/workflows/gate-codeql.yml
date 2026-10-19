@@ -1,0 +1,71 @@
+name: CodeQL Gate
+on:
+  workflow_call:
+    outputs:
+      scope_status:
+        description: All three present languages are always analyzed.
+        value: ${{ jobs.scope.outputs.status }}
+      scope_python:
+        description: Python scope.
+        value: ${{ jobs.scope.outputs.python }}
+      scope_javascript:
+        description: Automation JavaScript scope.
+        value: ${{ jobs.scope.outputs.javascript }}
+      scope_actions:
+        description: Workflow and composite Actions scope.
+        value: ${{ jobs.scope.outputs.actions }}
+  push:
+    branches: [main]
+  schedule:
+    - cron: '24 10 * * 1'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+jobs:
+  scope:
+    name: Detect CodeQL Scope
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.scope.outputs.status }}
+      python: ${{ steps.scope.outputs.python }}
+      javascript: ${{ steps.scope.outputs.javascript }}
+      actions: ${{ steps.scope.outputs.actions }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - id: scope
+        name: Require actual source for every configured language
+        run: |
+          test -n "$(git ls-files '*.py')"
+          test -n "$(git ls-files '*.js')"
+          test -n "$(git ls-files '.github/workflows/*.yml')"
+          printf 'status=success\npython=true\njavascript=true\nactions=true\n' >> "$GITHUB_OUTPUT"
+  analyze:
+    name: ${{ matrix.name }}
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            name: Analyze Python
+          - language: javascript-typescript
+            name: Analyze JavaScript/TypeScript
+          - language: actions
+            name: Analyze GitHub Actions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          category: /language:${{ matrix.language }}

@@ -1,6 +1,25 @@
 name: Validate infrastructure
 on:
-  pull_request:
+  workflow_call:
+    outputs:
+      ingress_status:
+        description: Disposable Nginx routing and reversal status.
+        value: ${{ jobs.validate.outputs.ingress_status }}
+      ingress_log:
+        description: Ingress diagnostics.
+        value: ${{ jobs.validate.outputs.ingress_log }}
+      recovery_status:
+        description: SQLite snapshot and recovery status.
+        value: ${{ jobs.validate.outputs.recovery_status }}
+      recovery_log:
+        description: Recovery diagnostics.
+        value: ${{ jobs.validate.outputs.recovery_log }}
+      automation_status:
+        description: Automation regression status.
+        value: ${{ jobs.validate.outputs.automation_status }}
+      automation_log:
+        description: Automation diagnostics.
+        value: ${{ jobs.validate.outputs.automation_log }}
   push:
     branches: [main]
 permissions:
@@ -9,11 +28,65 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      ingress_status: ${{ steps.ingress-report.outputs.ingress_status }}
+      ingress_log: ${{ steps.ingress-report.outputs.ingress }}
+      recovery_status: ${{ steps.recovery-report.outputs.recovery_status }}
+      recovery_log: ${{ steps.recovery-report.outputs.recovery }}
+      automation_status: ${{ steps.automation-report.outputs.automation_status }}
+      automation_log: ${{ steps.automation-report.outputs.automation }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
       - name: Verify shared release source manifest
         run: python3 scripts/update_release_manifest.py --check
       - name: Validate Compose and disposable ingress/reversal
+        id: ingress
+        continue-on-error: true
         run: |
+          set -o pipefail
           docker compose -f compose.yml config --quiet
-          python3 -m unittest discover -s tests -v
+          python3 -m unittest discover -s tests -p test_ingress.py -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+      - name: Validate SQLite recovery
+        id: recovery
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            status=0
+            python3 -m unittest discover -s tests -p test_snapshot.py -v || status=1
+            python3 -m unittest discover -s tests -p test_release_profiles.py -v || status=1
+            exit "$status"
+          } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
+      - name: Validate automation policy and review regressions
+        id: automation
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
+            mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
+            node --test "${automation_tests[@]}"
+          } 2>&1 | tee "$RUNNER_TEMP/automation.log"
+      - id: ingress-report
+        if: always()
+        env:
+          OUTCOME: ${{ steps.ingress.outcome }}
+        run: python3 scripts/ci_report.py ingress "$RUNNER_TEMP/ingress.log" "$OUTCOME"
+      - id: recovery-report
+        if: always()
+        env:
+          OUTCOME: ${{ steps.recovery.outcome }}
+        run: python3 scripts/ci_report.py recovery "$RUNNER_TEMP/recovery.log" "$OUTCOME"
+      - id: automation-report
+        if: always()
+        env:
+          OUTCOME: ${{ steps.automation.outcome }}
+        run: python3 scripts/ci_report.py automation "$RUNNER_TEMP/automation.log" "$OUTCOME"
+      - name: Require every validation suite
+        if: always() && (steps.ingress.outcome != 'success' || steps.recovery.outcome != 'success' || steps.automation.outcome != 'success')
+        run: exit 1

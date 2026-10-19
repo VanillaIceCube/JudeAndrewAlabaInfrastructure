@@ -1,5 +1,30 @@
 # 📝 Changelog
 
+## 2026-10-18
+
+### Added
+- Exercise all shared release suites for the two existing app policies and an isolated FullStackTemplate onboarding fixture.
+
+### Fixed
+- Derive release preflight test networks and containers from app policy instead of assuming every non-Notoli consumer is MacroMapper; retain explicit existing-app trust and secret assertions.
+
+### Changed
+
+- Updated Nora and Marty to v3: one open PR per agent, with repeat runs maintaining the existing PR and integrating current main.
+
+## 2026-10-11
+
+### Added
+- Add infrastructure Obi-Wan, Lint Eastwood and RoboCop reviews with tested inline publishing, prior-review history and visible failure gates.
+- Add Python, JavaScript and Actions CodeQL analysis, Dependency Review, Gitleaks, actionlint/ShellCheck and explicit package scanner applicability checks.
+- Add weekly Actions/Compose Dependabot updates and daily/manual security-alert issue reconciliation for Infrastructure Project #13.
+- Document credentials, least-privilege tokens, scanner scope and activation acceptance.
+
+### Changed
+- Require independent checks and applicable reviewers without auto-merge, source mutation or production workflows.
+- Include all alert severities and adapt security metadata to Project #13's Work type field.
+
+
 ## 2026-10-11
 
 ### Fixed
