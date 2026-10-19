@@ -1,0 +1,469 @@
+"""Gateway transaction, authorization, host-key and crash-barrier regressions."""
+
+import copy
+import io
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tarfile
+import tempfile
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import gateway_release as release
+import gateway_transport as transport
+
+SOURCE = "a" * 40
+SECOND = "b" * 40
+
+
+def archive(path, content="events {}\nhttp {}\n"):
+    with tarfile.open(path, "w") as target:
+        for name, data in {"compose.yml": "{}", "nginx/nginx.conf": content}.items():
+            item = tarfile.TarInfo(name)
+            item.size = len(data.encode())
+            target.addfile(item, io.BytesIO(data.encode()))
+
+
+class AuthorizationTests(unittest.TestCase):
+    def test_pending_preflight_allows_absent_gateway_without_weakening_app_trust(self):
+        objects = {}
+        for name, (internal, subnet, apps) in release.check_host.NETWORKS.items():
+            objects[("network", name)] = {"Internal": internal, "IPAM": {"Config": [{"Subnet": subnet}]},
+                "Containers": {app: {"Name": app, "IPv4Address": "172.30.88.3/29"} for app in apps}}
+        for name in ("notoli-backend", "macromapper-backend"):
+            objects[("container", name)] = {"Config": {"Env": ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"]},
+                                           "HostConfig": {"PortBindings": {}}}
+        with patch.object(release.check_host, "inspect", side_effect=lambda kind, name: copy.deepcopy(objects[(kind, name)])), \
+                patch("sys.stdout", new_callable=io.StringIO):
+            release.check_host.verify("host", allow_missing_proxy=True)
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host")
+            # An interrupted creation may have attached the proxy to only one network.
+            members = objects[("network", "notoli_backend_private")]["Containers"]
+            members["gateway"] = {"Name": "host-ingress-proxy", "IPv4Address": "172.30.88.2/29"}
+            release.check_host.verify("host", allow_missing_proxy=True)
+            members["gateway"]["IPv4Address"] = "172.30.88.4/29"
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host", allow_missing_proxy=True)
+            del members["gateway"]
+            objects[("container", "notoli-backend")]["Config"]["Env"] = []
+            with self.assertRaises(ValueError):
+                release.check_host.verify("host", allow_missing_proxy=True)
+
+    def test_cached_immutable_image_needs_no_registry_pull(self):
+        image = "nginx@sha256:" + "c" * 64
+        with patch.object(release, "inspect", return_value={"RepoDigests": [image]}), \
+                patch.object(release, "docker") as docker:
+            release.ensure_image(image)
+        docker.assert_not_called()
+        with patch.object(release, "inspect", return_value={"RepoDigests": []}), \
+                self.assertRaises(release.ReleaseError):
+            release.ensure_image(image)
+
+    @unittest.skipIf(os.name == "nt", "Linux evidence ownership contract")
+    def test_failed_command_retains_bounded_private_diagnostics_without_public_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with patch.object(release, "DIAGNOSTICS", directory):
+                with self.assertRaises(release.ReleaseError) as error:
+                    release.run([sys.executable, "-c", "import sys; sys.stderr.write('fixture-only-' * 2000); sys.exit(7)"])
+            self.assertNotIn("fixture-only", str(error.exception))
+            files = list(directory.glob("*.json"))
+            self.assertEqual(len(files), 1)
+            self.assertEqual(len(release.read(files[0])["stderr"]), 8192)
+            self.assertEqual(files[0].stat().st_mode & 0o777, 0o600)
+
+    def test_exact_status_payload_and_explicit_retirement_of_production_successes(self):
+        calls = []
+        def api(endpoint, method="GET", data=None):
+            calls.append((endpoint, method, data))
+            if "?environment=" in endpoint:
+                return [{"id": 10, "production_environment": True}, {"id": 11}]
+            if endpoint.endswith("?per_page=1"):
+                return [{"state": "success"}]
+            return None
+        with patch.dict(os.environ, {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "42"}), \
+                patch.object(transport, "api", side_effect=api):
+            transport.status(11, "success", "Verified running gateway")
+        payloads = [data for endpoint, method, data in calls if method == "POST"]
+        self.assertEqual(payloads[0], {"state": "success", "description": "Verified running gateway",
+                         "log_url": "https://github.com/" + transport.REPOSITORY + "/actions/runs/42", "auto_inactive": False})
+        self.assertEqual(payloads[1]["state"], "inactive")
+        self.assertIn("/deployments/10/statuses", calls[-1][0])
+
+    def test_deployment_tracking_uses_restored_source_and_never_labels_failed_promotion_successful(self):
+        env = {"GITHUB_OUTPUT": "", "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+               "GATEWAY_OPERATION": "rollback", "GATEWAY_RECOVERY": SECOND + "-1-1"}
+        calls = []
+        def api(endpoint, method="GET", data=None):
+            calls.append((endpoint, data))
+            return {"id": 11 if len(calls) == 1 else 12}
+        with tempfile.TemporaryDirectory() as temporary:
+            env["GITHUB_OUTPUT"] = str(Path(temporary) / "output")
+            with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SECOND), \
+                    patch.object(transport, "api", side_effect=api), patch.object(transport, "status") as status, \
+                    patch.object(transport, "execute", return_value={"status": "rolled_back", "running_source": SOURCE}):
+                transport.main()
+            self.assertEqual([data["ref"] for endpoint, data in calls if endpoint.endswith("/deployments")], [SECOND, SOURCE])
+            self.assertFalse(any(args.args[:2] == (11, "success") for args in status.call_args_list))
+            self.assertEqual(status.call_args_list[-1].args[1], "success")
+            self.assertIn(SOURCE, status.call_args_list[-1].args[2])
+
+    def test_cleanup_api_failures_preserve_accepted_deployment_success(self):
+        for failure_stage in ("list", "inspect", "deactivate"):
+            with self.subTest(stage=failure_stage), tempfile.TemporaryDirectory() as temporary:
+                states = []
+                def api(endpoint, method="GET", data=None):
+                    if endpoint.endswith("/deployments"):
+                        return {"id": 11}
+                    if "?environment=" in endpoint:
+                        if failure_stage == "list":
+                            raise release.ReleaseError("private API detail")
+                        return [{"id": 10}]
+                    if endpoint.endswith("?per_page=1"):
+                        if failure_stage == "inspect":
+                            raise release.ReleaseError("private API detail")
+                        return [{"state": "success"}]
+                    if endpoint.endswith("/10/statuses"):
+                        raise release.ReleaseError("private API detail")
+                    if method == "POST":
+                        states.append(data["state"])
+                    return None
+                env = {"GITHUB_OUTPUT": str(Path(temporary) / "output"), "GITHUB_RUN_ID": "42",
+                       "GITHUB_RUN_ATTEMPT": "1", "GITHUB_SERVER_URL": "https://github.com",
+                       "GATEWAY_OPERATION": "deploy", "GATEWAY_RECOVERY": ""}
+                with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SOURCE), \
+                        patch.object(transport, "api", side_effect=api), patch("sys.stdout", new_callable=io.StringIO) as output, \
+                        patch.object(transport, "execute", return_value={"status": "success", "running_source": SOURCE}):
+                    transport.main()
+                self.assertEqual(states, ["pending", "in_progress", "success"])
+                self.assertIn("::warning::", output.getvalue())
+                self.assertNotIn("private API detail", output.getvalue())
+
+    def test_rollback_transport_uploads_helpers_without_building_a_source_archive(self):
+        calls = []
+        def run(args, timeout=120):
+            calls.append(list(map(str, args)))
+            if str(args[-1]).startswith("systemd-run "):
+                return json.dumps({"status": "rolled_back", "running_source": SOURCE})
+            return ""
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with patch.dict(os.environ, {"GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_SERVER_URL": "https://github.com"}), \
+                    patch.object(transport, "ssh_configuration", return_value=directory / "config"), \
+                    patch.object(transport, "run", side_effect=run):
+                result = transport.execute(SOURCE, "rollback", SECOND + "-9-1", directory)
+            self.assertEqual(result["status"], "rolled_back")
+            self.assertFalse(any(args[0] == "git" for args in calls))
+            self.assertEqual([Path(args[-2]).as_posix() for args in calls if args[0] == "scp"],
+                             ["scripts/gateway_release.py", "scripts/check_host.py"])
+            self.assertFalse((directory / "source.tar").exists())
+            self.assertIn("--id " + SECOND + "-9-1", calls[-1][-1])
+
+    def test_failure_finalizer_preserves_a_success_already_published(self):
+        for state in ("success", "in_progress"):
+            with self.subTest(state=state), patch.object(transport, "api", return_value=[{"state": state}]), \
+                    patch.object(transport, "status") as writer, patch("sys.stdout", new_callable=io.StringIO):
+                transport.record_failure(11, "runner interrupted")
+            if state == "success":
+                writer.assert_not_called()
+            else:
+                writer.assert_called_once_with(11, "failure", "runner interrupted")
+
+    def test_health_checks_edge_and_origin_with_tls_assertions_and_honest_identity(self):
+        connections = []
+        class Connection:
+            def __init__(self, domain, **kwargs):
+                self.domain = domain
+                self.kwargs = kwargs
+                connections.append(self)
+            def request(self, method, path, headers):
+                self.path, self.headers = path, headers
+            def getresponse(self):
+                domain = "https://" + self.domain
+                if self.path == "/":
+                    status, body, headers = 200, b"<html>ready</html>", {}
+                elif self.path == "/api/notifications/":
+                    status, body, headers = 401, b'{"detail":"unauthenticated"}', {"Content-Type": "application/json"}
+                elif self.path.endswith("oauth-authorization-server"):
+                    status, body, headers = 200, json.dumps({"issuer": domain}).encode(), {}
+                elif self.path.endswith("/mcp") and self.path != "/mcp":
+                    status, body, headers = 200, json.dumps({"resource": domain + "/mcp"}).encode(), {}
+                else:
+                    status, body, headers = 401, b"", {"WWW-Authenticate": "Bearer resource_metadata=..."}
+                result = type("Response", (), {"status": status, "read": lambda self, limit: body,
+                                                "getheader": lambda self, key, default: headers.get(key, default)})()
+                return result
+            def close(self):
+                pass
+        with patch.object(release.http.client, "HTTPSConnection", Connection), \
+                patch.object(release.ssl, "create_default_context", return_value="verified-context") as contexts:
+            release.health_once("origin-ca.pem")
+        self.assertEqual(contexts.call_args_list[0].kwargs, {"cafile": None})
+        self.assertEqual(contexts.call_args_list[1].kwargs, {"cafile": "origin-ca.pem"})
+        self.assertEqual(len(connections), 14)
+        self.assertTrue(all(item.headers["User-Agent"] == "JudeGatewayRelease/1.0" for item in connections))
+        self.assertFalse(hasattr(connections[0], "_create_connection"))
+        self.assertTrue(hasattr(connections[-1], "_create_connection"))
+        self.assertTrue(all(item.kwargs["context"] == "verified-context" for item in connections))
+
+    def test_public_challenge_or_redirect_cannot_be_accepted_as_healthy(self):
+        response = type("Response", (), {"status": 302, "read": lambda self, limit: b"<html>challenge</html>"})()
+        connection = unittest.mock.Mock()
+        connection.getresponse.return_value = response
+        with patch.object(release.http.client, "HTTPSConnection", return_value=connection), \
+                self.assertRaises(release.ReleaseError):
+            release.health_once()
+
+    def test_production_policy_rejects_missing_reviewers_self_approval_and_broad_branches(self):
+        environment = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True},
+                       "can_admins_bypass": False,
+                       "protection_rules": [{"type": "required_reviewers", "prevent_self_review": True,
+                                             "reviewers": [{"id": 1}]}]}
+        branches = {"branch_policies": [{"name": "env-prod", "type": "branch"}]}
+        transport.policy(environment, branches)
+        for key, value in (("can_admins_bypass", True), ("protection_rules", []),
+                           ("deployment_branch_policy", None)):
+            with self.subTest(key=key), self.assertRaises(release.ReleaseError):
+                transport.policy({**environment, key: value}, branches)
+        for field in ("reviewers", "prevent_self_review"):
+            altered = copy.deepcopy(environment)
+            altered["protection_rules"][0][field] = False
+            with self.assertRaises(release.ReleaseError):
+                transport.policy(altered, branches)
+        with self.assertRaises(release.ReleaseError):
+            transport.policy(environment, {"branch_policies": [{"name": "*", "type": "branch"}]})
+
+    def test_authorization_rejects_main_pr_stale_source_and_missing_exact_approval(self):
+        env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "GATEWAY_DEPLOY_ENABLED": "true",
+               "GATEWAY_APPROVED_SHA": SOURCE}
+        for key, value in (("GITHUB_REF", "refs/heads/main"), ("GITHUB_EVENT_NAME", "pull_request"),
+                           ("GATEWAY_APPROVED_SHA", SECOND), ("GATEWAY_DEPLOY_ENABLED", "false")):
+            with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
+                    self.assertRaises(release.ReleaseError):
+                transport.authorization()
+        with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
+                patch.object(transport, "api", return_value={"object": {"sha": SECOND}}), \
+                self.assertRaises(release.ReleaseError):
+            transport.authorization()
+
+    def test_ssh_pins_the_negotiated_host_key_including_rsa_sha2(self):
+        for encoding, algorithm in (("ssh-ed25519", "ssh-ed25519"), ("ssh-rsa", "rsa-sha2-512")):
+            with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as temporary:
+                env = {"GATEWAY_SSH_HOST": "host.example", "GATEWAY_SSH_USER": "root", "GATEWAY_SSH_PORT": "22",
+                       "GATEWAY_SSH_KEY": "fixture", "GATEWAY_SSH_KNOWN_HOST": "gateway-host " + encoding + " AAAA",
+                       "GATEWAY_SSH_FINGERPRINT": "SHA256:fixture"}
+                with patch.object(transport, "run", return_value="256 SHA256:fixture comment"):
+                    path = transport.ssh_configuration(Path(temporary), env)
+                self.assertIn("HostKeyAlgorithms " + algorithm, path.read_text())
+                self.assertIn("StrictHostKeyChecking yes", path.read_text())
+                env["GATEWAY_SSH_FINGERPRINT"] = "SHA256:wrong"
+                with patch.object(transport, "run", return_value="256 SHA256:fixture comment"), \
+                        self.assertRaises(release.ReleaseError):
+                    transport.ssh_configuration(Path(temporary), env)
+
+    def test_bundle_rejects_traversal_symlink_and_duplicate(self):
+        for kind in ("traversal", "symlink", "duplicate"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                with tarfile.open(root / "source.tar", "w") as target:
+                    item = tarfile.TarInfo("../escape" if kind == "traversal" else "compose.yml")
+                    if kind == "symlink":
+                        item.type = tarfile.SYMTYPE
+                        item.linkname = "/etc/passwd"
+                    target.addfile(item, io.BytesIO())
+                    if kind == "duplicate":
+                        target.addfile(item, io.BytesIO())
+                (root / "out").mkdir()
+                with self.assertRaises(release.ReleaseError):
+                    release.unpack(root / "source.tar", root / "out")
+                self.assertFalse((root.parent / "escape").exists())
+
+    def test_bundle_preserves_allowed_empty_configuration_directories(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive(root / "source.tar")
+            with tarfile.open(root / "source.tar", "a") as target:
+                item = tarfile.TarInfo("nginx/snippets")
+                item.type = tarfile.DIRTYPE
+                target.addfile(item)
+            (root / "out").mkdir()
+            release.unpack(root / "source.tar", root / "out")
+            self.assertTrue((root / "out/nginx/snippets").is_dir())
+
+
+@unittest.skipIf(os.name == "nt", "Linux ownership, locking and fsync contract")
+class TransactionTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.root.chmod(0o700)
+        for name in ("releases", "attempts", "incoming"):
+            (self.root / name).mkdir(mode=0o700)
+        self.gateway = release.Gateway(self.root)
+        self.live = {"Id": "old", "Image": "old-image", "Mounts": [{"Source": "/certs", "Destination": "/etc/nginx/certs"}]}
+        self.model = {"services": {"proxy": {"image": "nginx@sha256:" + "c" * 64, "volumes": []}}}
+        self.previous_directory = self.root / "releases" / (SOURCE + "-0-0")
+        self.previous_directory.mkdir(mode=0o700)
+        release.atomic(self.previous_directory / "model.json", self.model)
+        self.previous = {"source": SOURCE, "directory": str(self.previous_directory), "image": self.model["services"]["proxy"]["image"],
+                         "configuration": "old-config", "runtime": self.live, "actions_run": "old-run", "recovery": None}
+        release.atomic(self.root / "current.json", self.previous)
+        self.identity = SECOND + "-1-1"
+        self.bundle = self.root / "bundle.tar"
+        archive(self.bundle)
+        self.calls = []
+        patches = [patch.object(self.gateway, "current", side_effect=lambda: release.read(self.root / "current.json")),
+                   patch.object(self.gateway, "capacity"), patch.object(self.gateway, "syntax"),
+                   patch.object(self.gateway, "compose", side_effect=self.compose),
+                   patch.object(release, "runtime", side_effect=lambda: self.live.copy()),
+                   patch.object(release, "invariants", return_value={"apps": "unchanged", "networks": "unchanged"}),
+                   patch.object(release, "certificate_identity", return_value="unchanged"),
+                   patch.object(release, "config_identity", side_effect=lambda model: "old-config" if model.get("old") else "new-config"),
+                   patch.object(release, "validate_model"), patch.object(release, "healthy"),
+                   patch.object(release, "inspect", return_value={"Id": "new-image"}),
+                   patch.object(release, "docker"),
+                   patch.object(release, "ensure_image"),
+                   patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(self.model)))]
+        self.mocks = [self.enterContext(item) for item in patches]
+
+    def compose(self, directory, *args):
+        self.calls.append((directory, args))
+        if args[0] == "up":
+            self.live = {**self.live, "Id": "new", "Image": "new-image"}
+        return ""
+
+    def deploy(self):
+        return self.gateway.deploy(self.bundle, self.identity, "https://github.com/run/1", None)
+
+    def prepare_old(self):
+        release.atomic(self.previous_directory / "model.json", {**self.model, "old": True})
+
+    def test_rejected_syntax_cannot_change_live_gateway_or_accepted_record(self):
+        self.gateway.syntax.side_effect = release.ReleaseError("invalid nginx")
+        with self.assertRaises(release.ReleaseError):
+            self.deploy()
+        self.assertFalse(any(args[0] == "up" for _, args in self.calls))
+        self.assertEqual(release.read(self.root / "current.json"), self.previous)
+        self.assertFalse((self.root / "pending.json").exists())
+
+    def test_noop_records_promoted_and_running_sources_without_activation(self):
+        self.mocks[7].side_effect = None
+        self.mocks[7].return_value = "old-config"
+        self.assertEqual(self.deploy(), {"status": "unchanged", "running_source": SOURCE})
+        self.assertEqual(self.calls, [])
+        self.assertEqual(release.read(self.root / "current.json"), self.previous)
+
+    def test_failed_health_restores_previous_and_failure_is_visible(self):
+        self.prepare_old()
+        self.mocks[9].side_effect = [None, release.ReleaseError("unhealthy"), None]
+        with self.assertRaisesRegex(release.ReleaseError, "previous gateway restored"):
+            self.deploy()
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+        self.assertEqual(release.read(self.root / "attempts" / self.identity / "result.json")["status"], "rolled_back")
+        self.assertFalse((self.root / "pending.json").exists())
+        self.assertEqual([path for path, args in self.calls if args[0] == "up"],
+                         [self.root / "releases" / self.identity, self.previous_directory])
+
+    def test_interrupted_activation_blocks_retry_until_explicit_recovery(self):
+        self.prepare_old()
+        def kill(directory, *args):
+            if args[0] == "up":
+                raise KeyboardInterrupt()
+        self.gateway.compose.side_effect = kill
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy()
+        self.assertTrue((self.root / "pending.json").exists())
+        with self.assertRaisesRegex(release.ReleaseError, "Interrupted"):
+            self.gateway.deploy(self.bundle, SECOND + "-1-2", "run", None)
+        self.gateway.compose.side_effect = self.compose
+        self.gateway.rollback(self.identity, None)
+        self.assertFalse((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+
+    def test_failed_rollback_retains_barrier(self):
+        self.prepare_old()
+        self.mocks[9].side_effect = [None, release.ReleaseError("unhealthy"), release.ReleaseError("recovery unhealthy")]
+        with self.assertRaises(release.ReleaseError):
+            self.deploy()
+        self.assertTrue((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+
+    def test_pending_recovery_refreshes_rebooted_app_identities_before_restoration(self):
+        self.prepare_old()
+        def kill(directory, *args):
+            if args[0] == "up":
+                raise KeyboardInterrupt()
+        self.gateway.compose.side_effect = kill
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy()
+        self.mocks[5].return_value = {"apps": "restarted-after-reboot", "networks": "unchanged"}
+        self.gateway.compose.side_effect = self.compose
+        self.gateway.rollback(self.identity, None)
+        self.assertFalse((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+        self.assertIn(unittest.mock.call(allow_missing_proxy=True), self.mocks[5].call_args_list)
+
+    def test_pending_recovery_rejects_recreated_networks_before_gateway_mutation(self):
+        self.prepare_old()
+        def kill(directory, *args):
+            if args[0] == "up":
+                raise KeyboardInterrupt()
+        self.gateway.compose.side_effect = kill
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy()
+        self.mocks[5].return_value = {"apps": "restarted-after-reboot", "networks": "recreated"}
+        self.gateway.compose.side_effect = self.compose
+        with self.assertRaisesRegex(release.ReleaseError, "network IDs changed"):
+            self.gateway.rollback(self.identity, None)
+        self.assertFalse(any(args[0] == "up" for _, args in self.calls))
+        self.assertTrue((self.root / "pending.json").exists())
+
+    def test_indeterminate_docker_timeout_keeps_barrier_instead_of_racing_rollback(self):
+        def timeout(directory, *args):
+            if args[0] == "up":
+                raise release.CommandTimeout("daemon request outcome unknown")
+        self.gateway.compose.side_effect = timeout
+        with self.assertRaisesRegex(release.ReleaseError, "timed out"):
+            self.deploy()
+        self.assertTrue((self.root / "pending.json").exists())
+        self.assertEqual(release.read(self.root / "current.json")["source"], SOURCE)
+
+    def test_second_independent_release_and_explicit_rollback(self):
+        self.prepare_old()
+        self.assertEqual(self.deploy()["status"], "success")
+        second_directory = self.root / "releases" / self.identity
+        release.atomic(second_directory / "model.json", {**self.model, "old": True})
+        self.mocks[7].side_effect = lambda model: "new-config" if model.get("old") else "next-config"
+        self.identity = "d" * 40 + "-2-1"
+        self.assertEqual(self.deploy()["running_source"], "d" * 40)
+        self.gateway.rollback(self.identity, None)
+        self.assertEqual(release.read(self.root / "current.json")["source"], SECOND)
+
+    def test_shared_app_lock_excludes_gateway_and_stable_inode_survives_release(self):
+        import fcntl
+        directory = self.root / "locks"
+        directory.mkdir(mode=0o700)
+        lock = directory / "maintenance.lock"
+        lock.touch(mode=0o600)
+        inode = lock.stat().st_ino
+        with lock.open("r+") as stream:
+            fcntl.flock(stream, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(release.ReleaseError, "already active"):
+                with release.maintenance(lock):
+                    self.fail("Gateway entered during app deployment")
+        with release.maintenance(lock):
+            with self.assertRaises(release.ReleaseError):
+                with release.maintenance(lock):
+                    self.fail("Overlapping gateway deployment")
+        self.assertEqual(lock.stat().st_ino, inode)
+
+
+if __name__ == "__main__":
+    unittest.main()

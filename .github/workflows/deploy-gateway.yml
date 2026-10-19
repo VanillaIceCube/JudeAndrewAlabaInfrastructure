@@ -1,0 +1,57 @@
+name: Deploy gateway
+on:
+  push:
+    branches: [env-prod]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Separately approved gateway operation (select env-prod above).
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      recovery:
+        description: For rollback, exact retained failed/current release ID from the host journal.
+        type: string
+        default: ''
+concurrency:
+  group: gateway-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/env-prod' && vars.GATEWAY_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: gateway-approval
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate approval policy and execute gateway transaction
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATEWAY_DEPLOY_ENABLED: ${{ vars.GATEWAY_DEPLOY_ENABLED }}
+          GATEWAY_APPROVED_SHA: ${{ vars.GATEWAY_APPROVED_SHA }}
+          GATEWAY_OPERATION: ${{ inputs.operation || 'deploy' }}
+          GATEWAY_RECOVERY: ${{ inputs.recovery }}
+          GATEWAY_SSH_HOST: ${{ secrets.GATEWAY_SSH_HOST }}
+          GATEWAY_SSH_USER: ${{ secrets.GATEWAY_SSH_USER }}
+          GATEWAY_SSH_PORT: ${{ secrets.GATEWAY_SSH_PORT }}
+          GATEWAY_SSH_KEY: ${{ secrets.GATEWAY_SSH_KEY }}
+          GATEWAY_SSH_KNOWN_HOST: ${{ secrets.GATEWAY_SSH_KNOWN_HOST }}
+          GATEWAY_SSH_FINGERPRINT: ${{ secrets.GATEWAY_SSH_FINGERPRINT }}
+        run: python3 scripts/gateway_transport.py
+      - name: Record a failed or cancelled runner without asserting the running source
+        if: always() && steps.release.outcome != 'success' && steps.release.outputs.deployment != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATEWAY_DEPLOYMENT_ID: ${{ steps.release.outputs.deployment }}
+        run: python3 scripts/gateway_transport.py finalize-failure

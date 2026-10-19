@@ -17,6 +17,7 @@ preserved through the reviewed migration.
 | Host ingress | [Compose](compose.yml), [Nginx](nginx/nginx.conf) |
 | Application releases | [Shared standard and parity matrix](docs/app-release-standard.md), [versioned source](app-release/v1) |
 | Production operations | [Cutover and reversal](docs/cutover.md) |
+| Subsequent gateway releases | [Promotion, approval and rollback](docs/gateway-releases.md) |
 | Adding an application | [Onboarding](docs/onboarding.md) |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
 | Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
