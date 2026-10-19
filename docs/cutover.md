@@ -17,6 +17,8 @@ provides cutover-only backup/restore evidence while legacy apps are running;
 it is not a scheduled backup system or a second app release mechanism.
 Subsequent app releases use their canonical production guides and the
 [shared release standard](app-release-standard.md).
+Subsequent gateway releases use the separate [gateway release procedure](gateway-releases.md);
+they never repeat the legacy proxy transfer.
 
 ## Conditions before a production plan
 
