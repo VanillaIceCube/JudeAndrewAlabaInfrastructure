@@ -41,3 +41,21 @@ and the one-time cutover are unchanged.
 Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open
 PR per agent per repository. Repeat runs maintain the existing PR, integrate
 current main, and verify its latest head instead of opening another PR.
+
+## 🔑 OpenAI reviewer isolation
+
+Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
+`ROBOCOP_OPENAI_API_KEY` for their respective reviewers; RoboCop also owns
+all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this repository's
+reviewer project. Keep credentials separate across repositories and application
+environments, preserve visible missing-key failures, and follow the deferred
+cutover steps in `.github/README-WORKFLOWS.md`.
+
+## 🤖 Dependabot AI reviews
+
+Trusted same-repository Dependabot PRs require the same three reviewers as human
+PRs. Keep forks excluded and all applicable reviewer failures blocking Required
+CI. Store the three reviewer OpenAI keys and three GitHub App private keys in
+both Actions and Dependabot; production/Project-token secrets stay outside
+Dependabot. Preserve immutable action references, non-mutating reviews and
+manual owner merge. A human PR smoke test does not prove Dependabot access.

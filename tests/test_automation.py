@@ -35,18 +35,47 @@ class AutomationPolicyTests(unittest.TestCase):
                     if not action.startswith("./"):
                         self.assertRegex(action, r"^[\w./-]+@[a-f0-9]{40}$")
 
-    def test_fork_and_dependabot_secrets_are_never_requested(self):
+    def test_reviewer_workflow_guards_exclude_forks_without_excluding_dependabot(self):
         text = (ROOT / ".github/workflows/ci-orchestrator.yml").read_text()
-        self.assertEqual(text.count("if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'"), 2)
-        self.assertIn("REVIEWS_APPLICABLE:", text)
-        self.assertNotIn("secrets: inherit", text)
+        for job, prefix in (("code-review", ""), ("build-review", "always() && "), ("security-review", "always() && ")):
+            with self.subTest(job=job):
+                block = re.search(rf"(?ms)^  {job}:\n(.*?)(?=^  [\w-]+:|\Z)", text).group(1)
+                guard = re.search(r"^    if: (.+)$", block, re.M).group(1)
+                self.assertEqual(guard, prefix + "github.event.pull_request.head.repo.full_name == github.repository")
+                self.assertNotIn("secrets: inherit", block)
+        self.assertNotIn("pull_request.user.login", text)
+        self.assertNotIn("REVIEWS_APPLICABLE:", text)
+        self.assertIn("run: python3 scripts/check_ci_result.py", text)
+
+    def test_ci_result_requires_reviews_for_human_and_dependabot_prs_only_from_this_repo(self):
+        repository = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
+        for author in ("VanillaIceCube", "dependabot[bot]"):
+            for head_repository, expected in ((repository, True), ("someone/fork", False), (None, False)):
+                with self.subTest(author=author, head_repository=head_repository):
+                    event = {
+                        "pull_request": {
+                            "user": {"login": author},
+                            "head": {"repo": {"full_name": head_repository} if head_repository else None},
+                        }
+                    }
+                    applicable = ci_result.reviews_applicable(event, repository)
+                    self.assertEqual(applicable, expected)
+                    results = {name: {"result": "success"} for name in ci_result.GATES}
+                    results.update({name: {"result": "skipped"} for name in ci_result.REVIEWS})
+                    self.assertEqual(bool(ci_result.failures(results, applicable)), expected)
+        self.assertFalse(ci_result.reviews_applicable({}, repository))
+        self.assertFalse(ci_result.reviews_applicable({"pull_request": {"head": {"repo": {"full_name": ""}}}}, ""))
 
     def test_aggregate_requires_every_gate_and_review(self):
         results = {name: {"result": "success"} for name in ci_result.GATES | ci_result.REVIEWS}
         self.assertEqual(ci_result.failures(results, True), [])
-        for state in ("failure", "cancelled", "skipped", "unknown"):
-            with self.subTest(state=state):
-                altered = {**results, "codeql": {"result": state}}
+        for name in ci_result.GATES | ci_result.REVIEWS:
+            for state in ("failure", "cancelled", "skipped", "unknown"):
+                with self.subTest(name=name, state=state):
+                    altered = {**results, name: {"result": state}}
+                    self.assertTrue(ci_result.failures(altered, True))
+            with self.subTest(name=name, state="missing"):
+                altered = {key: value for key, value in results.items() if key != name}
                 self.assertTrue(ci_result.failures(altered, True))
         self.assertTrue(ci_result.failures({}, True))
 
