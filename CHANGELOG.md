@@ -4,6 +4,13 @@
 
 ### Changed
 
+- Require Obi-Wan, Lint Eastwood and RoboCop reviews for same-repository Dependabot PRs, matching the application/template reviewer eligibility; retain fork exclusions and manual owner merging.
+- Require six reviewer secrets in both Actions and Dependabot, and derive Required CI review applicability from the PR source repository for both human and bot authors.
+
+## 2026-10-19
+
+### Changed
+
 - Separate Obi-Wan, Lint Eastwood, and RoboCop OpenAI secrets, including RoboCop alert aggregation; pass only each reviewer's own credentials, stage `OPENAI_REVIEWERS_PROJECT_ID` independently, and document the deferred per-repository key migration.
 
 ## 2026-10-19

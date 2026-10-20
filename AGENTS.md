@@ -50,3 +50,12 @@ all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this re
 reviewer project. Keep credentials separate across repositories and application
 environments, preserve visible missing-key failures, and follow the deferred
 cutover steps in `.github/README-WORKFLOWS.md`.
+
+## 🤖 Dependabot AI reviews
+
+Trusted same-repository Dependabot PRs require the same three reviewers as human
+PRs. Keep forks excluded and all applicable reviewer failures blocking Required
+CI. Store the three reviewer OpenAI keys and three GitHub App private keys in
+both Actions and Dependabot; production/Project-token secrets stay outside
+Dependabot. Preserve immutable action references, non-mutating reviews and
+manual owner merge. A human PR smoke test does not prove Dependabot access.

@@ -12,15 +12,16 @@ narrowed without changing other repositories. Bots never edit, merge or deploy.
 | Configuration | Storage/purpose |
 | --- | --- |
 | `OBI_WAN_CODE_NOBI_APP_ID`, `LINT_EASTWOOD_APP_ID`, `ROBOCOP_APP_ID` | Actions variables for identities |
-| Corresponding `*_PRIVATE_KEY` | Actions secrets for App authentication |
+| Corresponding `*_PRIVATE_KEY` | Actions + Dependabot secrets for App authentication |
 | `OPENAI_REVIEWERS_PROJECT_ID` | OpenAI reviewer project ID shared by this repository's three reviewer keys |
-| `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY` | Separate Infrastructure-only reviewer keys, Actions secrets; RoboCop also runs all alert feeds |
+| `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY` | Separate Infrastructure-only reviewer keys, Actions + Dependabot secrets; RoboCop also runs all alert feeds |
 | `SECURITY_ALERTS_PROJECT_ID` | Project #13 variable: `PVT_kwHOAYDAa84BmitT` |
 | `SECURITY_ALERTS_TOKEN` | Separate Project v2 read/write secret, never used for issue/alert APIs |
 
 Prefer expiring fine-grained account Projects read/write credentials, or classic
 `project` scope if unsupported. Record expiry and rotate before expiration.
-No Dependabot secrets are required. Keep review keys separate from production
+Store the three OpenAI keys and three App private keys in both Actions and
+Dependabot (six reviewer secrets in each). Keep review keys separate from production
 app/SSH/environment credentials; no values enter tickets, logs or artifacts.
 
 ## 🛡️ Repository and Project settings
@@ -54,3 +55,13 @@ acceptance evidence still dependent on default-branch activation.
 ## 🔑 Deferred OpenAI migration
 
 Follow the [exact key mapping and cutover sequence](README-WORKFLOWS.md#-separate-openai-reviewer-credentials). Configure the three new secrets before merging the source change; retain the legacy key until usage and all consumers are verified.
+
+## 🤖 Dependabot reviewer acceptance
+
+Follow the [six-secret setup and four-repository parity contract](README-WORKFLOWS.md#-separate-openai-reviewer-credentials).
+Use original GitHub App PEM contents in Dependabot; existing Actions secret
+values cannot be retrieved/copied through GitHub. OpenAI placeholder values
+must be replaced with real repository-specific keys. Configure the shared App
+ID and reviewer project variables, then validate a real Dependabot-triggered
+PR after the reviewed source is merged by the owner. All three reviews are
+required. Fork exclusions, independent checks and manual owner merging remain.

@@ -33,11 +33,15 @@ unavailable AI output and diff overflow fail reviewer checks. Inline placement,
 prior-history and duplicate suppression are tested. Bot approval never
 authorizes merging or deployment.
 
-Fork and Dependabot PRs run independent read-only gates; secret-dependent AI
-reviews are explicitly inapplicable. No Dependabot App secrets or
-`pull_request_target` workflow exist. Same-repository human PRs require the
-three reviewers. The reusable major-upgrade collector remains available for
-separately authorized trusted review runs. Dependabot requires manual owner merge.
+Same-repository human and Dependabot PRs require all three AI reviewers as
+well as every independent gate. Fork PRs run the independent read-only gates
+without receiving reviewer secrets. There is no `pull_request_target` workflow.
+Dependabot uses its separate secret store for all six reviewer credentials;
+missing credentials or skipped applicable reviews fail Required CI. Obi-Wan's
+existing metadata/major-upgrade evidence path applies to Dependabot updates,
+with web search enabled only for major upgrades and explicit gaps for unsupported
+evidence. Dependabot still requires manual owner merge; AI review adds no merge
+or deployment authority.
 
 GITHUB_TOKEN begins with contents read. Only CodeQL upload/review jobs request
 additional permissions. App tokens name this repository and explicit permissions;
@@ -104,9 +108,20 @@ repositories. Create three distinct keys with these exact display names:
 | `CI · Lint Eastwood · Build Review` | `LINT_EASTWOOD_OPENAI_API_KEY` | Lint Eastwood PR reviews |
 | `CI · RoboCop · Security Review` | `ROBOCOP_OPENAI_API_KEY` | RoboCop PR reviews and all three scheduled/manual alert feeds |
 
-In this repository, add all three keys as **Actions repository secrets**.
-Infrastructure excludes Dependabot from secret-dependent reviews; do not add
-Dependabot secrets here.
+Add all three keys as **Actions repository secrets** and **Dependabot repository
+secrets**, using identical values in both stores for this repository. Also store
+`OBI_WAN_CODE_NOBI_PRIVATE_KEY`, `LINT_EASTWOOD_PRIVATE_KEY`, and
+`ROBOCOP_PRIVATE_KEY` in both stores: six reviewer secrets per store. GitHub
+cannot copy the encrypted values between stores; use the original PEM files
+or a separately authorized replacement key. Never overwrite working private
+keys with placeholder text. OpenAI placeholder entries are nonfunctional and
+must be replaced with this repository's real keys before acceptance.
+
+Keep `SECURITY_ALERTS_TOKEN`, deployment keys, application secrets, and production
+environment credentials out of Dependabot. Repository App ID and
+`OPENAI_REVIEWERS_PROJECT_ID` variables remain shared configuration for both
+review paths. [GitHub's Dependabot restrictions](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-on-actions)
+apply even when a human reruns a Dependabot-triggered workflow.
 
 1. In OpenAI Platform, select the repository's reviewer project, open its API
    keys page, and create the three keys above. Restrict each key to the API
@@ -140,3 +155,31 @@ Dependabot secrets here.
    key values in logs/issues.
 
 See [OpenAI key security, expiration and usage guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys).
+
+## 🔄 AI reviewer parity across repositories
+
+The common contract is all three reviewers on trusted same-repository human
+and Dependabot PRs, no secret-dependent reviews on forks, separate per-persona
+OpenAI keys within each repository, six reviewer secrets in each secret store,
+and visible failure for unavailable reviews. Infrastructure's implementation
+now adopts this eligibility contract; live acceptance still requires real
+Dependabot credentials and a Dependabot-triggered run after owner merge.
+
+| Repository | Human / Dependabot AI reviews | Reviewer secret stores | Intentional merge-policy difference |
+| --- | --- | --- | --- |
+| MacroMapper | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge and app-specific required checks |
+| Notoli | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge; reviewer branch-policy work is separate |
+| FullStackTemplate | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge and required reviewer child checks |
+| Infrastructure | All three / all three | Actions + Dependabot | Owner merge only; Required CI includes every applicable review |
+
+Independent checks, evidence limits and major-upgrade gaps remain specific to
+each repository's actual scanners and dependency ecosystems. Infrastructure
+retains its non-mutating lint reviewer, immutable actions, no auto-merge,
+repository-scoped App tokens and production credential boundary. Parity of
+review eligibility does not copy application deployment or auto-fix behavior.
+
+After owner-approved merge, update or rerun a real same-repository Dependabot PR
+using the new default-branch policy; an old run retains its original workflow
+revision. Verify the run actually uses the new policy, all three App identities,
+required review outcomes, and supported major-upgrade evidence or documented
+gaps. A human PR run does not prove access to the Dependabot secret store.

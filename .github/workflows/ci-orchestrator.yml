@@ -36,7 +36,7 @@ jobs:
     uses: ./.github/workflows/gate-secrets.yml
   code-review:
     name: AI Code Review
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-code.yml
     secrets:
       OBI_WAN_OPENAI_API_KEY: ${{ secrets.OBI_WAN_OPENAI_API_KEY }}
@@ -47,7 +47,7 @@ jobs:
   build-review:
     name: AI Build Sheriff Review
     needs: [lints, tests]
-    if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-build.yml
     secrets:
       LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
@@ -69,7 +69,7 @@ jobs:
   security-review:
     name: AI Security Review
     needs: [codeql, dependency-vulnerability, dependency-malware, secrets]
-    if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-security.yml
     secrets:
       ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
@@ -103,5 +103,4 @@ jobs:
       - name: Require independent gates and applicable reviews
         env:
           RESULTS: ${{ toJSON(needs) }}
-          REVIEWS_APPLICABLE: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' }}
         run: python3 scripts/check_ci_result.py
