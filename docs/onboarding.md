@@ -23,3 +23,8 @@
 This repository provisions no networks automatically. Existing app route
 networks are adopted externally in place. A new app's network creation is an
 explicit operator action in its approved onboarding plan.
+
+
+## 🔌 Optional MCP applications
+
+Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.

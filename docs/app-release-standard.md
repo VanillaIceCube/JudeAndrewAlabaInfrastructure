@@ -107,3 +107,8 @@ for the shared host. It does not add gateway routes, networks, certificates,
 capacity, or deployment authorization. An operator must review the actual full
 gateway topology, chosen subnet, bootstrap, locks, and capacity before activation.
 All consumers must pin the same reviewed source commit when adopting this change.
+
+
+## 🔌 Optional MCP applications
+
+Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.

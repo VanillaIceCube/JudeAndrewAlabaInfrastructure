@@ -2,6 +2,17 @@
 
 ## 2026-10-20
 
+### Added
+
+- Define the optional multi-app MCP ingress/readiness/onboarding contract and an inactive generic vhost example, with isolated enabled/ordinary app routing checks.
+
+### Changed
+
+- Share Notoli's exact MCP transport directives through an opt-in Nginx include and apply no-store policy to discovery; keep MacroMapper's live MCP profile disabled.
+
+
+## 2026-10-20
+
 ### Changed
 
 - Use repository Actions settings for gateway SSH configuration, with owner/branch/source/workflow checks before credential loading and contents-read-only tokens; remove GitHub Environment policy and Deployment API dependencies.

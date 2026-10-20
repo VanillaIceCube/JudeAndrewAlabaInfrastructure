@@ -77,3 +77,8 @@ MacroMapper, Notoli and FullStackTemplate. Forks stay excluded. See the
 [parity contract](.github/README-WORKFLOWS.md#-ai-reviewer-parity-across-repositories)
 and provision all six reviewer secrets in both Actions and Dependabot. Owner
 merge approval remains mandatory.
+
+
+## 🔌 Optional MCP applications
+
+Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.

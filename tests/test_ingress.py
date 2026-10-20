@@ -1,6 +1,7 @@
 """Run only disposable resources on the selected local/CI Docker daemon."""
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 import random
@@ -20,8 +21,13 @@ STUB = """import json, os, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/api/slow-estimate-test/':
+        if self.path in ('/api/slow-estimate-test/', '/mcp?slow-test=1'):
             time.sleep(65)
+        if self.path == '/mcp?challenge-test=1':
+            self.send_response(401)
+            self.send_header('WWW-Authenticate','Bearer resource_metadata="https://'+self.headers['Host']+'/.well-known/oauth-protected-resource/mcp"')
+            self.end_headers()
+            return
         self.send_response(200)
         self.send_header('Cache-Control','public, max-age=300')
         self.end_headers()
@@ -81,6 +87,18 @@ class IngressTests(unittest.TestCase):
                 ).stdout
             )
             proxy = config["services"]["proxy"]
+            # Exercise the reusable include on a second enabled app without
+            # activating a real production route or changing MacroMapper.
+            vhosts = target / "vhosts"
+            shutil.copytree(ROOT / "nginx/vhosts", vhosts)
+            example = (ROOT / "docs/optional-mcp.conf.example").read_text()
+            example = example.replace("app.example.com", "optional.judeandrewalaba.com")
+            example = example.replace("example-backend", "optional-backend")
+            example = example.replace("example-frontend", "optional-frontend")
+            (vhosts / "optional.conf").write_text(example)
+            for volume in proxy["volumes"]:
+                if volume["target"] == "/etc/nginx/conf.d":
+                    volume["source"] = str(vhosts)
             self.assertEqual(set(config["services"]), {"proxy"})
             self.assertEqual(
                 proxy["networks"]["notoli_backend"]["ipv4_address"], "172.30.88.2"
@@ -151,6 +169,8 @@ class IngressTests(unittest.TestCase):
 
                 start_stub("notoli", "backend")
                 start_stub("notoli", "frontend")
+                start_stub("optional", "backend")
+                start_stub("optional", "frontend")
                 definitions = {}
                 for role in ("legacy", "replacement"):
                     proxy["container_name"] = prefix + "-" + role
@@ -228,8 +248,22 @@ class IngressTests(unittest.TestCase):
                     self.assertNotEqual(headers["X-Forwarded-For"], "spoofed")
                     self.assertNotIn("X-Forwarded-Host", headers)
                     self.assertNotIn("Forwarded", headers)
-                    if path.startswith(("/mcp", "/api", "/auth", "/admin")):
+                    if path.startswith(("/mcp", "/api", "/auth", "/admin", "/.well-known")):
                         self.assertEqual(response.headers["Cache-Control"], "no-store")
+                for app in ("notoli", "optional"):
+                    for path in (
+                        "/.well-known/oauth-protected-resource/mcp",
+                        "/auth/mcp/authorize/?state=NEVER_LOG_THIS",
+                        "/auth/mcp/token/", "/auth/mcp/revoke/",
+                    ):
+                        response, body = request("legacy", app, path)
+                        self.assertEqual(body["service"], app + "-backend")
+                        self.assertEqual(body["path"], path)
+                        self.assertEqual(response.headers["Cache-Control"], "no-store")
+                    response, _ = request("legacy", app, "/mcp?challenge-test=1", 401)
+                    self.assertIn(app + ".judeandrewalaba.com/.well-known/", response.headers["WWW-Authenticate"])
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+                    self.assertEqual(request("legacy", app, "/mcp/")[1]["service"], app + "-frontend")
                 self.assertEqual(
                     request("legacy", "notoli", "/connections/authorize")[1]["service"],
                     "notoli-frontend",
@@ -237,6 +271,8 @@ class IngressTests(unittest.TestCase):
 
                 start_stub("macromapper", "backend")
                 start_stub("macromapper", "frontend")
+                for path in ("/mcp", "/.well-known/oauth-protected-resource/mcp"):
+                    self.assertEqual(request("legacy", "macromapper", path)[1]["service"], "macromapper-frontend")
                 self.assertEqual(
                     request("legacy", "macromapper", "/api/notifications/")[1][
                         "service"
@@ -249,17 +285,24 @@ class IngressTests(unittest.TestCase):
                     .stdout.strip()
                     .rsplit(":", 1)[1]
                 )
-                slow_request = urllib.request.Request(
-                    "https://127.0.0.1:" + port + "/api/slow-estimate-test/",
-                    headers={"Host": "macromapper.judeandrewalaba.com"},
-                )
-                with urllib.request.urlopen(
-                    slow_request, context=ssl._create_unverified_context(), timeout=75
-                ) as response:
-                    self.assertEqual(response.status, 200)
-                    self.assertEqual(
-                        json.loads(response.read())["service"], "macromapper-backend"
+                def slow_probe(app, path):
+                    slow_request = urllib.request.Request(
+                        "https://127.0.0.1:" + port + path,
+                        headers={"Host": app + ".judeandrewalaba.com"},
                     )
+                    with urllib.request.urlopen(
+                        slow_request, context=ssl._create_unverified_context(), timeout=75
+                    ) as response:
+                        self.assertEqual(response.status, 200)
+                        self.assertEqual(json.loads(response.read())["service"], app + "-backend")
+
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    probes = [
+                        pool.submit(slow_probe, "optional", "/mcp?slow-test=1"),
+                        pool.submit(slow_probe, "macromapper", "/api/slow-estimate-test/"),
+                    ]
+                    for probe in probes:
+                        probe.result()
                 self.assertIn(
                     "proxy_read_timeout 120s;",
                     docker("exec", prefix + "-legacy", "nginx", "-T").stdout,
