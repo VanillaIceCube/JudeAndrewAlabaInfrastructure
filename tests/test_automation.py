@@ -34,6 +34,11 @@ class AutomationPolicyTests(unittest.TestCase):
         self.assertIn("GATEWAY_RUNNER_STATUS: ${{ job.status }}", finalizer)
         self.assertNotIn("GH_TOKEN", finalizer)
         self.assertNotIn("secrets.", finalizer)
+        for name in ("review-code.yml", "review-security.yml"):
+            policy = (ROOT / ".github/workflows" / name).read_text()
+            self.assertNotIn("branch-restricted credentials", policy)
+            self.assertIn("repository Actions secrets/variables only", policy)
+            self.assertIn("Repository secret access is not branch-scoped", policy)
 
     def test_package_manifests_require_explicit_scanner_setup(self):
         self.assertEqual(scope.unsupported_manifests(["compose.yml", "scripts/release.py", "action.yml"]), [])

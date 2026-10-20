@@ -6,6 +6,7 @@
 
 - Use repository Actions settings for gateway SSH configuration, with owner/branch/source/workflow checks before credential loading and contents-read-only tokens; remove GitHub Environment policy and Deployment API dependencies.
 - Record promoted versus running gateway identities in sanitized Actions summaries and the durable host journal; report runner failure/cancellation without asserting a host outcome, and document verified settings migration, cleanup and repository-secret exposure.
+- Align agent/reviewer policy with the owner-selected repository-only gateway settings model, including its workflow-writer trust boundary; preserve all required reviewer gates.
 
 ## 2026-10-19
 

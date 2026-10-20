@@ -79,10 +79,10 @@ and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/c
 4. Only after acceptance, delete the obsolete `production`, `gateway-approval`
    and `gateway-production` environments and their scoped settings. Check for
    active jobs and any unrelated consumers first. Deletion removes environment
-   secrets and protection rules and can leave historical deployment protection
-   references invalid and fail jobs waiting on those rules; retain sanitized
-   Actions evidence before cleanup. See [environment deletion effects](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#deleting-an-environment). Existing
-   deployment records are historical, not the current release authority. The new
+   secrets and protection rules and fails jobs waiting on those rules; retain
+   sanitized Actions evidence before cleanup. See [environment deletion effects](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#deleting-an-environment).
+   Historical deployment records can still reference the old environment names;
+   retain their run links, but do not use them as the current release authority. The new
    workflow creates neither environment jobs nor Deployment API records, so it
    cannot recreate these environments. The concurrency group name is only a lock.
 
