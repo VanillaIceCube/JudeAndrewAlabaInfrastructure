@@ -67,3 +67,8 @@ CI. Store the three reviewer OpenAI keys and three GitHub App private keys in
 both Actions and Dependabot; production/Project-token secrets stay outside
 Dependabot. Preserve immutable action references, non-mutating reviews and
 manual owner merge. A human PR smoke test does not prove Dependabot access.
+
+
+## 🔌 Optional MCP applications
+
+Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
