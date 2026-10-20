@@ -65,3 +65,15 @@ licensing contact.
 
 The release standard also supports template onboarding through an explicit app
 policy and disposable profile fixtures; see [template adoption](docs/app-release-standard.md#-template-adoption).
+
+## 🔑 AI reviewer credentials
+
+Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this
+repository. See the [workflow setup and deferred migration](.github/README-WORKFLOWS.md#-separate-openai-reviewer-credentials)
+for exact secret names, project configuration, verification, and rollback.
+
+Trusted same-repository Dependabot PRs receive all three AI reviews, matching
+MacroMapper, Notoli and FullStackTemplate. Forks stay excluded. See the
+[parity contract](.github/README-WORKFLOWS.md#-ai-reviewer-parity-across-repositories)
+and provision all six reviewer secrets in both Actions and Dependabot. Owner
+merge approval remains mandatory.
