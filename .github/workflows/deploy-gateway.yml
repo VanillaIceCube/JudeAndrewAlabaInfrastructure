@@ -20,21 +20,25 @@ permissions:
   contents: read
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/env-prod' && vars.DEPLOY_ENABLED == 'true'
+    if: >-
+      github.repository == 'VanillaIceCube/JudeAndrewAlabaInfrastructure' &&
+      github.ref == 'refs/heads/env-prod' && vars.DEPLOY_ENABLED == 'true' &&
+      github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: gateway-approval
     permissions:
       contents: read
-      actions: read
-      deployments: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Validate promotion policy and execute gateway transaction
+      - name: Validate reviewed source and owner authorization before loading SSH credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+        run: python3 scripts/gateway_transport.py authorize
+      - name: Execute gateway transaction
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,9 +51,8 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST_FINGERPRINT: ${{ vars.DEPLOY_HOST_FINGERPRINT }}
         run: python3 scripts/gateway_transport.py
-      - name: Record a failed or cancelled runner without asserting the running source
-        if: always() && steps.release.outcome != 'success' && steps.release.outputs.deployment != ''
+      - name: Report a failed or cancelled runner without asserting the host outcome
+        if: always() && steps.release.outcome != 'success'
         env:
-          GH_TOKEN: ${{ github.token }}
-          GATEWAY_DEPLOYMENT_ID: ${{ steps.release.outputs.deployment }}
+          GATEWAY_RUNNER_STATUS: ${{ job.status }}
         run: python3 scripts/gateway_transport.py finalize-failure

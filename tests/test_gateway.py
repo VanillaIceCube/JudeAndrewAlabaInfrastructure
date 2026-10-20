@@ -77,79 +77,63 @@ class AuthorizationTests(unittest.TestCase):
             self.assertEqual(len(release.read(files[0])["stderr"]), 8192)
             self.assertEqual(files[0].stat().st_mode & 0o777, 0o600)
 
-    def test_exact_status_payload_and_explicit_retirement_of_production_successes(self):
-        calls = []
-        def api(endpoint, method="GET", data=None):
-            calls.append((endpoint, method, data))
-            if "?environment=" in endpoint:
-                return [{"id": 10, "production_environment": True}, {"id": 11}]
-            if endpoint.endswith("?per_page=1"):
-                return [{"state": "success"}]
-            return None
-        with patch.dict(os.environ, {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "42"}), \
-                patch.object(transport, "api", side_effect=api):
-            transport.status(11, "success", "Verified running gateway")
-        payloads = [data for endpoint, method, data in calls if method == "POST"]
-        self.assertEqual(payloads[0], {"state": "success", "description": "Verified running gateway",
-                         "log_url": "https://github.com/" + transport.REPOSITORY + "/actions/runs/42", "auto_inactive": False})
-        self.assertEqual(payloads[1]["state"], "inactive")
-        self.assertIn("/deployments/10/statuses", calls[-1][0])
-
-    def test_deployment_tracking_uses_restored_source_and_never_labels_failed_promotion_successful(self):
-        env = {"GITHUB_OUTPUT": "", "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
-               "GATEWAY_OPERATION": "rollback", "GATEWAY_RECOVERY": SECOND + "-1-1"}
-        calls = []
-        def api(endpoint, method="GET", data=None):
-            calls.append((endpoint, data))
-            return {"id": 11 if len(calls) == 1 else 12}
-        with tempfile.TemporaryDirectory() as temporary:
-            env["GITHUB_OUTPUT"] = str(Path(temporary) / "output")
-            with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SECOND), \
-                    patch.object(transport, "api", side_effect=api), patch.object(transport, "status") as status, \
-                    patch.object(transport, "execute", return_value={"status": "rolled_back", "running_source": SOURCE}):
-                transport.main()
-            self.assertEqual([data["ref"] for endpoint, data in calls if endpoint.endswith("/deployments")], [SECOND, SOURCE])
-            self.assertFalse(any(args.args[:2] == (11, "success") for args in status.call_args_list))
-            self.assertEqual(status.call_args_list[-1].args[1], "success")
-            self.assertIn(SOURCE, status.call_args_list[-1].args[2])
-
-    def test_cleanup_api_failures_preserve_accepted_deployment_success(self):
-        for failure_stage in ("list", "inspect", "deactivate"):
-            with self.subTest(stage=failure_stage), tempfile.TemporaryDirectory() as temporary:
-                states = []
-                def api(endpoint, method="GET", data=None):
-                    if endpoint.endswith("/deployments"):
-                        return {"id": 11}
-                    if "?environment=" in endpoint:
-                        if failure_stage == "list":
-                            raise release.ReleaseError("private API detail")
-                        return [{"id": 10}]
-                    if endpoint.endswith("?per_page=1"):
-                        if failure_stage == "inspect":
-                            raise release.ReleaseError("private API detail")
-                        return [{"state": "success"}]
-                    if endpoint.endswith("/10/statuses"):
-                        raise release.ReleaseError("private API detail")
-                    if method == "POST":
-                        states.append(data["state"])
-                    return None
-                env = {"GITHUB_OUTPUT": str(Path(temporary) / "output"), "GITHUB_RUN_ID": "42",
-                       "GITHUB_RUN_ATTEMPT": "1", "GITHUB_SERVER_URL": "https://github.com",
-                       "GATEWAY_OPERATION": "deploy", "GATEWAY_RECOVERY": ""}
+    def test_run_evidence_preserves_promoted_and_running_identities_without_deployment_api(self):
+        for operation, status, running in (("deploy", "success", SOURCE),
+                                            ("deploy", "unchanged", SECOND),
+                                            ("rollback", "rolled_back", SECOND)):
+            with self.subTest(operation=operation, status=status), tempfile.TemporaryDirectory() as temporary:
+                summary = Path(temporary) / "summary"
+                env = {"GITHUB_STEP_SUMMARY": str(summary), "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+                       "GATEWAY_OPERATION": operation,
+                       "GATEWAY_RECOVERY": SECOND + "-1-1" if operation == "rollback" else ""}
                 with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SOURCE), \
-                        patch.object(transport, "api", side_effect=api), patch("sys.stdout", new_callable=io.StringIO) as output, \
-                        patch.object(transport, "execute", return_value={"status": "success", "running_source": SOURCE}):
+                        patch.object(transport, "api") as api, patch("sys.stdout", new_callable=io.StringIO), \
+                        patch.object(transport, "execute", return_value={"status": status, "running_source": running}):
                     transport.main()
-                self.assertEqual(states, ["pending", "in_progress", "success"])
-                self.assertIn("::warning::", output.getvalue())
-                self.assertNotIn("private API detail", output.getvalue())
+                api.assert_not_called()
+                text = summary.read_text()
+                self.assertIn("promoted source `" + SOURCE + "`", text)
+                self.assertIn("running source `" + running + "`", text)
+                self.assertIn("**" + status + "**", text)
+                if operation == "rollback":
+                    self.assertIn("Explicit recovery target: `" + SECOND + "-1-1`", text)
+
+    def test_failed_transport_never_asserts_acceptance_or_leaks_private_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            summary = Path(temporary) / "summary"
+            env = {"GITHUB_STEP_SUMMARY": str(summary), "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+                   "GATEWAY_OPERATION": "deploy", "GATEWAY_RECOVERY": ""}
+            with patch.dict(os.environ, env), patch.object(transport, "authorization", return_value=SOURCE), \
+                    patch.object(transport, "execute", side_effect=subprocess.TimeoutExpired("private-key", 1)), \
+                    patch("sys.stdout", new_callable=io.StringIO):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    transport.main()
+                transport.finalize_failure()
+            text = summary.read_text()
+            self.assertIn("runner failed", text)
+            self.assertIn("host outcome is unconfirmed", text)
+            self.assertNotIn("Verified host result", text)
+            self.assertNotIn("private-key", text)
+
+    def test_invalid_operation_or_recovery_cannot_start_transport(self):
+        for operation, recovery in (("other", ""), ("deploy", SECOND + "-1-1"),
+                                     ("rollback", ""), ("rollback", "private-invalid-input")):
+            env = {"GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+                   "GATEWAY_OPERATION": operation, "GATEWAY_RECOVERY": recovery}
+            with self.subTest(operation=operation, recovery=recovery), patch.dict(os.environ, env), \
+                    patch.object(transport, "authorization", return_value=SOURCE), \
+                    patch.object(transport, "execute") as execute, patch.object(transport, "evidence") as evidence:
+                with self.assertRaises(release.ReleaseError):
+                    transport.main()
+                execute.assert_not_called()
+                evidence.assert_not_called()
 
     def test_rollback_transport_uploads_helpers_without_building_a_source_archive(self):
         calls = []
         def run(args, timeout=120):
             calls.append(list(map(str, args)))
             if str(args[-1]).startswith("systemd-run "):
-                return json.dumps({"status": "rolled_back", "running_source": SOURCE})
+                return json.dumps({"status": "rolled_back", "running_source": SOURCE, "private": "fixture-only"})
             return ""
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
@@ -157,22 +141,27 @@ class AuthorizationTests(unittest.TestCase):
                     patch.object(transport, "ssh_configuration", return_value=directory / "config"), \
                     patch.object(transport, "run", side_effect=run):
                 result = transport.execute(SOURCE, "rollback", SECOND + "-9-1", directory)
-            self.assertEqual(result["status"], "rolled_back")
+            self.assertEqual(result, {"status": "rolled_back", "running_source": SOURCE})
             self.assertFalse(any(args[0] == "git" for args in calls))
             self.assertEqual([Path(args[-2]).as_posix() for args in calls if args[0] == "scp"],
                              ["scripts/gateway_release.py", "scripts/check_host.py"])
             self.assertFalse((directory / "source.tar").exists())
             self.assertIn("--id " + SECOND + "-9-1", calls[-1][-1])
 
-    def test_failure_finalizer_preserves_a_success_already_published(self):
-        for state in ("success", "in_progress"):
-            with self.subTest(state=state), patch.object(transport, "api", return_value=[{"state": state}]), \
-                    patch.object(transport, "status") as writer, patch("sys.stdout", new_callable=io.StringIO):
-                transport.record_failure(11, "runner interrupted")
-            if state == "success":
-                writer.assert_not_called()
-            else:
-                writer.assert_called_once_with(11, "failure", "runner interrupted")
+    def test_cancelled_runner_finalizer_never_calls_api_or_host_or_overwrites_acceptance(self):
+        for state in ("failure", "cancelled"):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as temporary:
+                summary = Path(temporary) / "summary"
+                summary.write_text("Verified host result: **success**; running source `" + SOURCE + "`.\n")
+                with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary), "GATEWAY_RUNNER_STATUS": state}), \
+                        patch.object(transport, "api") as api, patch.object(transport, "run") as run, \
+                        patch("sys.stdout", new_callable=io.StringIO):
+                    transport.finalize_failure()
+                api.assert_not_called()
+                run.assert_not_called()
+                self.assertIn("runner " + ("cancelled" if state == "cancelled" else "failed"), summary.read_text())
+                self.assertIn("Verified host result: **success**", summary.read_text())
+                self.assertIn("host outcome is unconfirmed", summary.read_text())
 
     def test_health_checks_edge_and_origin_with_tls_assertions_and_honest_identity(self):
         connections = []
@@ -219,27 +208,19 @@ class AuthorizationTests(unittest.TestCase):
                 self.assertRaises(release.ReleaseError):
             release.health_once()
 
-    def test_production_policy_accepts_automatic_release_only_on_restricted_branch(self):
-        environment = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True},
-                       "can_admins_bypass": False,
-                       "protection_rules": []}
-        branches = {"branch_policies": [{"name": "env-prod", "type": "branch"}]}
-        transport.policy(environment, branches)
-        for key, value in (("can_admins_bypass", True), ("deployment_branch_policy", None)):
-            with self.subTest(key=key), self.assertRaises(release.ReleaseError):
-                transport.policy({**environment, key: value}, branches)
-        with self.assertRaises(release.ReleaseError):
-            transport.policy(environment, {"branch_policies": [{"name": "*", "type": "branch"}]})
-        with self.assertRaises(release.ReleaseError):
-            transport.policy(environment, {"branch_policies": [{"name": "env-prod", "type": "tag"}]})
-
     def test_authorization_rejects_main_pr_stale_source_and_disabled_deployment(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
                "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "DEPLOY_ENABLED": "true",
-               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube",
+               "GITHUB_WORKFLOW_REF": transport.REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod",
+               "GITHUB_WORKFLOW_SHA": SOURCE}
         for key, value in (("GITHUB_REF", "refs/heads/main"), ("GITHUB_EVENT_NAME", "pull_request"),
                            ("DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
-                           ("GITHUB_TRIGGERING_ACTOR", "other-user")):
+                           ("GITHUB_TRIGGERING_ACTOR", "other-user"),
+                           ("GITHUB_REPOSITORY", "other/repo"), ("GITHUB_SHA", "invalid"),
+                           ("GITHUB_WORKFLOW_SHA", SECOND),
+                           ("GITHUB_WORKFLOW_REF", transport.REPOSITORY + "/.github/workflows/other.yml@refs/heads/env-prod"),
+                           ("GITHUB_WORKFLOW_REF", transport.REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/main")):
             with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
                     self.assertRaises(release.ReleaseError):
                 transport.authorization()
@@ -251,7 +232,9 @@ class AuthorizationTests(unittest.TestCase):
     def test_promotion_merge_requires_exact_reviewed_tree_when_not_in_main_history(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
                "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "DEPLOY_ENABLED": "true",
-               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube"}
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube",
+               "GITHUB_WORKFLOW_REF": transport.REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod",
+               "GITHUB_WORKFLOW_SHA": SOURCE}
         for relationship, matching, allowed in (("behind", True, True), ("diverged", True, True),
                                                 ("behind", False, False), ("diverged", False, False),
                                                 ("ahead", False, True), ("identical", False, True)):
@@ -267,16 +250,14 @@ class AuthorizationTests(unittest.TestCase):
                         return {"tree": {"sha": "c" * 40}}
                     if endpoint.endswith("/git/commits/" + SECOND):
                         return {"tree": {"sha": ("c" if matching else "d") * 40}}
-                    return {}
+                    self.fail("Unexpected non-source API call: " + endpoint)
                 with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
-                        patch.object(transport, "api", side_effect=api), patch.object(transport, "policy") as policy:
+                        patch.object(transport, "api", side_effect=api):
                     if allowed:
                         self.assertEqual(transport.authorization(), SOURCE)
-                        policy.assert_called_once()
                     else:
                         with self.assertRaises(release.ReleaseError):
                             transport.authorization()
-                        policy.assert_not_called()
 
     def test_ssh_pins_the_negotiated_host_key_including_rsa_sha2(self):
         for encoding, algorithm in (("ssh-ed25519", "ssh-ed25519"), ("ssh-rsa", "rsa-sha2-512")):
