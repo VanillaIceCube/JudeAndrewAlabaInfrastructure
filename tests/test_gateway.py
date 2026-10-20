@@ -218,16 +218,47 @@ class AuthorizationTests(unittest.TestCase):
                            ("DEPLOY_ENABLED", "false"), ("GITHUB_ACTOR", "other-user"),
                            ("GITHUB_TRIGGERING_ACTOR", "other-user"),
                            ("GITHUB_REPOSITORY", "other/repo"), ("GITHUB_SHA", "invalid"),
-                           ("GITHUB_WORKFLOW_SHA", SECOND),
+                           ("GITHUB_WORKFLOW_SHA", "invalid"),
                            ("GITHUB_WORKFLOW_REF", transport.REPOSITORY + "/.github/workflows/other.yml@refs/heads/env-prod"),
                            ("GITHUB_WORKFLOW_REF", transport.REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/main")):
             with self.subTest(key=key), patch.dict(os.environ, {**env, key: value}, clear=True), \
                     self.assertRaises(release.ReleaseError):
                 transport.authorization()
+
         with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
                 patch.object(transport, "api", return_value={"object": {"sha": SECOND}}), \
                 self.assertRaises(release.ReleaseError):
             transport.authorization()
+        with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SECOND), \
+                patch.object(transport, "api") as api, self.assertRaises(release.ReleaseError):
+            transport.authorization()
+        api.assert_not_called()
+
+    def test_distinct_workflow_commit_requires_identical_promoted_workflow_content(self):
+        env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
+               "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": SOURCE, "DEPLOY_ENABLED": "true",
+               "GITHUB_ACTOR": "VanillaIceCube", "GITHUB_TRIGGERING_ACTOR": "VanillaIceCube",
+               "GITHUB_WORKFLOW_REF": transport.REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod",
+               "GITHUB_WORKFLOW_SHA": SECOND}
+        for matching in (True, False):
+            with self.subTest(matching=matching):
+                def api(endpoint):
+                    if "/git/ref/heads/" in endpoint:
+                        return {"object": {"sha": SOURCE}}
+                    if "/compare/" in endpoint:
+                        return {"status": "identical"}
+                    if endpoint.endswith("?ref=" + SOURCE):
+                        return {"sha": "c" * 40}
+                    if endpoint.endswith("?ref=" + SECOND):
+                        return {"sha": ("c" if matching else "d") * 40}
+                    self.fail("Unexpected non-source API call: " + endpoint)
+                with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
+                        patch.object(transport, "api", side_effect=api):
+                    if matching:
+                        self.assertEqual(transport.authorization(), SOURCE)
+                    else:
+                        with self.assertRaises(release.ReleaseError):
+                            transport.authorization()
 
     def test_promotion_merge_requires_exact_reviewed_tree_when_not_in_main_history(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",

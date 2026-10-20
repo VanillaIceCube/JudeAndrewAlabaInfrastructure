@@ -32,8 +32,9 @@ def authorization():
             "Only the owner may authorize production promotion or retry")
     source = os.environ["GITHUB_SHA"]
     require(SHA.fullmatch(source), "Invalid source identity")
+    workflow_source = os.environ.get("GITHUB_WORKFLOW_SHA", "")
     require(os.environ.get("GITHUB_WORKFLOW_REF") == REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod"
-            and os.environ.get("GITHUB_WORKFLOW_SHA") == source,
+            and SHA.fullmatch(workflow_source),
             "Only the promoted gateway workflow may deploy")
     require(os.environ.get("DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
     require(run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch")
@@ -49,6 +50,12 @@ def authorization():
         accepted = api(f"repos/{REPOSITORY}/git/commits/{main}")
         reviewed = candidate["tree"]["sha"] == accepted["tree"]["sha"]
     require(reviewed, "Promotion must belong to reviewed main history or exactly match its current tree")
+    if workflow_source != source:
+        # Workflow identity is distinct from application source identity. Accept
+        # another workflow commit only when its immutable blob is byte-identical.
+        path = f"repos/{REPOSITORY}/contents/.github/workflows/deploy-gateway.yml?ref="
+        require(api(path + workflow_source)["sha"] == api(path + source)["sha"],
+                "Executing workflow differs from promoted reviewed content")
     return source
 
 
