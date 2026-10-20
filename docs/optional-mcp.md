@@ -14,9 +14,11 @@ include `nginx/snippets/mcp-locations.conf`. The inactive
 [example vhost](optional-mcp.conf.example) contains no production activation.
 The include preserves exact `/mcp` without a trailing-slash rewrite, HTTP/1.1,
 buffering off, empty Connection and a 120-second upstream **idle** read timeout.
-It forwards `/.well-known/*` to the same backend; auth routes including
-authorize/token/revoke/connections use the vhost's private `/auth/` forwarding.
-Keep `/connections*` on the frontend. JSON Streamable HTTP requires no WebSocket
+It forwards `/.well-known/*` to the same backend. The backend OAuth endpoints
+`/auth/mcp/authorize/`, `/auth/mcp/token/`, `/auth/mcp/revoke/` and the JWT-only
+connection-management API `/auth/mcp/connections/` use private `/auth/` forwarding.
+The separate browser pages `/connections` and `/connections/authorize` stay on
+the frontend; they call those backend APIs. JSON Streamable HTTP requires no WebSocket
 route. Request bounds and ASGI lifespan/session handling are app responsibilities.
 
 Private routes and discovery disable proxy caching, hide upstream cache policy
