@@ -36,6 +36,14 @@ must also be owner-triggered. Initial host setup and explicit gateway recovery
 retain their separately authorized operator scope. Application release rules
 and the one-time cutover are unchanged.
 
+The owner's [gateway settings decision in #41](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/41)
+uses repository Actions secrets and variables only. No GitHub Environment or
+Deployment API record is required. Preserve owner/branch/source/workflow checks,
+credential-free authorization before key loading, restricted triggers, fingerprint
+pinning, least privilege and host recovery evidence. Repository secrets have no
+branch-scoped access boundary; arbitrary workflow writers remain privileged.
+Document that exposure rather than claiming helper checks constrain other workflows.
+
 ## Jules recurring agents
 
 Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open

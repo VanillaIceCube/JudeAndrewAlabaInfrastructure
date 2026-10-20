@@ -22,17 +22,16 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
   A regular promotion merge may have a different commit ID only when its entire
   Git tree exactly matches current reviewed `main`; this includes workflows and
   release helpers, not only Nginx configuration. Divergent file contents fail.
-- Environment **gateway-approval**: selected deployment branches, exactly
-  `env-prod` (branch, no tags); no required reviewers or wait timer;
-  disable administrator bypass. The historical environment name remains the
-  credential boundary; it does not impose a separate human approval.
-  The workflow checks branch restrictions through GitHub's API before SSH.
-  Its token needs Actions read in addition to contents read/deployments write.
+- No GitHub Environment is required. The job restricts the repository, branch,
+  original actor and retrying actor before loading credentials. A separate
+  credential-free step verifies the exact promoted workflow/source through
+  GitHub's API; the transport repeats those checks immediately before SSH.
+  Its token needs only contents read; no Actions or Deployments write access.
 - No `GATEWAY_APPROVED_SHA` variable is needed. The workflow verifies its exact
   checkout is still the current `env-prod` head and contains reviewed source.
   Set repository `DEPLOY_ENABLED=true` after prerequisites and initial
   baseline adoption below pass. Setting the flag does not replay a skipped run.
-- Environment secret: `DEPLOY_SSH_KEY`. Environment variables: `DEPLOY_HOST`,
+- Repository Actions secret: `DEPLOY_SSH_KEY`. Repository Actions variables: `DEPLOY_HOST`,
   `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_HOST_FINGERPRINT`. These names and the
   secret/variable split match Notoli/MacroMapper. Supply an independently verified
   `SHA256:...` server fingerprint. No separate known-host entry is configured.
@@ -45,14 +44,52 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
   key and its negotiated algorithm before any SSH authentication or SCP upload.
   Unmatched/empty results fail closed. RSA keys use `rsa-sha2-512` signatures.
   Discovery never establishes trust by itself; strict host checking stays enabled.
+- Repository secrets can be requested by other same-repository workflows; they
+  do not provide an environment's branch-scoped credential boundary. Protect
+  reviewed workflow/helper changes and repository write access accordingly.
+  Only the gateway workflow references the key, only its transport step receives
+  it, and its only triggers are `env-prod` push and owner manual dispatch on that
+  branch. Review/scanner jobs must never request deployment credentials; keep
+  the key outside Dependabot. Regression checks enforce these workflow rules.
+  These controls prevent other existing jobs from initiating gateway operations;
+  a writer able to install an arbitrary secret-reading workflow remains privileged.
+  The helper's context checks cannot constrain a workflow that bypasses it.
 - The Linux host needs Python 3.12+, Docker Compose, systemd and cached accepted
   Nginx images. Verify the deployment identity can run persistent systemd units.
   Origin TLS is always verified using the hostname/SNI. If using a private
   origin CA, provision its reviewed trust anchor at
   `/opt/host-ingress-deploy/origin-ca.pem`; public probes use system trust.
 
-GitHub references: [environment protection](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+GitHub references: [Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
 and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).
+
+## 🔄 Migrating existing Actions settings
+
+1. Inventory `production`, `gateway-approval` and `gateway-production` secrets,
+   variables and consumers. Keep the old settings until the new path is verified.
+2. Securely re-enter the original dedicated key as repository Actions secret
+   `DEPLOY_SSH_KEY`; GitHub cannot reveal an existing secret. Reuse the verified
+   key when available; rotation changes host access and needs explicit scope.
+   Copy the four connection variables to repository Actions variables. Preserve
+   `DEPLOY_ENABLED`; do not copy deployment credentials into Dependabot.
+3. Merge reviewed source to `main`, then make the owner-authorized `env-prod`
+   promotion. Verify the exact Actions run/attempt, sanitized summary and durable
+   host result, including the actual running source for an unchanged gateway.
+   Confirm host health, preserved app/network/certificate identities and locks.
+4. Only after acceptance, delete the obsolete `production`, `gateway-approval`
+   and `gateway-production` environments and their scoped settings. Check for
+   active jobs and any unrelated consumers first. Deletion removes environment
+   secrets and protection rules and fails jobs waiting on those rules; retain
+   sanitized Actions evidence before cleanup. See [environment deletion effects](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#deleting-an-environment).
+   Historical deployment records can still reference the old environment names;
+   retain their run links, but do not use them as the current release authority. The new
+   workflow creates neither environment jobs nor Deployment API records, so it
+   cannot recreate these environments. The concurrency group name is only a lock.
+
+To reverse source before cleanup, retain the old environment credentials and
+use the normal reviewed promotion process. After cleanup, reverting to the old
+workflow also requires securely reprovisioning its environment settings. This
+settings migration does not authorize a gateway configuration rollback or app release.
 
 ## 📦 Private host preparation and adoption
 
@@ -176,18 +213,13 @@ recovery baseline, which must remain unchanged through restoration.
 
 ## 🧾 Evidence and retention
 
-**gateway-approval** is GitHub's automatic job/environment history and credential boundary.
-**gateway-production** contains explicit pending/in-progress/success/failure
-deployment records tied to the exact promoted SHA. A promotion that changes no
-gateway configuration becomes `inactive`, with the actually running SHA in its
-description; a retry of the already running exact SHA can be `success`.
-A rollback attempt is `inactive` and names the restored SHA; a separate verified
-recovery deployment selects the restored SHA and marks it successful. These operation
-records never assert that a different attempted source is the running gateway.
-Only verified success deactivates previous successful deployment records.
-Retirement of older records is best-effort: an API failure emits a warning while
-preserving the newly accepted deployment's success. Failure finalizers also
-preserve an already published success; reconcile older metadata separately.
+Actions run status, summary and logs record the promoted source, unique
+source/run/attempt identity, operation and explicit recovery target when present.
+Only an accepted host response adds a verified `success`, `unchanged` or
+`rolled_back` result with the actual running source. A successful unchanged
+promotion does not claim the helper's promoted source is running. Explicit
+rollback reports the restored source. No GitHub Deployment API records or
+GitHub Environments are created or required.
 
 The durable host `current.json` is authoritative for the accepted running source,
 image digest, configuration identity, Actions run and recovery reference.
@@ -198,9 +230,12 @@ Failed command context and bounded output are retained as mode 0600 files in
 the private host `diagnostics` directory; Actions receives only the tool/phase
 and exit code. Inspect those files on the host, never paste their raw contents.
 Never publish full Docker inspect, journal/config contents, credentials or keys.
-If a runner disappears, GitHub may show failure/in-progress while the independent
-host unit completes: inspect systemd and `pending.json`/`current.json` privately,
-then reconcile the deployment status for the **observed** running source under
+Failed/cancelled runners remain failed/cancelled in Actions, even if an independent
+host unit later completes. The credential-free finalizer reports an unconfirmed
+host outcome without overwriting earlier verified evidence. A hard runner loss
+may prevent finalizer/summary delivery; Actions' conclusion and the host journal
+remain the evidence. Inspect systemd and `pending.json`/`current.json` privately,
+then record the **observed** running source under
 the approved operator plan. A green job alone is not production acceptance.
 
 Retain all incoming, release and attempt directories, previous images and

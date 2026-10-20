@@ -14,6 +14,32 @@ spec.loader.exec_module(ci_result)
 
 
 class AutomationPolicyTests(unittest.TestCase):
+    def test_gateway_credentials_are_limited_to_owner_production_transport(self):
+        text = (ROOT / ".github/workflows/deploy-gateway.yml").read_text()
+        self.assertNotRegex(text, r"(?m)^\s*environment:")
+        self.assertNotIn("deployments:", text)
+        self.assertNotIn("actions: read", text)
+        self.assertIn("branches: [env-prod]", text)
+        self.assertIn("github.ref == 'refs/heads/env-prod'", text)
+        self.assertIn("vars.DEPLOY_ENABLED == 'true'", text)
+        self.assertIn("github.actor == github.repository_owner", text)
+        self.assertIn("github.triggering_actor == github.repository_owner", text)
+        self.assertIn("cancel-in-progress: false", text)
+        self.assertNotRegex(text, r"pull_request|workflow_call|secrets: inherit")
+        authorize = text.index("run: python3 scripts/gateway_transport.py authorize")
+        credential = text.index("DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}")
+        self.assertLess(authorize, credential)
+        finalizer = text[text.index("      - name: Report a failed or cancelled runner"):]
+        self.assertIn("if: always() && steps.release.outcome != 'success'", finalizer)
+        self.assertIn("GATEWAY_RUNNER_STATUS: ${{ job.status }}", finalizer)
+        self.assertNotIn("GH_TOKEN", finalizer)
+        self.assertNotIn("secrets.", finalizer)
+        for name in ("review-code.yml", "review-security.yml"):
+            policy = (ROOT / ".github/workflows" / name).read_text()
+            self.assertNotIn("branch-restricted credentials", policy)
+            self.assertIn("repository Actions secrets/variables only", policy)
+            self.assertIn("Repository secret access is not branch-scoped", policy)
+
     def test_package_manifests_require_explicit_scanner_setup(self):
         self.assertEqual(scope.unsupported_manifests(["compose.yml", "scripts/release.py", "action.yml"]), [])
         for manifest in ("frontend/package.json", "backend/requirements-prod.txt", "pyproject.toml", "uv.lock", "go.mod"):
