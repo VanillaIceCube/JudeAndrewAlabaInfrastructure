@@ -251,7 +251,7 @@ class AuthorizationTests(unittest.TestCase):
                         return {"sha": "c" * 40}
                     if endpoint.endswith("?ref=" + SECOND):
                         return {"sha": ("c" if matching else "d") * 40}
-                    self.fail("Unexpected non-source API call: " + endpoint)
+                    raise AssertionError("Unexpected non-source API call: " + endpoint)
                 with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
                         patch.object(transport, "api", side_effect=api):
                     if matching:
@@ -281,7 +281,7 @@ class AuthorizationTests(unittest.TestCase):
                         return {"tree": {"sha": "c" * 40}}
                     if endpoint.endswith("/git/commits/" + SECOND):
                         return {"tree": {"sha": ("c" if matching else "d") * 40}}
-                    self.fail("Unexpected non-source API call: " + endpoint)
+                    raise AssertionError("Unexpected non-source API call: " + endpoint)
                 with patch.dict(os.environ, env, clear=True), patch.object(transport, "run", return_value=SOURCE), \
                         patch.object(transport, "api", side_effect=api):
                     if allowed:
