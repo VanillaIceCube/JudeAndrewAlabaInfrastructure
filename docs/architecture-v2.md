@@ -309,3 +309,8 @@ Both applications adopt the [versioned release standard](app-release-standard.md
 App policy remains explicit configuration; common behavior and tests are vendored
 from one pinned source and checked in CI. This changes source organization, not
 network ownership, recovery semantics or production authorization.
+
+
+## 🔌 Optional MCP applications
+
+Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.

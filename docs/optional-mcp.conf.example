@@ -1,0 +1,16 @@
+# Example only; not loaded by nginx.conf. Onboarding requires a reviewed vhost,
+# network membership, certificate and app readiness policy. No new app is enabled.
+server {
+  listen 443 ssl;
+  server_name app.example.com;
+  include /etc/nginx/snippets/tls.conf;
+  include /etc/nginx/snippets/headers.conf;
+  set $app_backend example-backend:8000;
+  set $app_frontend example-frontend:80;
+  include /etc/nginx/snippets/mcp-locations.conf;
+  location ~ ^/(auth|api|admin)/ {
+    proxy_pass http://$app_backend$request_uri;
+    include /etc/nginx/snippets/private.conf;
+  }
+  location / { proxy_pass http://$app_frontend$request_uri; }
+}
