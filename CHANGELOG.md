@@ -2,6 +2,14 @@
 
 ## 2026-10-20
 
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+
+
+## 2026-10-20
+
 ### Added
 
 - Define the optional multi-app MCP ingress/readiness/onboarding contract and an inactive generic vhost example, with isolated enabled/ordinary app routing checks.
