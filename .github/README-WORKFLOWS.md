@@ -186,3 +186,42 @@ using the new default-branch policy; an old run retains its original workflow
 revision. Verify the run actually uses the new policy, all three App identities,
 required review outcomes, and supported major-upgrade evidence or documented
 gaps. A human PR run does not prove access to the Dependabot secret store.
+
+## 🛡️ Dependency evidence and alert lifecycle parity
+
+The reusable baseline is FullStackTemplate's `.github/actions/prepare-vulnerability-report`.
+MacroMapper, Notoli and Infrastructure carry the same report implementation and
+regression contract. Dependency Review still blocks high/critical additions;
+every non-success scanner outcome, missing/malformed output or failed evidence
+preparation fails the independent Vulnerability check. No empty-array fallback
+may turn unavailable evidence into a clean scan. RoboCop receives at most 16 KiB
+of package/severity/manifest context, with omitted-entry counts. The
+`dependency-review-evidence` artifact retains every structured entry for seven
+days, excluding untrusted free text and arbitrary URLs; unavailable evidence is
+retained as structured diagnostics. Artifacts have the repository's Actions
+access controls, not an additional private storage boundary.
+
+Alert synchronization saves source history/replacement links first, ensures
+Project membership, then writes End date before Status Done. Done can trigger
+Project auto-close. The issue client re-reads state before a separate state-only
+close. Only GitHub's observed HTTP 422 `Validation Failed` with an empty errors
+array is eligible for recovery, and only if another read proves closed/completed
+with the exact saved lifecycle body. Other failures propagate. Partial Project
+failures leave the issue open for rerun; issue mutations remain attributed to
+RoboCop and Project writes use the separate Project credential. New items use
+the live `Work type` field. No credentials, branch protections or deployments
+change.
+
+Historical evidence: FullStackTemplate #192 closed at 2026-10-11 16:40:51 UTC,
+before run 38156425534's state-close PATCH returned 422 at 16:40:52 UTC with
+`errors: []`. Notoli #825 has the same earlier pattern. All four Projects have
+Auto-close issue enabled (read-only verification 2026-10-20). This establishes
+the competing-close ordering; GitHub's internal validation cause is not exposed.
+Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
+feeds do not establish that a live close race occurred.
+
+Infrastructure deliberately retains weekly grouped Actions and separate Compose
+Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
+Dependency Review, immutable actions and the separate secret-scanning gate.
+Dependency graph evidence covers supported Actions/Compose dependencies; it is
+not an image-content scanner and does not assume backend/frontend directories.
