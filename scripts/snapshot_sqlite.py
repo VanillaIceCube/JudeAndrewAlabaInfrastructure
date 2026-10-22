@@ -105,6 +105,7 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
         raise
     finally:
         # Only the unique temporary artifact is removed, never application data.
+        cleanup_err = None
         try:
             cleanup = subprocess.run(
                 [
@@ -119,11 +120,20 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
                 capture_output=True,
                 timeout=30,
             )
-            if cleanup.returncode != 0 and primary_exc is None:
-                raise RuntimeError("Snapshot cleanup failed; temporary remote database artifact could not be removed")
-        except Exception as cleanup_exc:
-            if primary_exc is None and not isinstance(cleanup_exc, RuntimeError):
-                raise RuntimeError("Snapshot cleanup failed; temporary remote database artifact could not be removed") from cleanup_exc
+            if cleanup.returncode != 0:
+                cleanup_err = f"Cleanup command exited with code {cleanup.returncode}"
+        except Exception as exc:
+            cleanup_err = f"Cleanup command failed: {type(exc).__name__}"
+
+        if cleanup_err:
+            if primary_exc is None:
+                raise RuntimeError(
+                    f"Snapshot cleanup failed; temporary remote database artifact could not be removed: {cleanup_err}"
+                )
+            print(
+                f"Warning: snapshot cleanup failed after primary error: {cleanup_err}",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":
