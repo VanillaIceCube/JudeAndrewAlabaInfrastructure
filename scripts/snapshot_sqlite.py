@@ -110,7 +110,7 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
                 "import os,sys; os.unlink(sys.argv[1]) if os.path.exists(sys.argv[1]) else None",
                 remote,
             ],
-            check=True,
+            check=False,
             capture_output=True,
             timeout=30,
         )

@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 import uuid
 
 spec = importlib.util.spec_from_file_location(
@@ -108,3 +109,17 @@ class SnapshotTests(unittest.TestCase):
             with self.assertRaises(sqlite3.DatabaseError):
                 snapshot.capture(source, root / "recovery")
             self.assertFalse((root / "recovery/verified.json").exists())
+
+    def test_capture_container_cleanup_failure_does_not_mask_primary_exception(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "recovery"
+
+            def mock_run(cmd, *args, **kwargs):
+                if kwargs.get("check"):
+                    raise subprocess.CalledProcessError(1, cmd, output="", stderr="primary container error")
+                return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="cleanup error")
+
+            with patch("subprocess.run", side_effect=mock_run):
+                with self.assertRaises(subprocess.CalledProcessError) as cm:
+                    snapshot.capture_container("fake-container", destination)
+                self.assertEqual(cm.exception.stderr, "primary container error")
