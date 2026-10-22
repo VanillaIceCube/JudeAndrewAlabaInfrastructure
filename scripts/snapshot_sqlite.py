@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -75,6 +76,7 @@ with closing(sqlite3.connect('file:' + source + '?mode=ro', uri=True)) as db:
             raise RuntimeError('Snapshot integrity failed')
 print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode & 0o777)}))
 """
+    primary_exc = None
     try:
         result = subprocess.run(
             ["docker", "exec", container, "python", "-c", program, remote],
@@ -98,22 +100,30 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
             json.dumps(metadata, indent=2) + "\n"
         )
         return metadata
+    except Exception as exc:
+        primary_exc = exc
+        raise
     finally:
         # Only the unique temporary artifact is removed, never application data.
-        subprocess.run(
-            [
-                "docker",
-                "exec",
-                container,
-                "python",
-                "-c",
-                "import os,sys; os.unlink(sys.argv[1]) if os.path.exists(sys.argv[1]) else None",
-                remote,
-            ],
-            check=False,
-            capture_output=True,
-            timeout=30,
-        )
+        try:
+            cleanup = subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    container,
+                    "python",
+                    "-c",
+                    "import os,sys; os.unlink(sys.argv[1]) if os.path.exists(sys.argv[1]) else None",
+                    remote,
+                ],
+                capture_output=True,
+                timeout=30,
+            )
+            if cleanup.returncode != 0 and primary_exc is None:
+                raise RuntimeError("Snapshot cleanup failed; temporary remote database artifact could not be removed")
+        except Exception as cleanup_exc:
+            if primary_exc is None and not isinstance(cleanup_exc, RuntimeError):
+                raise RuntimeError("Snapshot cleanup failed; temporary remote database artifact could not be removed") from cleanup_exc
 
 
 if __name__ == "__main__":
