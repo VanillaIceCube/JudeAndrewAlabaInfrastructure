@@ -96,8 +96,9 @@ def ssh_configuration(directory, env):
 def evidence(message):
     """Only caller-validated identities and fixed prose belong in public evidence."""
     print(message)
-    with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
-        summary.write(message + "\n\n")
+    if "GITHUB_STEP_SUMMARY" in os.environ:
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+            summary.write(message + "\n\n")
 
 
 def finalize_failure():

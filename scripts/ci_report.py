@@ -8,7 +8,7 @@ import uuid
 def main():
     name, filename, status = sys.argv[1:]
     path = Path(filename)
-    content = path.read_text(errors="replace") if path.exists() else "No check log was produced."
+    content = path.read_text(encoding="utf-8", errors="replace") if path.exists() else "No check log was produced."
     content = "\n".join(content.splitlines()[-120:])[-16000:]
     delimiter = "REPORT_" + uuid.uuid4().hex
     output_text = f"{name}_status={status}\n{name}<<{delimiter}\n{content}\n{delimiter}\n"
