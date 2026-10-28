@@ -97,6 +97,11 @@ the disposable CI Docker daemon. No live host or application onboarding occurs.
 
 ## 🔑 Separate OpenAI reviewer credentials
 
+GitHub App token consumers pin `actions/create-github-app-token` v3.3.0;
+the security-alert regression tests assert that exact SHA alongside the existing
+credential and permission boundaries. CodeQL init/analyze advance together to
+v4.39.1, and the Gitleaks action uses v3.0.0.
+
 Credential provisioning is a separate operator step. Configure the new secrets
 and project variable before activating these workflows. Missing keys fail
 visibly; there is no fallback to the old shared `OPENAI_API_KEY`.
