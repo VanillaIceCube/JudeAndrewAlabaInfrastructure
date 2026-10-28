@@ -1,5 +1,16 @@
 # 📝 Changelog
 
+## 2026-10-27
+
+### Fixed
+
+- Align strict security-alert token-action assertions with the reviewed v3.3.0 immutable pin while preserving credential and permission checks.
+
+### Changed
+
+- Update CodeQL init/analyze together to v4.39.1 and Gitleaks to v3.0.0.
+- Pin Docker login v4.7.0 in the shared release template so application dependency updates retain deployment parity.
+
 ## 2026-10-20
 
 ### Fixed

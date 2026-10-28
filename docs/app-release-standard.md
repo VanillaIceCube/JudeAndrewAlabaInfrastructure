@@ -63,6 +63,10 @@ parity again before accessing destination credentials or publishing images.
 
 For a coordinated update:
 
+The current template pins `docker/login-action` v4.7.0. Dependabot login-action
+updates in application workflows must adopt the shared template commit through
+the procedure below; changing only the rendered workflow fails parity.
+
 1. Edit common source/tests/template here and run
    `python scripts/update_release_manifest.py`. Infrastructure CI verifies the
    manifest with `--check`.
