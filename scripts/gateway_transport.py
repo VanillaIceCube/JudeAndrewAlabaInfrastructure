@@ -1,6 +1,7 @@
 """Actions-side gateway transport and sanitized run evidence. Never print credentials."""
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import tarfile
+import gateway_profile as profiles
 
 from gateway_release import IDENTITY, SHA, ReleaseError, require, run
 
@@ -37,6 +40,7 @@ def authorization():
             and SHA.fullmatch(workflow_source),
             "Only the promoted gateway workflow may deploy")
     require(os.environ.get("DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
+    profiles.selected(os.environ)  # Fail before any SSH credential is loaded.
     require(run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch")
     require(api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
             "Promotion advanced; approve a fresh run")
@@ -100,13 +104,24 @@ def evidence(message):
         summary.write(message + "\n\n")
 
 
-def source_archive(source, archive):
-    # Optional source profiles are not part of the default host release payload.
-    # Its strict extractor supports only the base mount trees until an explicit
-    # separately reviewed profile packaging operation selects otherwise.
+def source_archive(source, archive, profile=None):
+    profile = profile or profiles.selected(os.environ)
+    require(profile in profiles.PROFILES, "Invalid route profile")
     run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
          "compose.yml", "nginx/nginx.conf", "nginx/vhosts", "nginx/snippets",
-         "scripts/gateway_release.py", "scripts/check_host.py"])
+         "scripts/gateway_release.py", "scripts/check_host.py", "scripts/gateway_profile.py"])
+    vhost = None
+    if profile != "base":
+        path = "nginx/optional/" + ("ynab" if profile == "enabled" else "ynab-disabled") + "/zz-ynab.conf"
+        vhost = run(["git", "show", source + ":" + path]).encode()
+    with tarfile.open(archive, "a") as payload:
+        additions = {profiles.MARKER: json.dumps(profiles.descriptor(profile, vhost)).encode()}
+        if vhost is not None:
+            additions[profiles.VHOST] = vhost
+        for name, data in additions.items():
+            item = tarfile.TarInfo(name)
+            item.size, item.mode = len(data), 0o600
+            payload.addfile(item, io.BytesIO(data))
 
 
 def finalize_failure():
@@ -132,7 +147,7 @@ def execute(source, operation, recovery, directory):
     remote = REMOTE + identity
     run([*ssh, "umask 077; mkdir " + remote])
     archive = directory / "source.tar"
-    uploads = [Path("scripts/gateway_release.py"), Path("scripts/check_host.py")]
+    uploads = [Path("scripts/gateway_release.py"), Path("scripts/check_host.py"), Path("scripts/gateway_profile.py")]
     if operation == "deploy":
         source_archive(source, archive)
         uploads.insert(0, archive)
@@ -150,9 +165,10 @@ def execute(source, operation, recovery, directory):
                         "--property=UMask=0077", *arguments])
     output = run([*ssh, command], timeout=1250)
     result = json.loads(output.splitlines()[-1])
-    require(result["status"] in {"success", "unchanged", "rolled_back"} and SHA.fullmatch(result["running_source"]),
+    require(result["status"] in {"success", "unchanged", "rolled_back", "protected"} and SHA.fullmatch(result["running_source"]),
             "Missing host acceptance record")
-    return {"status": result["status"], "running_source": result["running_source"]}
+    require(result.get("profile", "base") in profiles.PROFILES, "Invalid accepted route profile")
+    return {"status": result["status"], "running_source": result["running_source"], "profile": result.get("profile", "base")}
 
 
 def main():
@@ -172,7 +188,9 @@ def main():
         result = execute(source, operation, recovery, Path(temporary))
     # Report the host's actual running identity, including unchanged promotions
     # and explicit rollback. Never claim the promoted helper source is running.
-    evidence(f"Verified host result: **{result['status']}**; running source `{result['running_source']}`.")
+    profile = result.get("profile", "base")
+    require(profile in profiles.PROFILES, "Invalid accepted route profile")
+    evidence(f"Verified host result: **{result['status']}**; running source `{result['running_source']}`; route profile `{profile}`.")
 
 
 if __name__ == "__main__":

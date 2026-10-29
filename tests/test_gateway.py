@@ -152,10 +152,10 @@ class AuthorizationTests(unittest.TestCase):
                     patch.object(transport, "ssh_configuration", return_value=directory / "config"), \
                     patch.object(transport, "run", side_effect=run):
                 result = transport.execute(SOURCE, "rollback", SECOND + "-9-1", directory)
-            self.assertEqual(result, {"status": "rolled_back", "running_source": SOURCE})
+            self.assertEqual(result, {"status": "rolled_back", "running_source": SOURCE, "profile": "base"})
             self.assertFalse(any(args[0] == "git" for args in calls))
             self.assertEqual([Path(args[-2]).as_posix() for args in calls if args[0] == "scp"],
-                             ["scripts/gateway_release.py", "scripts/check_host.py"])
+                             ["scripts/gateway_release.py", "scripts/check_host.py", "scripts/gateway_profile.py"])
             self.assertFalse((directory / "source.tar").exists())
             self.assertIn("--id " + SECOND + "-9-1", calls[-1][-1])
 

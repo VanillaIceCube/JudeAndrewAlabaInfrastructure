@@ -12,6 +12,8 @@
 
 ### Added
 
+- Extend the existing gateway transaction with explicit YNAB profile packaging,
+  protected tombstone transitions, route identity and independent health checks.
 - Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
   fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
   require independent immutable egress and gateway image references.
