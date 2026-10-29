@@ -9,9 +9,13 @@ import sys
 import tempfile
 import uuid
 import build as builder
+import importlib.util
 
 ROOT = Path(__file__).resolve().parents[2]
 LABEL = "infrastructure.ynab.gateway.fixture"
+egress_spec = importlib.util.spec_from_file_location("ynab_egress_builder", ROOT / "services/ynab-egress/build.py")
+egress_builder = importlib.util.module_from_spec(egress_spec)
+egress_spec.loader.exec_module(egress_builder)
 
 
 def run(command, **kwargs):
@@ -29,6 +33,7 @@ def cleanup(identity):
         subprocess.run(["docker", "rm", "-f", *containers], check=False, timeout=30)
     subprocess.run(["docker", "volume", "rm", identity + "-secret"], check=False, timeout=30)
     subprocess.run(["docker", "image", "rm", identity + ":fixture"], check=False, timeout=30)
+    subprocess.run(["docker", "image", "rm", identity + ":egress-fixture"], check=False, timeout=30)
 
 
 PREPARE = """
@@ -101,6 +106,21 @@ def main(identity):
     try:
         with tempfile.TemporaryDirectory(prefix=identity) as temp:
             builder.build(image, Path(temp) / "record.json")
+            egress_builder.build(identity + ":egress-fixture", Path(temp) / "egress-record.json")
+            egress_config = json.loads(subprocess.check_output([
+                "docker", "image", "inspect", identity + ":egress-fixture"], text=True))[0]["Config"]
+            if egress_config["User"] != "13:13" or egress_config["Entrypoint"] != ["/usr/sbin/squid"]:
+                raise ValueError("Unexpected egress image privilege/entrypoint configuration")
+            fixture_env = dict(os.environ, YNAB_GATEWAY_REPOSITORY="ghcr.io/fixture/gateway", YNAB_GATEWAY_SHA256="a" * 64,
+                YNAB_EGRESS_REPOSITORY="ghcr.io/fixture/egress", YNAB_EGRESS_SHA256="b" * 64,
+                YNAB_TOKEN_FILE="/synthetic/token", YNAB_GATEWAY_IDENTITY_FILE="/synthetic/identity",
+                YNAB_OAUTH_PUBLIC_KEY_FILE="/synthetic/public-key")
+            model = json.loads(run(["docker", "compose", "-f", str(ROOT / "services/ynab-gateway/compose.yml"),
+                "-f", str(ROOT / "services/ynab-gateway/network.compose.yml"), "--profile", "manual-gateway",
+                "config", "--format", "json"], env=fixture_env, capture_output=True, text=True).stdout)
+            if set(model["services"]) != {"gateway", "egress"} or any(
+                    service.get("ports") for service in model["services"].values()):
+                raise ValueError("Unexpected app service/host-port configuration")
             run(["docker", "run", "--rm", "--label", LABEL + "=" + identity,
                  "--network", "none", "--read-only", "--cap-drop", "ALL",
                  "--security-opt", "no-new-privileges", "--pids-limit", "64",
@@ -116,6 +136,7 @@ def main(identity):
             production_entrypoint(identity, image)
             run([sys.executable, str(ROOT / "tests/test_ynab_egress.py")], env=dict(os.environ,
                 YNAB_GATEWAY_TEST_IMAGE=image, YNAB_GATEWAY_TEST_SECRET=identity + "-secret",
+                YNAB_EGRESS_TEST_IMAGE=identity + ":egress-fixture",
                 YNAB_EGRESS_TEST_ID=identity.replace("ynab-gateway-test-", "ynab-egress-test-")))
     finally:
         cleanup(identity)

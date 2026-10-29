@@ -94,6 +94,13 @@ candidate, **not approved for production**. Update a maintained upstream artifac
 and re-run the complete egress/container suites and audit; do not suppress these
 findings or patch/fork Oliver's application.
 
+The separately reviewed [egress packaging](../services/ynab-egress/README.md)
+provides a scan-compatible maintained Canonical base plus two hash/version-pinned
+Ubuntu security packages. Its initial local full scan removed those HIGH findings,
+with all 138 native OS records covered; review remaining lower-severity findings,
+licenses and provenance, and re-scan each exact final build. This is not a blanket
+exception or production artifact approval.
+
 A newer Canonical Ubuntu 26.04 Rock candidate exposes an OS label but no
 Trivy-recognized OS package inventory. Its zero reported OS findings cannot pass
 this gate. A supported, complete publisher SBOM/catalog path or a scan-compatible

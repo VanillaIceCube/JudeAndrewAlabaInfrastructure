@@ -4,6 +4,9 @@
 
 ### Added
 
+- Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
+  fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
+  require independent immutable egress and gateway image references.
 - Add a pinned full-image YNAB audit prerequisite that rejects missing package
   coverage, stale evidence, secrets and high/critical vulnerabilities; retain
   explicit artifact/license/provenance and production activation gates.

@@ -70,12 +70,14 @@ not conclusions drawn from Compose config or a droplet's advertised size.
 
 ## 🔌 Fixed outbound path
 
-The maintained Canonical `ubuntu/squid` artifact is pinned to linux/amd64 digest
-`8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce`.
-The inspected image reports Squid 6.13; its publisher channel is
-`6.6-24.04_beta`. The channel is evidence for updates, **not** a mutable deployment
-reference or production approval. Review this packaging status, GPL notices,
-provenance and full-image advisories in #61 before any promotion.
+The [egress recipe](../services/ynab-egress/README.md) pins a scan-compatible
+Canonical Squid 6.13 amd64 base and two hash/version-pinned Ubuntu security
+packages. It supersedes the original beta digest's HIGH findings while preserving
+native package inventory. The inactive overlay requires a separately built,
+reviewed immutable `YNAB_EGRESS_REPOSITORY`/`YNAB_EGRESS_SHA256` artifact, alongside
+the gateway image pair; no mutable publisher channel is a deployment reference.
+Review GPL notices, provenance, remaining findings and both exact full-image scans
+in #61 before any promotion.
 
 The non-root proxy runs uid/gid13 with read-only root, dropped capabilities, no
 privilege escalation, no restart or logs/cache, 128 MiB, quarter CPU and 32 PIDs.
