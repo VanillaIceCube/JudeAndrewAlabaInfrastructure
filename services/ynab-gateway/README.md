@@ -17,7 +17,8 @@ Oliver's unchanged application and canonical source pins remain under
 [`../ynab-mcp`](../ynab-mcp/README.md). No fork or dependency overrides.
 
 `requirements.txt` pins the complete Linux/Python 3.12 graph with SHA-256 artifact
-hashes. Generate updates in a disposable Linux container using Python 3.12,
+hashes. Preserve its two-line canonical-input/scanner header on regeneration.
+Generate updates in a disposable Linux container using Python 3.12,
 `pip==26.2` and `pip-tools==7.6.2`, with this single input line in a temporary
 `requirements.in` (do not add another unscanned manifest):
 
