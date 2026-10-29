@@ -4,6 +4,9 @@
 
 ### Added
 
+- Add a pinned full-image YNAB audit prerequisite that rejects missing package
+  coverage, stale evidence, secrets and high/critical vulnerabilities; retain
+  explicit artifact/license/provenance and production activation gates.
 - Add inactive YNAB ingress/disable profiles and isolated route/CONNECT-egress
   contracts with disposable DNS/streaming/rollback/TLS API tests; apply no provider changes.
 - Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated

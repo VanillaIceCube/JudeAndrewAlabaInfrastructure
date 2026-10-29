@@ -107,6 +107,12 @@ the fixture private-IP ACL exception or CA into production. Run both ingress
 suites and the gateway runner for route/egress changes; #61/#62 must approve
 artifact/security/release/capacity and provider operations before activation.
 
+#61's [artifact gate](docs/ynab-artifact-security.md) requires complete OS/runtime
+inventory, a hash-pinned scanner and fresh evidence for both images. Never waive
+the pinned Squid candidate's known HIGH findings or approve a zero-inventory scan.
+Run `python -m unittest discover -s tests -p test_ynab_image_audit.py -v` for gate
+changes. Scans neither approve licenses/provenance nor authorize deployment.
+
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,
