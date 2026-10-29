@@ -77,6 +77,8 @@ Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAut
 
 Follow [the gateway decision](docs/ynab-mcp.md) and #56/#57–#62 dependency order.
 The disposable `experiments/ynab-mcp` harness is not deployable application code.
+Run it with Node 24 for harness/pin changes; existing validation CI enforces the
+same credential-free experiment with a four-minute limit.
 Keep upstream source/lock pins, one stdio child per logical session, independent
 owner identity boundaries and `YNAB_ALLOW_WRITES=0`. Do not ship fixture tools,
 fork/vendor Oliver's application, or treat native gateway keys as public OAuth.

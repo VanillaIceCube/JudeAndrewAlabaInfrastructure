@@ -6,7 +6,8 @@
 
 - Document the conditional YNAB MCP gateway choice, dependency/security blockers,
   identity/route contracts and ordered #57–#62 handoff; add a pinned disposable
-  upstream protocol/preview experiment without production configuration or credentials.
+  upstream protocol/preview experiment in existing validation CI without production
+  configuration or credentials.
 
 ### Fixed
 

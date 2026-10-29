@@ -84,6 +84,11 @@ On a disposable workstation/CI runner with Git, Python and Node 24/npm:
 python experiments/ynab-mcp/run.py
 ```
 
+The existing `validate.yml` automation step runs this same command with Node 24
+and a four-minute process limit; failures block the existing Required CI gate.
+Revalidate every harness/pin change and each proposed upstream upgrade. This
+protocol fixture does not replace #61's production supply-chain/release gates.
+
 Sources, packages, fixture HOME and working files are temporary and removed on
 exit. Package downloads require internet. This is a local-process experiment,
 not a hostile-code sandbox: use a disposable runner without credentials. The
@@ -196,7 +201,8 @@ designed for Django/SQLite apps; #61 must assess a configuration-only service
 profile rather than copying the engine or inventing fake migrations/databases.
 
 1. **#57, this PR:** architecture, source/lock pins and disposable proof. Existing
-   Compose, Nginx, app networks, certificates, credentials and workflows unchanged.
+   Compose, Nginx, app networks, certificates, credentials and deployment workflows
+   unchanged. The existing validation workflow also runs the bounded experiment.
 2. **#58:** resolve advisory/provenance gates, then isolated non-root immutable
    runtime; no host ports/Docker socket, minimal read-only filesystem/capabilities,
    measured resource limits, independent secrets and deliberate journal policy.
