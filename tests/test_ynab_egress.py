@@ -17,7 +17,7 @@ import uuid
 from test_ingress import docker, OPENSSL, ROOT
 
 LABEL = "infrastructure.ynab.egress.fixture"
-SQUID = "ubuntu/squid@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce"
+SQUID = os.environ.get("YNAB_EGRESS_TEST_IMAGE")
 PYTHON = "python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487"
 IDENTITY = os.environ.get("YNAB_EGRESS_TEST_ID", "ynab-egress-test-" + uuid.uuid4().hex)
 IMAGE = os.environ.get("YNAB_GATEWAY_TEST_IMAGE")
@@ -46,11 +46,13 @@ def cleanup(identity):
             docker(kind, "rm", *( ["-f"] if kind == "container" else []), *ids, check=False)
 
 
-@unittest.skipUnless(IMAGE and SECRET, "Run through services/ynab-gateway/run_tests.py with its synthetic image/volume")
+@unittest.skipUnless(IMAGE and SECRET and SQUID, "Run through services/ynab-gateway/run_tests.py with its synthetic images/volume")
 class EgressTests(unittest.TestCase):
     def test_fixed_connect_acl_and_real_upstream_use_the_proxy_without_direct_egress(self):
         if not re.fullmatch(r"ynab-gateway-test-[a-f0-9]{32}:fixture", IMAGE):
             raise ValueError("Use an exact disposable gateway fixture image")
+        if SQUID != IMAGE.removesuffix(":fixture") + ":egress-fixture":
+            raise ValueError("Use the matching disposable egress image")
         if not re.fullmatch(r"ynab-gateway-test-[a-f0-9]{32}-secret", SECRET):
             raise ValueError("Use an exact synthetic fixture volume")
         if not re.fullmatch(r"ynab-egress-test-[a-f0-9]{32}", IDENTITY):

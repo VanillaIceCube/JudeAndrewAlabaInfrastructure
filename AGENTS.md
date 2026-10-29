@@ -112,6 +112,10 @@ inventory, a hash-pinned scanner and fresh evidence for both images. Never waive
 the pinned Squid candidate's known HIGH findings or approve a zero-inventory scan.
 Run `python -m unittest discover -s tests -p test_ynab_image_audit.py -v` for gate
 changes. Scans neither approve licenses/provenance nor authorize deployment.
+The [egress recipe](services/ynab-egress/README.md) pins official Ubuntu security
+packages without a mutable resolver. Regenerate its recipe manifest and run the
+gateway runner plus both full-image artifact scans for changes. Keep unpublished
+local candidates distinct from approved registry digests.
 
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
