@@ -74,12 +74,13 @@ class EgressTests(unittest.TestCase):
                 docker("run", "-d", "--label", label, "--name", IDENTITY + "-api", "--network", api_network,
                        "--network-alias", "api.ynab.com", "--read-only", "--mount",
                        "type=bind,source=" + str(temp) + ",target=/fixture,readonly", PYTHON, "python", "-c", API)
-                def start_proxy():
+                def start_proxy(address=None):
                     docker("run", "-d", "--label", label, "--name", proxy, "--network", network,
                            "--network-alias", "ynab-egress", "--user", "13:13", "--read-only", "--cap-drop", "ALL",
                            "--security-opt", "no-new-privileges", "--pids-limit", "32", "--memory", "128m",
                            "--tmpfs", "/tmp:rw,noexec,nosuid,size=8m,uid=13,gid=13,mode=0700", "--mount",
                            "type=bind,source=" + str(policy) + ",target=/etc/squid/squid.conf,readonly",
+                           *(["--add-host", "api.ynab.com:" + address] if address else []),
                            "--entrypoint", "/usr/sbin/squid", SQUID,
                            "-N", "-f", "/etc/squid/squid.conf", "-d0")
                     docker("network", "connect", api_network, proxy)
@@ -87,7 +88,7 @@ class EgressTests(unittest.TestCase):
                     docker("run", "--rm", "--label", label, "--network", network, "--read-only", "--cap-drop", "ALL",
                            PYTHON, "python", "-c", ready)
                 def status(request):
-                    probe = "import socket,sys\nwith socket.create_connection(('ynab-egress',3128),timeout=3) as stream:\n stream.sendall(sys.argv[1].encode());print(int(stream.recv(1024).split(b' ')[1]))"
+                    probe = "import socket,sys\nwith socket.create_connection(('ynab-egress',3128),timeout=8) as stream:\n stream.sendall(sys.argv[1].encode());print(int(stream.recv(1024).split(b' ')[1]))"
                     return int(docker("run", "--rm", "--label", label, "--network", network, "--read-only", "--cap-drop", "ALL",
                                       PYTHON, "python", "-c", probe, request).stdout.strip())
                 start_proxy()
@@ -105,6 +106,16 @@ class EgressTests(unittest.TestCase):
                 direct = "import socket,sys\ntry: socket.create_connection((sys.argv[1],443),timeout=1)\nexcept OSError: pass\nelse: raise SystemExit('Direct fixture API access bypassed isolation')"
                 docker("run", "--rm", "--label", label, "--network", network, "--read-only", "--cap-drop", "ALL",
                        PYTHON, "python", "-c", direct, api_ip)
+                for reserved in ("192.0.2.2", "198.51.100.2", "203.0.113.2", "3fff::1", "100:0:0:1::1"):
+                    docker("rm", "-f", proxy)
+                    start_proxy(reserved)
+                    self.assertEqual(status("CONNECT api.ynab.com:443 HTTP/1.1\r\nHost: api.ynab.com\r\n\r\n"), 403)
+                # A public-address control must get a connection failure rather
+                # than ACL403, proving the host override affected resolution.
+                # Both networks are internal: no actual external connection can occur.
+                docker("rm", "-f", proxy)
+                start_proxy("8.8.8.8")
+                self.assertEqual(status("CONNECT api.ynab.com:443 HTTP/1.1\r\nHost: api.ynab.com\r\n\r\n"), 503)
                 exception = "acl fixture_destination dst " + api_ip + "/32\n"
                 fixture_policy = source.decode().replace("http_access deny private_dst", exception + "http_access deny private_dst !fixture_destination")
                 docker("rm", "-f", proxy)

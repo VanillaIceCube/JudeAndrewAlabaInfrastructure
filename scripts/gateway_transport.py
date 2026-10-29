@@ -100,6 +100,15 @@ def evidence(message):
         summary.write(message + "\n\n")
 
 
+def source_archive(source, archive):
+    # Optional source profiles are not part of the default host release payload.
+    # Its strict extractor supports only the base mount trees until an explicit
+    # separately reviewed profile packaging operation selects otherwise.
+    run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
+         "compose.yml", "nginx/nginx.conf", "nginx/vhosts", "nginx/snippets",
+         "scripts/gateway_release.py", "scripts/check_host.py"])
+
+
 def finalize_failure():
     # No credentials, network request or host mutation. The runner's conclusion
     # cannot establish whether an independently running host unit has completed.
@@ -125,8 +134,7 @@ def execute(source, operation, recovery, directory):
     archive = directory / "source.tar"
     uploads = [Path("scripts/gateway_release.py"), Path("scripts/check_host.py")]
     if operation == "deploy":
-        run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
-             "compose.yml", "nginx", "scripts/gateway_release.py", "scripts/check_host.py"])
+        source_archive(source, archive)
         uploads.insert(0, archive)
     for path in uploads:
         run([*scp, path, "gateway:" + remote + "/" + path.name])

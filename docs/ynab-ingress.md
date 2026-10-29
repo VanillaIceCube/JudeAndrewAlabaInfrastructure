@@ -85,6 +85,10 @@ requests and IP literals are denied. There is no TLS interception or token at
 the proxy; Node validates the API's normal certificate end to end. The proxy is
 not a financial-write firewall: #59 and the unchanged runtime independently keep
 writes disabled. DNS/host administrator compromise is outside this app boundary.
+Review the [IANA special-purpose IPv6 registry](https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml)
+alongside artifact updates; the deny list includes both IPv4 documentation ranges
+and IPv6 `2001:db8::/32`/`3fff::/20`, plus local-use translation/SID ranges. New
+network contracts require IPv6 disabled; the ACL remains an additional safeguard.
 
 Node 24's [documented environment-proxy flag](https://github.com/nodejs/node/blob/v24.15.0/doc/api/cli.md#--use-env-proxy)
 is enabled in the fixed child command; HTTP/HTTPS proxy authorities are exactly
@@ -161,3 +165,6 @@ Profiles must pass #61's supported bundle/preflight/release interface before use
 the current default gateway transaction must not be bypassed with ad-hoc Compose
 commands. #62 records the exact approved sequence and recovery. Main-source
 merges supply neither live network creation nor public activation authorization.
+The default transport archives only the existing base mount trees, excluding the
+inactive optional directories so its strict extractor continues to accept the
+normal payload. A regression extracts an actual Git archive through that parser.

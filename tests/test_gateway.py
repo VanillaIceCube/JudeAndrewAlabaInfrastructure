@@ -29,6 +29,17 @@ def archive(path, content="events {}\nhttp {}\n"):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_default_archive_excludes_optional_profiles_and_passes_strict_unpack(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = transport.run(["git", "rev-parse", "HEAD"]).strip()
+            transport.source_archive(source, root / "source.tar")
+            with tarfile.open(root / "source.tar") as payload:
+                self.assertFalse(any(name.startswith("nginx/optional") for name in payload.getnames()))
+            (root / "out").mkdir()
+            release.unpack(root / "source.tar", root / "out")
+            self.assertTrue((root / "out/nginx/nginx.conf").is_file())
+
     def test_pending_preflight_allows_absent_gateway_without_weakening_app_trust(self):
         objects = {}
         for name, (internal, subnet, apps) in release.check_host.NETWORKS.items():
