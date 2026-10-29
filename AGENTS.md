@@ -117,11 +117,17 @@ packages without a mutable resolver. Regenerate its recipe manifest and run the
 gateway runner plus both full-image artifact scans for changes. Keep unpublished
 local candidates distinct from approved registry digests.
 
-
 The [gateway profile contract](docs/gateway-profiles.md) uses the existing bundle/
 owner-promotion path. Preserve a disabled tombstone baseline before exposure,
 exact Notoli trust and accepted optional-route identity; never implicitly remove
 the hostname by reverting to `base`. No profile variable is a deployment approval.
+
+Use the [YNAB-only release contract](docs/ynab-releases.md) for its stateless app
+controller. Keep paired fresh scans under shared maintenance/exclusive app locks,
+matched private files/images, durable pending barriers and explicit recovery.
+Never retry ambiguous Docker mutations, accept saved approval JSON or mutate
+ingress/networks/other apps. Run both `test_ynab_release*.py` state/Docker suites;
+source tests substitute only synthetic providers, never a production bypass.
 
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container

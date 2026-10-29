@@ -11,6 +11,9 @@
 
 - Extend the existing gateway transaction with explicit YNAB profile packaging,
   protected tombstone transitions, route identity and independent health checks.
+- Add an owner-operated YNAB-only stage/promotion/rollback controller using shared
+  host primitives, fresh paired artifact scans, matched private files and durable
+  recovery barriers; test actual Docker upgrades and SIGKILL without live services.
 - Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
   fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
   require independent immutable egress and gateway image references.
