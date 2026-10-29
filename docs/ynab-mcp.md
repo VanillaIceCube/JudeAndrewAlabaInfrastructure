@@ -6,21 +6,30 @@ Reviewed 2026-10-28. **No production service or public endpoint is enabled.**
 
 ## 🧭 Decision and boundaries
 
-Select **Supergateway's stateful Streamable HTTP-to-stdio transport**, with one
-upstream child per MCP session and a single owner security domain per gateway
-instance. Keep Oliver Ames's application unchanged and consume reviewed upstream
-source with its lockfile. Do not fork, vendor, implement another protocol engine,
-or connect YNAB to Notoli's users/OAuth database.
+**2026-10-29 #59 amendment:** reopen the conditional choice below in favor of
+FastMCP 4.1.4's maintained stateful proxy/resource-server APIs, because no acceptable
+Supergateway artifact is available. The [hashed Python lock and scanner boundary](../services/ynab-gateway/README.md)
+are the first reviewable prerequisite. The 61 clean known-advisory pins support
+further implementation, not public activation or FastMCP lifecycle acceptance.
+The original Supergateway experiment remains historical regression evidence;
+its dependency findings are not waived. #59 authentication/session acceptance
+must pass before #60 can supply an inactive route.
 
-The exact evaluated Supergateway **4.2.1 is blocked for production**: its locked
-runtime dependency graph has high/critical advisories. Selection is conditional
-on a patched upstream artifact and a repeated review/test/audit in #58/#59.
+Select **FastMCP's maintained stateful Streamable HTTP-to-stdio proxy** for #59,
+with one upstream child per MCP session and a single owner security domain per
+gateway instance. Keep Oliver Ames's application unchanged and consume reviewed
+upstream source with its lockfile. Do not fork, vendor, implement another protocol
+engine, or connect YNAB to Notoli's users/OAuth database.
+
+The original #57 Supergateway **4.2.1 selection is superseded and blocked for
+production**: its locked runtime dependency graph has high/critical advisories.
 Do not resolve this by silently running `npm audit fix`, relaxing pins or adding
-local dependency overrides. If upstream cannot provide an acceptable artifact,
-reopen this decision and compare alternatives before any deployment.
+local dependency overrides. Its seven-test experiment remains historical evidence
+only; the replacement needs its own complete authentication/lifecycle acceptance.
 
-Native API-key authentication suffices for the **private, single-owner transport
-experiment**. It does not implement OAuth, expiry, scopes, client identity or
+**Historical #57 evidence only:** Supergateway's native API-key authentication
+sufficed for that private transport experiment. It does not apply to the selected
+FastMCP replacement. It lacks OAuth, expiry, scopes, client identity or
 principal-to-session binding. Therefore it is **not the public authentication
 boundary**. Public ingress remains blocked until #59 supplies reviewed OAuth
 resource-server enforcement and the client acceptance described below. The
@@ -30,8 +39,8 @@ existing [optional MCP contract](optional-mcp.md) continues to apply.
 
 | Candidate examined | Evidence | Disposition |
 | --- | --- | --- |
-| Supergateway 4.2.1, MIT, `a78bd90804d3080e8268961949f22575b34826f0` | [Release](https://github.com/supercorp-ai/supergateway/releases/tag/v4.2.1), [session lifecycle](https://github.com/supercorp-ai/supergateway/blob/a78bd90804d3080e8268961949f22575b34826f0/src/gateways/statefulSessions.ts), [authentication](https://github.com/supercorp-ai/supergateway/blob/a78bd90804d3080e8268961949f22575b34826f0/src/lib/apiKey.ts). Released October 24 with Windows process-tree cleanup and empty-key configuration fixes; upstream reports cross-platform soak tests. | Best fit for the small Node/stdio transport layer; seven local contract tests below pass. Dependency audit blocks the evaluated pin from production. |
-| FastMCP 4.1.4, Apache-2.0, `26bf9080ae338d1467dca6471b15c6911f71c75c` | [Release](https://github.com/PrefectHQ/fastmcp/releases/tag/v4.1.4), [proxy provider and client factory](https://github.com/PrefectHQ/fastmcp/blob/26bf9080ae338d1467dca6471b15c6911f71c75c/fastmcp_slim/fastmcp/server/providers/proxy.py). Active broader Python framework with OAuth support. | Viable fallback, but adds another runtime/framework and requires explicit proof that backend-client lifetimes preserve each upstream preview session. Not exercised or security-certified by this experiment; do not assume proxy defaults preserve tokens. |
+| Supergateway 4.2.1, MIT, `a78bd90804d3080e8268961949f22575b34826f0` | [Release](https://github.com/supercorp-ai/supergateway/releases/tag/v4.2.1), [session lifecycle](https://github.com/supercorp-ai/supergateway/blob/a78bd90804d3080e8268961949f22575b34826f0/src/gateways/statefulSessions.ts), [authentication](https://github.com/supercorp-ai/supergateway/blob/a78bd90804d3080e8268961949f22575b34826f0/src/lib/apiKey.ts). Released October 24 with Windows process-tree cleanup and empty-key configuration fixes; upstream reports cross-platform soak tests. | Original #57 selection, now superseded; seven local contract tests below pass. Dependency audit blocks the evaluated pin from production. |
+| FastMCP 4.1.4, Apache-2.0, `26bf9080ae338d1467dca6471b15c6911f71c75c` | [Release](https://github.com/PrefectHQ/fastmcp/releases/tag/v4.1.4), [proxy provider and client factory](https://github.com/PrefectHQ/fastmcp/blob/26bf9080ae338d1467dca6471b15c6911f71c75c/fastmcp_slim/fastmcp/server/providers/proxy.py). Active broader Python framework with OAuth support. | Selected #59 replacement with a pinned Python graph; runtime acceptance is not included in this prerequisite. Adds another runtime/framework; complete identity/session/failure acceptance remains required. The original Supergateway experiment does not certify this proxy. |
 | TBXark/mcp-proxy 1.1.0, MIT, `a0e6dfb620020a729338e8c993aaa45667211de4` | [Release](https://github.com/tbxark/mcp-proxy/releases/tag/v1.1.0), [downstream client lifecycle](https://github.com/tbxark/mcp-proxy/blob/a0e6dfb620020a729338e8c993aaa45667211de4/client.go), [HTTP/auth routing](https://github.com/tbxark/mcp-proxy/blob/a0e6dfb620020a729338e8c993aaa45667211de4/http.go). Maintained Go aggregation proxy. | Its aggregated downstream-client model is not evidence of one isolated stdio process per remote session. Extra isolation work and another runtime offer no demonstrated advantage here. Not runtime-tested. |
 | Owned minimal SDK adapter | Would own authentication, streaming, cancellation, child cleanup, session isolation, errors and ongoing protocol updates. | Reject for now: larger security maintenance obligation than configuring a vetted transport. An unauthenticated proxy or per-request process is unacceptable. |
 
@@ -137,7 +146,11 @@ client that initializes afresh for each tool call cannot complete local previews
 
 ## 🔐 Authentication, identities and exact routes
 
-For private transport evaluation, configure exactly one random owner key per
+The following paragraph/table record **historical Supergateway-only evaluation**;
+they are not FastMCP configuration instructions. #59 must deliver the replacement
+authentication contract and its own executable acceptance evidence.
+
+For that private transport evaluation, configure exactly one random owner key per
 instance through a protected file; reject absent/empty configuration at startup.
 Use `Authorization: Bearer`, never query credentials. Supergateway also accepts
 `X-API-Key`; a future public edge must strip it so it cannot bypass OAuth.

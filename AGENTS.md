@@ -88,6 +88,12 @@ authorized operations. Keep sanitized progress on #56 and private details in
 KnowledgeVault. Log each Cloudflare/DigitalOcean request and purpose privately
 before execution, then record its result and any mutation; do not log secrets.
 
+#59 reopens the conditional gateway choice with pinned FastMCP 4.1.4; see
+`services/ynab-gateway/README.md`. Only its exact hashed Python lock has scanner
+support. Run `python scripts/check_gateway_dependencies.py` for lock changes;
+never bypass unsupported-manifest checks or treat known-advisory checks as proof
+against unknown malware. Auth/session acceptance and production gates remain open.
+
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,
