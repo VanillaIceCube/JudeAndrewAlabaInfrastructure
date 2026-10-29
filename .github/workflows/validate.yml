@@ -81,7 +81,7 @@ jobs:
         run: |
           set -o pipefail
           docker compose -f compose.yml config --quiet
-          python3 -m unittest discover -s tests -p test_ingress.py -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+          python3 -m unittest discover -s tests -p 'test_*ingress.py' -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
       - name: Validate SQLite recovery
         id: recovery
         continue-on-error: true

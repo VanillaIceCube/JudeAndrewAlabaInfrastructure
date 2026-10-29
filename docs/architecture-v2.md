@@ -63,6 +63,12 @@ app-only Notoli release should remove it or bind it to loopback once approved.
 
 ## Routing and proxy trust
 
+The [YNAB optional ingress/egress plan](ynab-ingress.md) supplies an inactive
+fourth route-network attachment and independent app/CONNECT-proxy networks. It
+does not modify any existing network, enable the base profile or change Notoli's
+exact trusted peer. Its 410 disable profile preserves existing routes. Separate
+artifact/release/security and owner operation gates apply before use.
+
 Serve the existing `notoli.judeandrewalaba.com` and
 `macromapper.judeandrewalaba.com` vhosts on 80/443 with canonical HTTPS redirects.
 Retain 25 MiB body limits and existing slash redirects for `/api`, `/auth`, and

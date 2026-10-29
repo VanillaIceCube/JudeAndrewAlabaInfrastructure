@@ -200,6 +200,12 @@ does not substitute for these tests.
 Read-only source/build/preflight never starts a production service. The default
 Compose `network_mode: none` is deliberate; #60 must separately supply reviewed
 route/egress source, and #61/#62 must supply release/recovery/client acceptance.
+The [inactive network/ingress overlay](../../docs/ynab-ingress.md) now supplies
+that source contract. The fixed child uses Node's environment-proxy flag with
+exact `ynab-egress:3128` authorities and no bypass; native inbound HTTP header
+forwarding is explicitly disabled. The gateway runner additionally tests actual
+unchanged stdio reads against a synthetic TLS API through the maintained proxy,
+with no internet access. Production packaging/security and operations stay gated.
 Rotate secrets with fresh protected files and recreate the selected gateway under
 its app lock; bind mounts retain old file inodes. Preserve prior matched image,
 configuration and private evidence for explicit rollback. No shared ingress,

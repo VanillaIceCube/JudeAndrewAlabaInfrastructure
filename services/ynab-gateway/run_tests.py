@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import uuid
 import build as builder
@@ -20,6 +21,8 @@ def run(command, **kwargs):
 def cleanup(identity):
     if not re.fullmatch(r"ynab-gateway-test-[a-f0-9]{32}", identity):
         raise ValueError("Invalid fixture identity")
+    run([sys.executable, str(ROOT / "tests/test_ynab_egress.py"), "--cleanup",
+         identity.replace("ynab-gateway-test-", "ynab-egress-test-")])
     containers = subprocess.check_output(["docker", "ps", "-aq", "--filter",
                                           "label=" + LABEL + "=" + identity], text=True).split()
     if containers:
@@ -111,6 +114,9 @@ def main(identity):
             if config["User"] != "65532:65532" or config.get("ExposedPorts"):
                 raise ValueError("Unexpected gateway image privilege/port configuration")
             production_entrypoint(identity, image)
+            run([sys.executable, str(ROOT / "tests/test_ynab_egress.py")], env=dict(os.environ,
+                YNAB_GATEWAY_TEST_IMAGE=image, YNAB_GATEWAY_TEST_SECRET=identity + "-secret",
+                YNAB_EGRESS_TEST_ID=identity.replace("ynab-gateway-test-", "ynab-egress-test-")))
     finally:
         cleanup(identity)
 

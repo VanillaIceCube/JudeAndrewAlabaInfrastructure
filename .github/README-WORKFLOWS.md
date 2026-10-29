@@ -37,6 +37,12 @@ Its result/log joins the existing automation evidence for Lint Eastwood; failure
 blocks the overall Tests/Required CI result. It publishes no image and loads no
 real credentials. See the [gateway contract](../services/ynab-gateway/README.md).
 
+Ingress validation includes both the base and inactive YNAB overlay fixtures.
+The separate gateway image job also tests its actual stdio app against a
+synthetic TLS API through the pinned CONNECT proxy, on an internal-only Docker
+network pair with no direct client/API path. Exact-run cleanup removes its labeled egress fixtures as well. The
+private-IP ACL exception/CA are test-only; no provider changes or live API calls.
+
 ## 🔒 Required checks and permissions
 
 `Required CI` in the CI workflow requires independent gates and all applicable reviews.
