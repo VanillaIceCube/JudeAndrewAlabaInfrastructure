@@ -52,6 +52,7 @@ class ImageAuditTests(unittest.TestCase):
             "Package: " + name + "\nVersion: " + version + "\nStatus: install ok installed\n"
             for name, version in expected()["os"]),
             "app/node_modules/.package-lock.json": json.dumps({"packages": {
+                "": {"name": "fixture-root", "version": "1.0"},
                 "node_modules/fixture-node": {"version": "1.0"}}}),
             "opt/gateway-deps/fastmcp_slim-4.1.4.dist-info/METADATA": "Name: fastmcp-slim\nVersion: 4.1.4\n"}
         with tempfile.TemporaryDirectory() as directory:

@@ -79,9 +79,16 @@ def inventory(filesystem, role):
         packages = json.loads(lock).get("packages")
         require(isinstance(packages, dict) and packages, "Missing installed Node packages")
         for path, package in packages.items():
+            # npm's ordinary v2/v3 lock may include the application's root;
+            # it is not an installed node_modules dependency. Hidden installed
+            # locks generally omit it, but both forms must retain full coverage.
+            if path == "":
+                require(isinstance(package, dict), "Malformed Node root record")
+                continue
             require("node_modules/" in path and isinstance(package, dict) and package.get("version"),
                     "Incomplete installed Node package record")
             expected["node"].add((path.rsplit("node_modules/", 1)[1], package["version"]))
+        require(expected["node"], "Missing installed Node dependencies")
         for text in records.values():
             package = Parser().parsestr(text)
             require(package.get("Name") and package.get("Version"), "Incomplete installed Python package record")
