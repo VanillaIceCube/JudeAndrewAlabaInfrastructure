@@ -611,8 +611,9 @@ class Gateway:
             # Retain the barrier rather than racing an indeterminate activation.
             raise ReleaseError("Activation timed out; pending barrier retained for explicit recovery") from None
         except Exception:
-            self.restore(journal, ca)
-            raise ReleaseError("Candidate failed; safe gateway profile restored; evidence retained") from None
+            restored = self.restore(journal, ca)
+            outcome = "protected tombstone restored" if restored.get("outcome") == "protected" else "previous gateway restored"
+            raise ReleaseError("Candidate failed; " + outcome + "; evidence retained") from None
 
 
 def main():
