@@ -7,7 +7,6 @@ The actual gateway/protocol/secret policy is tested by its existing image runner
 """
 import hashlib
 import ipaddress
-import json
 import os
 from pathlib import Path
 import shutil
