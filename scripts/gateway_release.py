@@ -484,6 +484,16 @@ class Gateway:
 
     def restore(self, journal, ca):
         previous = journal["previous"]
+        protected = self.profile(previous) == "base" and journal.get("profile") == "disabled"
+        if protected:
+            # First tombstone activation has no protected predecessor. Recover
+            # its already syntax-tested disabled candidate, retaining the host
+            # protection through both ordinary failure and interrupted recovery.
+            staged = self.root / "releases" / journal["id"]
+            require(profiles.read(staged) == "disabled", "Protected recovery profile mismatch")
+            require(config_identity(read(staged / "model.json")) == journal["configuration"], "Protected recovery checksum mismatch")
+            previous = {"directory": str(staged), "source": journal["source"], "actions_run": journal["actions_run"],
+                        "recovery": None, "configuration": journal["configuration"], "profile": "disabled"}
         directory = Path(previous["directory"])
         require(directory.parent == self.root / "releases", "Unsafe recovery reference")
         model = read(directory / "model.json")
@@ -496,12 +506,12 @@ class Gateway:
             require(ynab_identity() == journal["ynab_state"], "YNAB app/network identity changed")
         require(certificate_identity(journal["certs"]) == journal["certificates"], "Certificates changed")
         healthy(ca)
-        route_health(profile, strict=journal.get("strict_restore", False), ca=ca)
+        route_health(profile, strict=profile == "enabled" and journal.get("profile") == "disabled", ca=ca)
         record = self.save(directory, previous["source"], previous["actions_run"], previous["recovery"], model)
         atomic(self.root / "attempts" / journal["id"] / "result.json",
-               {"status": "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]})
+               {"status": "protected" if protected else "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]})
         (self.root / "pending.json").unlink(missing_ok=True)
-        return record
+        return dict(record, outcome="protected" if protected else "rolled_back")
 
     def rollback(self, identity, ca):
         require(IDENTITY.fullmatch(identity), "Invalid recovery identity")
@@ -514,7 +524,6 @@ class Gateway:
             current_record = self.current()
             require(current_record["recovery"] == identity, "Only the current release may be rolled back")
             profiles.transition(self.profile(current_record), self.profile(journal["previous"]))
-            journal["strict_restore"] = self.profile(current_record) != "enabled" and self.profile(journal["previous"]) == "enabled"
         # Reboot or an independent app release can change app identities while
         # an interrupted gateway journal remains. Revalidate them under the lock;
         # the gateway itself may be absent or only partially attached.
@@ -603,7 +612,7 @@ class Gateway:
             raise ReleaseError("Activation timed out; pending barrier retained for explicit recovery") from None
         except Exception:
             self.restore(journal, ca)
-            raise ReleaseError("Candidate failed; previous gateway restored; evidence retained") from None
+            raise ReleaseError("Candidate failed; safe gateway profile restored; evidence retained") from None
 
 
 def main():
@@ -626,8 +635,8 @@ def main():
             gateway.adopt(args.directory, args.source, ca)
             result = {"status": "adopted", "running_source": args.source}
         elif args.operation == "rollback":
-            gateway.rollback(args.id, ca)
-            result = {"status": "rolled_back", "running_source": read(ROOT / "current.json")["source"]}
+            recovered = gateway.rollback(args.id, ca)
+            result = {"status": recovered.get("outcome", "rolled_back"), "running_source": read(ROOT / "current.json")["source"]}
         else:
             require(args.id and args.id.startswith(args.source + "-"), "Source/release identity mismatch")
             require(hashlib.sha256(regular(args.archive).read_bytes()).hexdigest() == args.archive_sha256,

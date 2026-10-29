@@ -43,6 +43,10 @@ origin and public TLS, the real anonymous 401 challenge and exact resource metad
 to `base` is rejected: retain the 410 tombstone through disablement and rollback.
 Rolling back the first disabled baseline to an unprotected base is prohibited;
 use a reviewed forward fix while retaining the tombstone.
+If the first disabled activation is interrupted or fails after mutation, recovery
+retains its syntax-tested disabled candidate. The private result is `protected`;
+it has no unprotected predecessor to restore. An ambiguous Docker timeout still
+retains the barrier until explicit owner recovery.
 
 For an already enabled profile, later gateway-only updates allow a private
 uncached 502/503 from a stopped YNAB backend. This preserves independent gateway

@@ -165,7 +165,7 @@ def execute(source, operation, recovery, directory):
                         "--property=UMask=0077", *arguments])
     output = run([*ssh, command], timeout=1250)
     result = json.loads(output.splitlines()[-1])
-    require(result["status"] in {"success", "unchanged", "rolled_back"} and SHA.fullmatch(result["running_source"]),
+    require(result["status"] in {"success", "unchanged", "rolled_back", "protected"} and SHA.fullmatch(result["running_source"]),
             "Missing host acceptance record")
     require(result.get("profile", "base") in profiles.PROFILES, "Invalid accepted route profile")
     return {"status": result["status"], "running_source": result["running_source"], "profile": result.get("profile", "base")}

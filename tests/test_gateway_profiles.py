@@ -38,6 +38,54 @@ class ProfileTests(unittest.TestCase):
             with self.subTest(previous=previous, candidate=candidate), self.assertRaises(ValueError):
                 profiles.transition(previous, candidate)
 
+    @unittest.skipIf(os.name == "nt", "Linux private recovery/fsync contract")
+    def test_first_tombstone_recovery_stays_protected_and_enabled_restore_is_strict(self):
+        for previous_profile in ("base", "enabled"):
+            with self.subTest(previous=previous_profile), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                root.chmod(0o700)
+                for name in ("releases", "attempts", "incoming"):
+                    (root / name).mkdir(mode=0o700)
+                gateway = release.Gateway(root)
+                identity = "b" * 40 + "-1-1"
+                staged = root / "releases" / identity
+                old = root / "releases" / ("a" * 40 + "-0-0")
+                for directory in (staged, old):
+                    directory.mkdir(mode=0o700)
+                (staged / profiles.VHOST).parent.mkdir(parents=True)
+                (staged / profiles.VHOST).write_bytes(b"synthetic-disabled-vhost")
+                release.atomic(staged / profiles.MARKER, profiles.descriptor("disabled", b"synthetic-disabled-vhost"))
+                image = "nginx@sha256:" + "c" * 64
+                candidate = {"services": {"proxy": {"image": image, "volumes": [{"target": "/etc/nginx/conf.d",
+                    "source": str(staged / "nginx/vhosts")}]}}, "networks": {}}
+                previous_model = {"services": {"proxy": {"image": image, "volumes": []}},
+                                  "networks": {"ynab_route": {}} if previous_profile == "enabled" else {}}
+                release.atomic(staged / "model.json", candidate)
+                release.atomic(old / "model.json", previous_model)
+                previous = {"directory": str(old), "source": "a" * 40, "actions_run": "operator", "recovery": None,
+                            "profile": previous_profile, "configuration": release.config_identity(previous_model)}
+                journal = {"id": identity, "source": "b" * 40, "actions_run": "operator", "previous": previous,
+                           "profile": "disabled", "configuration": release.config_identity(candidate),
+                           "invariants": {"apps": "same"}, "certs": "/synthetic/certs", "certificates": "same",
+                           "ynab_state": {"network": "same", "apps": {}} if previous_profile == "enabled" else None}
+                (root / "attempts" / identity).mkdir(mode=0o700)
+                release.atomic(root / "pending.json", journal)
+                with patch.object(gateway, "syntax"), patch.object(gateway, "compose") as compose, \
+                     patch.object(release, "profile_invariants", return_value={"apps": "same"}), \
+                     patch.object(release, "ynab_identity", return_value=journal["ynab_state"]), \
+                     patch.object(release, "certificate_identity", return_value="same"), patch.object(release, "healthy"), \
+                     patch.object(release, "route_health") as health, patch.object(release, "runtime", return_value={"Id": "recovered"}):
+                    result = gateway.restore(journal, None)
+                if previous_profile == "base":
+                    self.assertEqual(compose.call_args.args[0], staged)
+                    self.assertEqual(result["outcome"], "protected")
+                    self.assertEqual(release.read(root / "current.json")["profile"], "disabled")
+                    health.assert_called_once_with("disabled", strict=False, ca=None)
+                else:
+                    self.assertEqual(compose.call_args.args[0], old)
+                    health.assert_called_once_with("enabled", strict=True, ca=None)
+                self.assertFalse((root / "pending.json").exists())
+
     def test_actual_git_archives_flatten_only_selected_vhost_and_keep_four_mounts(self):
         source = transport.run(["git", "rev-parse", "HEAD"]).strip()
         with tempfile.TemporaryDirectory() as temporary:
