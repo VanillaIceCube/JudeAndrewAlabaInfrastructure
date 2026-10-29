@@ -287,6 +287,7 @@ class AuthorizationTests(unittest.TestCase):
                     if endpoint.endswith("/heads/main"):
                         return {"object": {"sha": SECOND}}
                     if "/compare/" in endpoint:
+                        self.assertEqual(endpoint, f"repos/{transport.REPOSITORY}/compare/{SOURCE}...{SECOND}")
                         return {"status": relationship}
                     if endpoint.endswith("/git/commits/" + SOURCE):
                         return {"tree": {"sha": "c" * 40}}

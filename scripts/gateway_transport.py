@@ -45,6 +45,10 @@ def authorization():
     require(api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
             "Promotion advanced; approve a fresh run")
     main = api(f"repos/{REPOSITORY}/git/ref/heads/main")["object"]["sha"]
+    # GitHub compares BASE...HEAD: candidate is BASE and reviewed main is HEAD.
+    # "ahead" means MAIN contains candidate (reviewed ancestry), not that
+    # env-prod contains extra changes. An env-prod-only commit yields "behind"
+    # or "diverged" and must pass the complete-tree equality fallback below.
     compare = api(f"repos/{REPOSITORY}/compare/{source}...{main}")
     reviewed = compare["status"] in {"ahead", "identical"}
     if not reviewed:
