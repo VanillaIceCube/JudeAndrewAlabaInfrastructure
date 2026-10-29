@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-10-28
+
+### Fixed
+
+- Record the previously undocumented [PR #25](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/25) fix (merged 2026-10-18): emit bounded CI reports to stdout when `GITHUB_OUTPUT` is absent, avoiding a local-execution `KeyError` while preserving GitHub Actions output formatting.
+
 ## 2026-10-27
 
 ### Fixed
