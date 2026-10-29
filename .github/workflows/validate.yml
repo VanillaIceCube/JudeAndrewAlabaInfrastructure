@@ -71,6 +71,9 @@ jobs:
           {
             python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
             timeout --kill-after=15s 4m python3 experiments/ynab-mcp/run.py || exit 1
+            ynab_test_id="ynab-runtime-test-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+            trap 'python3 services/ynab-mcp/test_runtime.py --cleanup "$ynab_test_id"' EXIT
+            YNAB_RUNTIME_TEST_ID="$ynab_test_id" timeout --kill-after=15s 5m python3 services/ynab-mcp/test_runtime.py || exit 1
             mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
             node --test "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"

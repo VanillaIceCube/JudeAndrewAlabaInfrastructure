@@ -87,3 +87,9 @@ credentials and activation remain blocked pending #58/#59 review and separately
 authorized operations. Keep sanitized progress on #56 and private details in
 KnowledgeVault. Log each Cloudflare/DigitalOcean request and purpose privately
 before execution, then record its result and any mutation; do not log secrets.
+
+The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
+`upstream.json` pin and unchanged upstream code. Run its disposable container
+suite for runtime/pin changes. Keep the initial profile network-disabled,
+uid 65532, read-only, token-file-only and financially read-only. No source PR
+approves a production image, provisions a credential or supplies live acceptance.

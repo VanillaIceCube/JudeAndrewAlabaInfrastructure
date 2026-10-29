@@ -1,5 +1,13 @@
 # 📝 Changelog
 
+## 2026-10-29
+
+### Added
+
+- Add a pinned, non-root, read-only YNAB stdio runtime candidate with package/source
+  parity checks, protected token-file policy, no-network Compose profile and bounded
+  disposable CI tests; retain production dependency/security and activation gates.
+
 ## 2026-10-28
 
 ### Added
