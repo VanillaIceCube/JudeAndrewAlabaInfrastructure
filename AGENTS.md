@@ -139,3 +139,9 @@ The gateway image uses pinned Python/Node Alpine stages and two hash-pinned,
 signature-verified native APKs. Preserve complete APK inventory coverage in the
 artifact gate, the unchanged hashed Python/Node graphs and stdio-only advisory
 applicability; never copy untracked C++ libraries or waive image findings.
+
+Follow [managed MCP OAuth](docs/mcp-oauth.md) and the
+[first-activation checklist](docs/ynab-onboarding.md) for #71/#62. Keep fixed
+owner/client/resource checks and offline public keys; audience arrays may add
+only the exact issuer-local userinfo endpoint. Provider configuration is
+MCP-only; Notoli migration waits for actual YNAB acceptance in both clients.

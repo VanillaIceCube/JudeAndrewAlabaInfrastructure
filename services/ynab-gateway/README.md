@@ -77,7 +77,8 @@ unavailable token mounts without claiming API validity.
 
 The maintained pinned `JWTVerifier` verifies RS256 signatures/issuer/audience.
 The owner policy additionally requires `typ: at+jwt`, integer `iat`/`exp`, at most
-15 minutes of token lifetime, no future `nbf`, exact resource audience (a string),
+15 minutes of token lifetime, no future `nbf`, exact resource audience (a string or a bounded array containing only this resource
+and optionally the exact issuer-local `/userinfo` audience),
 the configured subject/client and consistent `azp` if present. Every MCP method
 requires a bearer and `ynab:read`; no cookies, query credentials, API keys or
 forwarded user identity. A refreshed token for the same principal can retain a

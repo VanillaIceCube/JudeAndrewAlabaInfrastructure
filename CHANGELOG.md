@@ -4,11 +4,10 @@
 
 ### Changed
 
+- Define managed MCP-only OAuth settings and YNAB-first operator/client acceptance;
+  support bounded RFC 9068 audience arrays without sharing application trust.
 - Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
   hashed C++ packages; verify complete native APK scan coverage.
-
-- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
-  stages and native tracked C++ libraries; retain fresh artifact security gates.
 
 ### Added
 

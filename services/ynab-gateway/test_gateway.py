@@ -109,7 +109,7 @@ class GatewayTests(unittest.TestCase):
                            {"nbf": int(time.time()) + 100}, {"sub": "other"},
                            {"client_id": "unknown"}, {"client_id": ["client-a"]},
                            {"azp": "other"}, {"iss": "https://other.example"},
-                           {"aud": "https://other.example/mcp"}, {"aud": [g.RESOURCE]}):
+                           {"aud": "https://other.example/mcp"}):
                 with self.subTest(claims=claims):
                     response = self.rpc("tools/list", token=self.token(changes=claims))
                     self.assertEqual(response.status_code, 401)
@@ -117,6 +117,26 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(self.rpc("tools/list", token="malformed").status_code, 401)
             self.assertEqual(self.rpc("tools/list", token=self.token(header={"alg": "RS256", "typ": "JWT"})).status_code, 401)
             self.assertEqual(self.app.sessions, {})
+
+    def test_managed_provider_audiences_remain_resource_and_principal_bound(self):
+        userinfo = self.identity.issuer.rstrip("/") + "/userinfo"
+        with self.running():
+            for client in ("client-a", "client-b"):
+                for audience in (g.RESOURCE, [g.RESOURCE], [g.RESOURCE, userinfo], [userinfo, g.RESOURCE]):
+                    token = self.token(client, {"aud": audience, "scope": "openid ynab:read"})
+                    sid = self.initialize(token)
+                    self.assertEqual(self.rpc("tools/list", sid=sid, token=token).status_code, 200)
+                    self.app.credit = 5
+                    self.assertEqual(self.http.delete("/mcp", headers=self.headers(sid, token)).status_code, 200)
+            for audience in ([], [userinfo], [g.RESOURCE, g.RESOURCE],
+                             [g.RESOURCE, "https://another-app.example/mcp"],
+                             [g.RESOURCE, "https://other-issuer.example/userinfo"],
+                             [g.RESOURCE, userinfo, "https://another-app.example/mcp"],
+                             [g.RESOURCE, 42], {"resource": g.RESOURCE}):
+                with self.subTest(audience=audience):
+                    self.assertEqual(self.rpc("initialize", token=self.token(changes={"aud": audience})).status_code, 401)
+            for claims in ({"sub": "another-owner"}, {"client_id": "another-app-client"}, {"exp": int(time.time()) + 1000}):
+                self.assertEqual(self.rpc("initialize", token=self.token(changes={"aud": [g.RESOURCE, userinfo], **claims})).status_code, 401)
 
     def test_principal_bound_session_rotation_delete_and_replay(self):
         with self.running():

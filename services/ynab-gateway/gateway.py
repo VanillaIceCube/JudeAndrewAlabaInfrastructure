@@ -74,8 +74,17 @@ class OwnerVerifier(JWTVerifier):
         claims, now = access.claims, time.time()
         exp, issued = claims.get("exp"), claims.get("iat")
         client_id = claims.get("client_id")
+        audience = claims.get("aud")
+        # RFC 9068 providers may add their own OIDC userinfo audience. Accept
+        # only this resource plus that exact issuer-local endpoint, never a
+        # second application audience. Signature/issuer checks have run above.
+        valid_audience = audience == RESOURCE if isinstance(audience, str) else (
+            isinstance(audience, list) and 1 <= len(audience) <= 2
+            and all(isinstance(value, str) for value in audience)
+            and len(set(audience)) == len(audience) and RESOURCE in audience
+            and set(audience) <= {RESOURCE, self.identity.issuer.rstrip("/") + "/userinfo"})
         if (type(exp) is not int or type(issued) is not int or not issued <= now + 5
-                or not now < exp <= issued + 900 or claims.get("aud") != RESOURCE
+                or not now < exp <= issued + 900 or not valid_audience
                 or claims.get("sub") != self.identity.owner
                 or not isinstance(client_id, str) or client_id not in self.identity.clients
                 or claims.get("azp", client_id) != client_id

@@ -25,6 +25,8 @@ preserved through the reviewed migration.
 | YNAB network/ingress | [Inactive route, controlled egress and DNS/TLS plan](docs/ynab-ingress.md) |
 | YNAB artifact security | [Pinned scan coverage and production blockers](docs/ynab-artifact-security.md) |
 | YNAB app releases | [Inactive staging, paired scan gate and exact recovery](docs/ynab-releases.md) |
+| MCP OAuth ownership | [Managed provider settings; YNAB first](docs/mcp-oauth.md) |
+| YNAB onboarding | [Separate activation and both-client acceptance](docs/ynab-onboarding.md) |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
 | Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
 | Project history | [Changelog](CHANGELOG.md) |
