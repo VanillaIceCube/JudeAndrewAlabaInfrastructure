@@ -222,7 +222,8 @@ if __name__ == "__main__":
     parser.add_argument("--cache", type=Path, required=True)
     args = parser.parse_args()
     try:
-        print(json.dumps(audit(args.archive, args.filesystem, args.image_id, args.role, args.scanner, args.cache), sort_keys=True))
+        audit(args.archive, args.filesystem, args.image_id, args.role, args.scanner, args.cache)
+        print("YNAB image audit passed; separate production approval remains required")
     except (AuditError, OSError, ValueError, TypeError, KeyError, AttributeError, tarfile.TarError) as error:
         # Never print untrusted JSON or scanner stderr (secret scanner matches).
         print("YNAB image audit blocked: " + (str(error) if isinstance(error, AuditError) else "incomplete evidence"))

@@ -102,6 +102,7 @@ jobs:
           {
             python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
             python3 -m unittest discover -s tests -p test_ynab_image_audit.py -v || exit 1
+            python3 -m unittest discover -s tests -p test_ynab_release_preflight.py -v || exit 1
             timeout --kill-after=15s 4m python3 experiments/ynab-mcp/run.py || exit 1
             ynab_test_id="ynab-runtime-test-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
             trap 'python3 services/ynab-mcp/test_runtime.py --cleanup "$ynab_test_id"' EXIT

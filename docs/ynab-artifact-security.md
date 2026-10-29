@@ -47,7 +47,7 @@ never enter stdout. A mode-0600 `audit-*.json` report is retained in the private
 cache even on a policy rejection for applicability review; never upload it as a
 public/CI artifact. Temporary work files are removed. Keep exported images private:
 they must be built without credentials. Lower-severity findings remain visible in
-the count summary and require applicability review, rather than blanket approval.
+the private report and require applicability review, rather than blanket approval.
 The independent filesystem reader extracts nothing and executes no image code.
 It compares all installed Debian/Ubuntu package names/versions with the scan,
 and requires coverage for every installed Node lock and gateway Python metadata
@@ -61,6 +61,29 @@ prerequisite does not silently label the currently vulnerable candidate clean or
 make every unrelated source PR depend on an unapproved production artifact.
 The release path must require fresh evidence for **both** exact images; hand-edited
 JSON or an old successful scan is not a release authorization.
+
+The implemented external artifact prerequisite is
+`scripts/preflight_ynab_release.py`. It accepts both role-specific immutable
+registry references, verifies their local `RepoDigests`, platform and image IDs,
+and creates matching image/filesystem exports itself. It never starts a container,
+pulls/pushes an image or touches a network. It invokes a fresh pinned scan for each
+role and returns only after both pass; a missing, stale, mismatched or failed
+second scan cannot yield a release result. Temporary containers are removed by
+exact unique name, including their anonymous volumes.
+
+```sh
+python3 scripts/preflight_ynab_release.py \
+  --gateway ghcr.io/vanillaicecube/judeandrewalabainfrastructure-ynab-gateway@sha256:EXACT_GATEWAY_DIGEST \
+  --egress ghcr.io/vanillaicecube/judeandrewalabainfrastructure-ynab-egress@sha256:EXACT_EGRESS_DIGEST \
+  --scanner /tools/trivy --cache /private/trivy-cache
+```
+
+This is the mandatory artifact preflight interface for #61's subsequent release
+transaction: invoke it under release locks immediately before mutation, never
+accept a saved approval JSON in its place. Production deployment is currently
+unsupported and remains blocked; the inactive Compose files are source contracts,
+not an alternative deployment path. The remaining transaction and its enforcement
+of this call require a separate reviewed #61 PR before activation.
 
 ## 🚧 Current blockers and limits
 
