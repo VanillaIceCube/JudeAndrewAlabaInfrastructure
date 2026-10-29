@@ -33,6 +33,18 @@ def expected():
 
 
 class ImageAuditTests(unittest.TestCase):
+    def test_captured_trivy_0761_alpine_package_identity_schema(self):
+        captured = json.loads((Path(__file__).parent / "fixtures/ynab-trivy-0.76.1-alpine.json").read_text())
+        report = captured["report"]
+        records = {"os_family": "alpine", "os": {tuple(pair) for pair in captured["native_apk_packages"]}}
+        for key, kind in (("python", "python-pkg"), ("node", "node-pkg")):
+            records[key] = {(p["Name"].lower().replace("_", "-"), p["Version"])
+                            for row in report["Results"] if row.get("Type") == kind for p in row["Packages"]}
+        result = audit.validate(report, report["Metadata"]["ImageID"], "gateway", records,
+                                audit.timestamp(report["CreatedAt"]))
+        self.assertEqual(result["os_packages"], 40)
+        self.assertFalse(result["production_approved"])
+
     def test_alpine_native_records_and_complete_report_must_agree(self):
         report = fixture()
         report["Metadata"]["OS"] = {"Family": "alpine", "Name": "3.24.3"}
