@@ -116,9 +116,10 @@ class YNABIngressTests(unittest.TestCase):
                                 return response, response.read()
                             response.close()
                         except (OSError, urllib.error.URLError):
+                            # Backend creation/re-resolution can race this bounded probe.
                             pass
                         time.sleep(0.3)
-                    self.fail(f"Fixture {host} {path} did not return {expected}")
+                    raise AssertionError(f"Fixture {host} {path} did not return {expected}")
                 domain = "ynab.judeandrewalaba.com"
                 request(domain, "/mcp", method="POST", expected=502)
                 request("notoli.judeandrewalaba.com", "/api/")

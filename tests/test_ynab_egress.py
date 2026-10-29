@@ -155,6 +155,7 @@ class EgressTests(unittest.TestCase):
                             if reply.get("id") == payload["id"]:
                                 return reply
                         self.fail("Fixture stdio reply deadline exceeded")
+                    return None
                 try:
                     initialized = rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
                         "protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "egress-fixture", "version": "1"}}})
