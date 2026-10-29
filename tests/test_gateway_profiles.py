@@ -140,12 +140,21 @@ class ProfileTests(unittest.TestCase):
         objects[("container", "host-ingress-proxy")] = {"State": {"Running": True}, "NetworkSettings": {"Networks": {
             **{name: {} for name in release.check_host.NETWORKS}, "ynab_mcp_private": {"IPAddress": "172.30.89.2"}}}}
         objects[("network", "ynab_mcp_private")] = {"Internal": True, "Driver": "bridge", "EnableIPv6": False,
-            "IPAM": {"Config": [{"Subnet": "172.30.89.0/29"}]}, "Containers": {"proxy": {
+            "IPAM": {"Config": [{"Subnet": "172.30.89.0/29", "Gateway": "172.30.89.1"}]}, "Containers": {"proxy": {
                 "Name": "host-ingress-proxy", "IPv4Address": "172.30.89.2/29"}}}
         with patch.object(release.check_host, "inspect", side_effect=lambda kind, name: copy.deepcopy(objects[(kind, name)])), patch("sys.stdout", new_callable=io.StringIO):
             with self.assertRaises(ValueError):
                 release.check_host.verify("host")
             release.check_host.verify("host", ynab_enabled=True)
+            ipam = objects[("network", "ynab_mcp_private")]["IPAM"]
+            valid = copy.deepcopy(ipam["Config"])
+            for invalid in ([{"Subnet": "172.30.89.0/29", "Gateway": "172.30.89.4"}],
+                            [{"Subnet": "172.30.89.0/29"}],
+                            [{**valid[0], "AuxiliaryAddresses": {"unexpected": "172.30.89.5"}}]):
+                ipam["Config"] = invalid
+                with self.assertRaises(ValueError):
+                    release.check_host.verify("host", ynab_enabled=True)
+            ipam["Config"] = valid
             objects[("container", "notoli-backend")]["Config"]["Env"] = ["DJANGO_TRUSTED_PROXY_IPS=172.30.89.2"]
             with self.assertRaises(ValueError):
                 release.check_host.verify("host", ynab_enabled=True)

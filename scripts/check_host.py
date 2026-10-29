@@ -31,7 +31,7 @@ def ynab_route(allow_missing_proxy=False):
     members = {item["Name"]: item for item in route["Containers"].values()}
     allowed = {"host-ingress-proxy": "172.30.89.2", "ynab-mcp-gateway-1": "172.30.89.3"}
     if (not route["Internal"] or route["Driver"] != "bridge" or route.get("EnableIPv6") or
-            [item["Subnet"] for item in route["IPAM"]["Config"]] != ["172.30.89.0/29"] or
+            route["IPAM"]["Config"] != [{"Subnet": "172.30.89.0/29", "Gateway": "172.30.89.1"}] or
             not set(members) <= set(allowed) or
             any(item["IPv4Address"].split("/")[0] != allowed[name] for name, item in members.items()) or
             (not allow_missing_proxy and "host-ingress-proxy" not in members)):
