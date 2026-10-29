@@ -56,7 +56,7 @@ def inventory(filesystem, role):
         for count, member in enumerate(archive):
             require(count < 100_000, "Filesystem inventory exceeds entry limit")
             name = member.name.removeprefix("./")
-            selected = (name == "var/lib/dpkg/status" or
+            selected = (name in {"var/lib/dpkg/status", "lib/apk/db/installed"} or
                         name == "app/node_modules/.package-lock.json" or
                         (name.startswith("opt/gateway-deps/") and name.endswith(".dist-info/METADATA")))
             if not selected:
@@ -66,12 +66,29 @@ def inventory(filesystem, role):
             total += member.size
             require(total <= 30_000_000, "Filesystem inventory exceeds size limit")
             records[name] = archive.extractfile(member).read().decode("utf-8")
-    require("var/lib/dpkg/status" in records, "Missing native OS package records")
-    for paragraph in records.pop("var/lib/dpkg/status").split("\n\n"):
-        package = Parser().parsestr(paragraph.strip())
-        if package.get("Status") == "install ok installed":
-            require(package.get("Package") and package.get("Version"), "Incomplete OS package record")
-            expected["os"].add((package["Package"], package["Version"]))
+    databases = {"var/lib/dpkg/status", "lib/apk/db/installed"} & records.keys()
+    require(len(databases) == 1, "Missing or ambiguous native OS package records")
+    database = databases.pop()
+    if database == "lib/apk/db/installed":
+        expected["os_family"] = "alpine"
+        names = set()
+        for paragraph in records.pop(database).split("\n\n"):
+            if not paragraph.strip():
+                continue
+            names_record = [line[2:] for line in paragraph.splitlines() if line.startswith("P:")]
+            versions = [line[2:] for line in paragraph.splitlines() if line.startswith("V:")]
+            require(len(names_record) == len(versions) == 1 and names_record[0] and versions[0],
+                    "Incomplete native APK package record")
+            name, version = names_record[0], versions[0]
+            require(name not in names, "Duplicate native APK package record")
+            names.add(name)
+            expected["os"].add((name, version))
+    else:
+        for paragraph in records.pop(database).split("\n\n"):
+            package = Parser().parsestr(paragraph.strip())
+            if package.get("Status") == "install ok installed":
+                require(package.get("Package") and package.get("Version"), "Incomplete OS package record")
+                expected["os"].add((package["Package"], package["Version"]))
     require(len(expected["os"]) >= 20, "Missing/thin native OS inventory")
     lock = records.pop("app/node_modules/.package-lock.json", None)
     if role == "gateway":
@@ -115,7 +132,11 @@ def validate(report, image_id, role, expected, now=None):
     require(timedelta(minutes=-5) <= age <= timedelta(hours=24), "Stale/future scan report")
     metadata = report.get("Metadata", {})
     require(metadata.get("ImageConfig", {}).get("architecture") == "amd64", "Unexpected architecture")
-    require(metadata.get("OS", {}).get("Family") in {"ubuntu", "debian"}, "Unsupported OS inventory")
+    family = metadata.get("OS", {}).get("Family")
+    require(family in {"ubuntu", "debian", "alpine"}, "Unsupported OS inventory")
+    require((family == "alpine") == (expected.get("os_family") == "alpine"),
+            "Native OS database differs from scanner family")
+    require(family != "alpine" or role == "gateway", "Unsupported Alpine image role")
     require(not metadata.get("OS", {}).get("EOSL", False), "End-of-life OS")
     results = report.get("Results")
     require(isinstance(results, list) and results, "Missing scanner results")
@@ -154,7 +175,8 @@ def validate(report, image_id, role, expected, now=None):
             licenses.add((license_item.get("PkgName") or license_item["FilePath"], license_item["Name"]))
     # A newer Rock candidate reports its OS but zero recognized OS packages.
     # Refuse that blind spot rather than treating zero CVEs as a clean image.
-    require(len(packages) >= 20 and "libc6" in packages, "Missing/thin OS package inventory")
+    required_packages = {"musl", "libgcc", "libstdc++"} if family == "alpine" else {"libc6"}
+    require(len(packages) >= 20 and required_packages <= packages, "Missing/thin OS package inventory")
     require(expected.get("os") and observed["os"] == expected["os"], "OS package coverage differs from image records")
     if role == "egress":
         require("squid" in packages, "Missing proxy package inventory")

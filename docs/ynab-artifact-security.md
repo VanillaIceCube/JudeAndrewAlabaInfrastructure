@@ -49,12 +49,18 @@ public/CI artifact. Temporary work files are removed. Keep exported images priva
 they must be built without credentials. Lower-severity findings remain visible in
 the private report and require applicability review, rather than blanket approval.
 The independent filesystem reader extracts nothing and executes no image code.
-It compares all installed Debian/Ubuntu package names/versions with the scan,
+It compares all installed Debian/Ubuntu dpkg or Alpine APK package names and full
+versions with the scan,
 and requires coverage for every installed Node lock and gateway Python metadata
 record. A package-count threshold alone cannot establish coverage. An absent
 native package database or installed runtime lock fails closed. This is coverage
 of recorded packages; untracked/copied binaries still need source/base provenance
-review, including the two Node runtime libraries copied into the Python base.
+review, including the official Node executable copied into the Python base.
+The Alpine gateway recipe installs two hash-pinned, publisher-signed native C++
+packages instead of copying untracked libraries. APK and dpkg databases cannot
+be mixed; the scanner family must match the native database. Alpine support is
+limited to the gateway role, requires musl/libgcc/libstdc++ and complete native
+coverage, and retains the existing inventory floor and all vulnerability gates.
 
 Repository CI tests the fail-closed policy without metadata requests. This
 prerequisite does not silently label the currently vulnerable candidate clean or
@@ -86,6 +92,16 @@ not an alternative deployment path. The remaining transaction and its enforcemen
 of this call require a separate reviewed #61 PR before activation.
 
 ## 🚧 Current blockers and limits
+
+The earlier trixie gateway candidate failed with 44 HIGH and one UNKNOWN OS
+finding. The replacement Alpine candidate passed its initial 2026-10-29 complete
+scan: 40 OS package records, zero HIGH/CRITICAL/UNKNOWN findings and no detected
+secrets. Its one MEDIUM finding is CVE-2026-118663 in `@hono/node-server` 2.0.11;
+this is unchanged upstream's HTTP adapter, outside the bounded stdio import path
+as recorded in the [runtime guide](../services/ynab-mcp/README.md). This assessment
+does not justify enabling upstream HTTP or accepting a newly vulnerable artifact.
+Both exact image roles must pass a fresh scan; these results are not publication,
+license, client acceptance or production authorization.
 
 The #60 Squid digest `8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce`
 has five HIGH OS findings in the 2026-10-29 scan: CVE-2025-68973 (gpgv),

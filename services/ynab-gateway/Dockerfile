@@ -1,26 +1,27 @@
-FROM node@sha256:a43f7fc3e52e87d12a905f46eea0275def84ca8f2981a5b53fed44d7fb398ee0 AS node
+FROM node@sha256:4eefa1bfce4197942661ef9148247d779ddf1bb0ee006d3294a467609de60724 AS node
 WORKDIR /app
 COPY --from=upstream package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund && npm cache clean --force
 RUN npm audit --omit=dev --audit-level=high
 
-FROM python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487 AS python-deps
+FROM python@sha256:69ebe56e2a764c399514a0a6117131cb730cc4d0e71e85c08deb9af74cbb9f41 AS python-deps
 COPY requirements.txt /build/requirements.txt
 RUN python -m pip install --no-cache-dir --disable-pip-version-check pip==26.2 && \
     python -m pip install --no-cache-dir --require-hashes --only-binary=:all: \
     --no-deps --target /opt/gateway-deps -r /build/requirements.txt
 
-FROM python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487
+FROM python@sha256:69ebe56e2a764c399514a0a6117131cb730cc4d0e71e85c08deb9af74cbb9f41
 LABEL org.opencontainers.image.source="https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure" \
       infrastructure.ynab.upstream="076aa5836658f8332058fa2bd58500aa14326dc9" \
       infrastructure.ynab.gateway="4.1.4"
 RUN rm -rf /usr/local/lib/python3.12/site-packages/pip* /usr/local/lib/python3.12/ensurepip /usr/local/bin/pip*
+ADD --checksum=sha256:393dcd32629f06d7d85409c272d142d0c082772d10b87ef55ee82f47de3be637 https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libgcc-15.2.0-r5.apk /build/libgcc.apk
+ADD --checksum=sha256:14c987b556f5385a5db18376e788c75f37d85321b8dc1920d926ea7daac1d6f6 https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libstdc++-15.2.0-r5.apk /build/libstdcpp.apk
+RUN --network=none apk add --no-network /build/libgcc.apk /build/libstdcpp.apk && rm /build/libgcc.apk /build/libstdcpp.apk
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/LICENSE /usr/share/doc/node/LICENSE
-COPY --from=node /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6
-COPY --from=node /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
-# The immutable Debian bookworm base supplies glibc/libm/libdl/libpthread;
-# the two deliberate copies above supply Node's C++ runtime.
+# Both pinned stages use Alpine 3.24/musl. Native APK metadata covers the
+# hash-pinned, signature-verified C++ packages; copy no untracked libraries.
 RUN ldd /usr/local/bin/node > /tmp/node-libraries && \
     cat /tmp/node-libraries && ! grep -F 'not found' /tmp/node-libraries && \
     /usr/local/bin/node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)" && \
