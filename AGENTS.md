@@ -72,3 +72,16 @@ manual owner merge. A human PR smoke test does not prove Dependabot access.
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+
+## 🧾 YNAB MCP investigation
+
+Follow [the gateway decision](docs/ynab-mcp.md) and #56/#57–#62 dependency order.
+The disposable `experiments/ynab-mcp` harness is not deployable application code.
+Keep upstream source/lock pins, one stdio child per logical session, independent
+owner identity boundaries and `YNAB_ALLOW_WRITES=0`. Do not ship fixture tools,
+fork/vendor Oliver's application, or treat native gateway keys as public OAuth.
+The evaluated gateway pin has unresolved high/critical advisories: public ingress,
+credentials and activation remain blocked pending #58/#59 review and separately
+authorized operations. Keep sanitized progress on #56 and private details in
+KnowledgeVault. Log each Cloudflare/DigitalOcean request and purpose privately
+before execution, then record its result and any mutation; do not log secrets.

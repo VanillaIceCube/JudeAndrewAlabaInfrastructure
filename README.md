@@ -19,6 +19,7 @@ preserved through the reviewed migration.
 | Production operations | [Cutover and reversal](docs/cutover.md) |
 | Subsequent gateway releases | [Promotion, approval and rollback](docs/gateway-releases.md) |
 | Adding an application | [Onboarding](docs/onboarding.md) |
+| YNAB MCP investigation | [Gateway decision and disposable proof](docs/ynab-mcp.md) — production blocked |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
 | Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
 | Project history | [Changelog](CHANGELOG.md) |
