@@ -139,9 +139,10 @@ class ProfileTests(unittest.TestCase):
                                            "HostConfig": {"PortBindings": {}}}
         objects[("container", "host-ingress-proxy")] = {"State": {"Running": True}, "NetworkSettings": {"Networks": {
             **{name: {} for name in release.check_host.NETWORKS}, "ynab_mcp_private": {"IPAddress": "172.30.89.2"}}}}
-        objects[("network", "ynab_mcp_private")] = {"Internal": True, "Driver": "bridge", "EnableIPv6": False,
+        objects[("network", "ynab_mcp_private")] = {"Id": "route-fixture-id", "Internal": True, "Driver": "bridge", "EnableIPv6": False,
             "IPAM": {"Config": [{"Subnet": "172.30.89.0/29", "Gateway": "172.30.89.1"}]}, "Containers": {"proxy": {
-                "Name": "host-ingress-proxy", "IPv4Address": "172.30.89.2/29"}}}
+                "Name": "host-ingress-proxy", "IPv4Address": "172.30.89.2/29"}, "app": {
+                "Name": "ynab-mcp-gateway-1", "IPv4Address": "172.30.89.3/29"}}}
         with patch.object(release.check_host, "inspect", side_effect=lambda kind, name: copy.deepcopy(objects[(kind, name)])), patch("sys.stdout", new_callable=io.StringIO):
             with self.assertRaises(ValueError):
                 release.check_host.verify("host")
@@ -155,6 +156,24 @@ class ProfileTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     release.check_host.verify("host", ynab_enabled=True)
             ipam["Config"] = valid
+            route = objects[("network", "ynab_mcp_private")]
+            app_member = route["Containers"].pop("app")
+            with self.assertRaisesRegex(ValueError, "required YNAB"):
+                release.check_host.verify("host", ynab_enabled=True)
+            app = {"State": {"Running": False, "Status": "exited", "Dead": False, "Restarting": False}, "Config": {"Labels": {
+                "com.docker.compose.project": "ynab-mcp", "com.docker.compose.service": "gateway"}},
+                "NetworkSettings": {"Networks": {"ynab_mcp_private": {"IPAddress": "", "NetworkID": route["Id"]}}}}
+            objects[("container", "ynab-mcp-gateway-1")] = app
+            release.check_host.ynab_route(allow_stopped_gateway=True)
+            for field, value in (("State", {"Running": True}), ("Config", {"Labels": {}}),
+                                 ("State", {"Running": False, "Status": "created"}),
+                                 ("State", {"Running": False, "Status": "exited", "Dead": True}),
+                                 ("State", {"Running": False, "Status": "restarting"}),
+                                 ("NetworkSettings", {"Networks": {"ynab_mcp_private": {"IPAddress": "", "NetworkID": "stale"}}}),
+                                 ("NetworkSettings", {"Networks": {}})):
+                with patch.dict(app, {field: value}), self.assertRaises(ValueError):
+                    release.check_host.ynab_route(allow_stopped_gateway=True)
+            route["Containers"]["app"] = app_member
             objects[("container", "notoli-backend")]["Config"]["Env"] = ["DJANGO_TRUSTED_PROXY_IPS=172.30.89.2"]
             with self.assertRaises(ValueError):
                 release.check_host.verify("host", ynab_enabled=True)

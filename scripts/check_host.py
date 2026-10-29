@@ -26,7 +26,7 @@ def inspect(kind, name):
     return json.loads(result.stdout)[0]
 
 
-def ynab_route(allow_missing_proxy=False):
+def ynab_route(allow_missing_proxy=False, *, allow_stopped_gateway=False):
     route = inspect("network", "ynab_mcp_private")
     members = {item["Name"]: item for item in route["Containers"].values()}
     allowed = {"host-ingress-proxy": "172.30.89.2", "ynab-mcp-gateway-1": "172.30.89.3"}
@@ -36,10 +36,25 @@ def ynab_route(allow_missing_proxy=False):
             any(item["IPv4Address"].split("/")[0] != allowed[name] for name, item in members.items()) or
             (not allow_missing_proxy and "host-ingress-proxy" not in members)):
         raise ValueError("YNAB route topology drift")
+    if "ynab-mcp-gateway-1" not in members:
+        if not allow_stopped_gateway:
+            raise ValueError("Missing required YNAB gateway endpoint")
+        # App-only stop/recovery must not block an unrelated gateway update.
+        # Permit only the exact stopped, project-owned container still configured
+        # for this network; never a missing/running/disconnected foreign member.
+        app = inspect("container", "ynab-mcp-gateway-1")
+        labels = app["Config"].get("Labels") or {}
+        attachment = app["NetworkSettings"]["Networks"].get("ynab_mcp_private")
+        state = app["State"]
+        if (state.get("Status") != "exited" or state["Running"] or state.get("Dead") or state.get("Restarting")
+                or labels.get("com.docker.compose.project") != "ynab-mcp"
+                or labels.get("com.docker.compose.service") != "gateway" or attachment is None
+                or attachment.get("NetworkID") != route["Id"] or attachment.get("IPAddress")):
+            raise ValueError("Unowned or inconsistent stopped YNAB gateway")
     return route
 
 
-def verify(phase, allow_missing_proxy=False, *, ynab_enabled=False):
+def verify(phase, allow_missing_proxy=False, *, ynab_enabled=False, allow_stopped_gateway=False):
     if allow_missing_proxy and phase != "host":
         raise ValueError("Optional gateway is only valid during host recovery")
     if ynab_enabled and phase != "host":
@@ -80,7 +95,7 @@ def verify(phase, allow_missing_proxy=False, *, ynab_enabled=False):
         if ynab_enabled and ingress["NetworkSettings"]["Networks"]["ynab_mcp_private"]["IPAddress"] != "172.30.89.2":
             raise ValueError("YNAB proxy address drift")
     if ynab_enabled:
-        ynab_route(allow_missing_proxy)
+        ynab_route(allow_missing_proxy, allow_stopped_gateway=allow_stopped_gateway)
     print(
         "PASS: network membership, fixed trust and backend port invariants ("
         + phase
