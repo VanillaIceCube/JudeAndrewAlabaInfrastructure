@@ -33,6 +33,52 @@ def expected():
 
 
 class ImageAuditTests(unittest.TestCase):
+    def test_alpine_native_records_and_complete_report_must_agree(self):
+        report = fixture()
+        report["Metadata"]["OS"] = {"Family": "alpine", "Name": "3.24.3"}
+        row = report["Results"][0]
+        row["Type"] = "alpine"
+        row["Packages"] = [{"ID": name + "@1.0-r1", "Name": name, "Version": "1.0-r1"}
+                           for name in ["musl", "libgcc", "libstdc++"] + ["package-" + str(n) for n in range(20)]]
+        records = {"os": {(p["Name"], p["Version"]) for p in row["Packages"]},
+                   "os_family": "alpine", "python": expected()["python"], "node": expected()["node"]}
+        report["Results"].extend([
+            {"Class": "lang-pkgs", "Type": "python-pkg", "Packages": [{"Name": "fastmcp-slim", "Version": "4.1.4"}]},
+            {"Class": "lang-pkgs", "Type": "node-pkg", "Packages": [{"Name": "fixture-node", "Version": "1.0"}]}])
+        audit.validate(report, IMAGE, "gateway", records, NOW)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "filesystem.tar"
+            apk = "\n\n".join("P:" + name + "\nV:" + version for name, version in records["os"]) + "\n\n"
+            files = {"lib/apk/db/installed": apk,
+                     "app/node_modules/.package-lock.json": json.dumps({"packages": {"node_modules/fixture-node": {"version": "1.0"}}}),
+                     "opt/gateway-deps/fastmcp_slim-4.1.4.dist-info/METADATA": "Name: fastmcp-slim\nVersion: 4.1.4\n"}
+            def write_archive():
+                with tarfile.open(path, "w") as archive:
+                    for name, text in files.items():
+                        member = tarfile.TarInfo(name)
+                        member.size = len(text.encode())
+                        archive.addfile(member, io.BytesIO(text.encode()))
+            write_archive()
+            self.assertEqual(audit.inventory(path, "gateway"), records)
+            for invalid in (apk + "P:musl\nV:1.0-r1\n\n", apk + "P:broken\n\n",
+                            apk + "P:ambiguous\nP:second\nV:1\n\n"):
+                files["lib/apk/db/installed"] = invalid
+                write_archive()
+                with self.assertRaises(audit.AuditError):
+                    audit.inventory(path, "gateway")
+            files["lib/apk/db/installed"] = apk
+            files["var/lib/dpkg/status"] = "Package: libc6\nVersion: 1\nStatus: install ok installed\n"
+            write_archive()
+            with self.assertRaisesRegex(audit.AuditError, "ambiguous"):
+                audit.inventory(path, "gateway")
+        row["Packages"].pop()
+        with self.assertRaisesRegex(audit.AuditError, "coverage differs"):
+            audit.validate(report, IMAGE, "gateway", records, NOW)
+        row["Packages"].append({"ID": "package-19@1.0-r1", "Name": "package-19", "Version": "1.0-r1"})
+        records.pop("os_family")
+        with self.assertRaisesRegex(audit.AuditError, "scanner family"):
+            audit.validate(report, IMAGE, "gateway", records, NOW)
+
     def test_debian_identity_preserves_epoch_and_full_revision(self):
         report = fixture()
         report["Results"][0]["Packages"][0].update(ID="libc6@1:2.39-0ubuntu8.6", Version="2.39")
