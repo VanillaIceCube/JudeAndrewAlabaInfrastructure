@@ -167,19 +167,23 @@ These are candidate commands; placeholders are deliberately not usable productio
 configuration. Build requires Docker/Git/internet, reuses #58's source/tag/lock/
 package parity verification, verifies `manifest.json`, runs a fresh high/critical
 upstream npm audit and installs the hashed Python graph as wheels only. Pinned
-Node 24.22.2 and Python 3.12.16 slim Debian trixie amd64 images share the C runtime;
-both stages are pinned by platform digest. No fork or vendored source. The final
-image removes Python installers/build tools and
-checks the copied Node binary with `ldd` (no missing libraries) and `node --version`.
-The Python base supplies glibc/libm/libdl/libpthread and Node's C++ runtime with
-native dpkg package records. No libstdc++/libgcc files are copied across images.
-The Node executable and its notice come from the pinned official Node stage.
-It contains no fixture server or secrets. The previous bookworm image has known
-HIGH/CRITICAL OS findings. The exact smaller trixie candidate's 2026-10-29 full
-scan still reports 44 HIGH and one UNKNOWN OS finding (zero CRITICAL); it remains
-blocked for production. No finding is suppressed or treated as approved. Fresh
-full-image audit, applicability, license/provenance and release approval remain
-required. A source/manifest update supplies none of those approvals by itself.
+Node 24.22.2 and Python 3.12.16 Alpine 3.24 amd64 stages share musl; both
+are pinned by platform digest. The unchanged Python lock includes the required
+musllinux wheels, installed with their existing hashes. No fork, rebuilt wheels
+or dependency override is introduced. Native `libgcc` and `libstdc++` 15.2.0-r5
+come from two SHA-256-pinned official Alpine APKs. Installation verifies their
+publisher signatures against the base's trusted keys, with networking disabled,
+and retains native package records. No untracked C/C++ library is copied.
+The final image removes Python installers and checks the copied official Node
+executable with `ldd` and `node --version`; its upstream notice is included.
+
+The prior bookworm and trixie candidates failed the full-image gate. The initial
+Alpine candidate's 2026-10-29 scan passed that gate with all 40 native APK records
+covered, zero HIGH/CRITICAL/UNKNOWN findings and no detected secrets. One MEDIUM
+Hono HTTP-adapter finding remains in the unchanged Node graph; the stdio import
+boundary and its applicability are documented in the [runtime guide](../ynab-mcp/README.md).
+No suppression or advisory exception is introduced. Fresh scans, license/provenance
+review and production/client acceptance remain required for each final artifact.
 Local image ID/record is explicitly
 unpublished and unapproved; a registry manifest digest and full-image/license/
 provenance review still belong to #61. The gateway runs as uid/gid 65532.
