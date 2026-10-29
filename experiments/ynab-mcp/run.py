@@ -11,6 +11,7 @@ import tempfile
 
 HERE = Path(__file__).resolve().parent
 PINS = json.loads((HERE / "pins.json").read_text())
+PINS['ynab'] = json.loads((HERE.parents[1] / 'services/ynab-mcp/upstream.json').read_text(encoding='utf-8'))
 
 
 def run(args, cwd, env):

@@ -40,8 +40,9 @@ entire projects. No candidate is approved for public production by this document
 
 ## 📌 Reproducible pins and supply chain
 
-The experiment's [pins.json](../experiments/ynab-mcp/pins.json) records full source
-commits and SHA-256 hashes of both upstream npm lockfiles:
+The experiment's [gateway pin](../experiments/ynab-mcp/pins.json) and the canonical
+[runtime source pin](../services/ynab-mcp/upstream.json) record full commits and
+SHA-256 hashes of both upstream npm lockfiles:
 
 | Source | Evaluated version / full commit | Lock SHA-256 |
 | --- | --- | --- |
@@ -69,7 +70,10 @@ reachability waiver. Oliver's lock resolves SDK 1.32.1, whereas the evaluated
 gateway pins SDK 1.30.0 and also carries 2.0.0 SDK packages. Do not equate their
 security status merely because both use MCP.
 
-#58 must retain fresh advisory/license/malware evidence, assess every remaining
+#58's [isolated runtime](../services/ynab-mcp/README.md) verifies package/source
+parity, fails high/critical npm audits and runs network-disabled container tests.
+It is not an approved production image. Before promotion, retain fresh
+advisory/license/malware evidence, assess every remaining
 finding, verify source/package provenance if choosing a registry artifact, and
 build an immutable image with pinned base digest and recorded output digest.
 The upstream Dockerfile's mutable `node:22-alpine` is not a production image pin.

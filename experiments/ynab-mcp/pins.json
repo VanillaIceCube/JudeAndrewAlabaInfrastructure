@@ -4,11 +4,5 @@
     "version": "4.2.1",
     "commit": "a78bd90804d3080e8268961949f22575b34826f0",
     "lock_sha256": "f600671d77f6ac96279ee418381c40c8b2a515376972c15c0ebcd372bfcab943"
-  },
-  "ynab": {
-    "repository": "https://github.com/oliverames/ynab-mcp-server.git",
-    "version": "6.1.0",
-    "commit": "076aa5836658f8332058fa2bd58500aa14326dc9",
-    "lock_sha256": "2619d837be950b52b4ee2a729c9cefaec504499962283c895f2fb6115f0876a6"
   }
 }

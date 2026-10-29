@@ -92,6 +92,10 @@ with a four-minute limit, no application credentials and synthetic API fixtures.
 Its output feeds the existing automation result and Required CI. This is protocol
 evidence, not production dependency certification or service activation; the
 evaluated gateway's high/critical advisories and public OAuth gates remain blocking.
+The same job runs the [isolated stdio runtime](../services/ynab-mcp/README.md)
+container suite under a five-minute limit. Its source/package parity, fresh
+high/critical npm audit and synthetic-secret hardening tests do not publish an
+image or grant production approval.
 
 See [setup](GITHUB_SETUP.md). Default-branch Dependabot/schedules activate after
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
