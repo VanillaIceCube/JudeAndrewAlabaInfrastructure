@@ -134,3 +134,8 @@ The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 suite for runtime/pin changes. Keep the initial profile network-disabled,
 uid 65532, read-only, token-file-only and financially read-only. No source PR
 approves a production image, provisions a credential or supplies live acceptance.
+
+The gateway image uses pinned Python/Node Alpine stages and two hash-pinned,
+signature-verified native APKs. Preserve complete APK inventory coverage in the
+artifact gate, the unchanged hashed Python/Node graphs and stdio-only advisory
+applicability; never copy untracked C++ libraries or waive image findings.
