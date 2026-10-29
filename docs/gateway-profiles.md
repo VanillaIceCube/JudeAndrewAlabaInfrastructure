@@ -54,6 +54,11 @@ and app recovery while keeping the dedicated route fail-closed. Existing Notoli/
 MacroMapper readiness remains mandatory. Restoring `disabled → enabled` performs
 strict exposure checks again. No financial or authenticated API call is a gateway
 readiness probe; the authorization server is never contacted by these probes.
+Normal host validation requires the YNAB gateway endpoint. Transaction/recovery
+checks explicitly allow an absent endpoint only when the exact project-owned
+gateway container is stopped and still configured for the route network. Missing,
+foreign, running-but-detached or reconfigured containers fail closed. This narrow
+exception does not bypass the strict 401/metadata checks before first exposure.
 
 During interruption, retain the journal barrier and inspect the host before the
 existing explicit owner recovery. The route-network ID must remain unchanged.
