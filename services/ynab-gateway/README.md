@@ -168,7 +168,10 @@ package parity verification, verifies `manifest.json`, runs a fresh high/critica
 upstream npm audit and installs the hashed Python graph as wheels only. Pinned
 Node 24 and Python 3.12 Debian bookworm images share the C runtime; no fork or
 vendored source. The final image removes Python installers/build tools and
-contains no fixture server or secrets. Local image ID/record is explicitly
+checks the copied Node binary with `ldd` (no missing libraries) and `node --version`.
+The Python base supplies glibc/libm/libdl/libpthread; libstdc++/libgcc are deliberately
+copied from the pinned Node image. It contains no fixture server or secrets.
+Local image ID/record is explicitly
 unpublished and unapproved; a registry manifest digest and full-image/license/
 provenance review still belong to #61. The gateway runs as uid/gid 65532.
 
@@ -177,6 +180,11 @@ test fixtures read-only, runs with no network/capabilities and read-only root, t
 removes only its uniquely labeled container/tag. The script directory cannot
 shadow image source (`python -P`); tests assert they import `/gateway/gateway.py`.
 The outer seven-minute timeout has exact-run cleanup on EXIT, including failures.
+An additional network-disabled container launches the exact production ENTRYPOINT
+with synthetic private files in a uniquely labeled volume, then verifies loopback
+readiness, actual Node policy/upstream initialization/listing, anonymous rejection
+and write denial. No financial API call is made. Its generated JWT stays in memory,
+the signing key is never mounted, and exact-run cleanup removes the container/volume.
 Its result/log is included in Required CI/Lint Eastwood evidence. No credentials
 or actual financial/API requests are used.
 

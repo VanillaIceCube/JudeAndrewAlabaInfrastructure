@@ -19,6 +19,12 @@ COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/LICENSE /usr/share/doc/node/LICENSE
 COPY --from=node /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6
 COPY --from=node /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
+# The immutable Debian bookworm base supplies glibc/libm/libdl/libpthread;
+# the two deliberate copies above supply Node's C++ runtime.
+RUN ldd /usr/local/bin/node > /tmp/node-libraries && \
+    cat /tmp/node-libraries && ! grep -F 'not found' /tmp/node-libraries && \
+    /usr/local/bin/node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)" && \
+    /usr/local/bin/node --version && rm /tmp/node-libraries
 COPY --from=python-deps /opt/gateway-deps /opt/gateway-deps
 WORKDIR /app
 COPY --from=node /app/node_modules ./node_modules
