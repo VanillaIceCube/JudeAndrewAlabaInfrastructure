@@ -15,7 +15,7 @@ prompts, evidence, input validation, permissions and Project metadata.
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
 | CodeQL | All present Python, automation JavaScript and Actions sources on every PR, main push and weekly/manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
-| Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
+| Package malware | Exact YNAB gateway hashed Python lock: OSV known advisories/catalogued malware plus PyPI hash/yank verification; all other manifests block pending reviewed scanner support |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
@@ -24,6 +24,11 @@ CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
 logging and reversal. Image updates require separate operator-reviewed
 image/advisory assessment and production authorization.
+
+The [YNAB gateway dependency gate](../services/ynab-gateway/README.md) executes no
+packages and fails closed on metadata errors. Its known-malware coverage does not
+establish absence of unknown malware, container vulnerabilities or license/provenance
+approval. The reusable scope job has a five-minute bound and remains a Required CI gate.
 
 ## 🔒 Required checks and permissions
 

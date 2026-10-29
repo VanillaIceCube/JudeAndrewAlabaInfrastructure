@@ -5,9 +5,7 @@ import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("dependency_scope", ROOT / "scripts/check_dependency_scope.py")
-scope = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(scope)
+from scripts import check_dependency_scope as scope
 spec = importlib.util.spec_from_file_location("ci_result", ROOT / "scripts/check_ci_result.py")
 ci_result = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ci_result)

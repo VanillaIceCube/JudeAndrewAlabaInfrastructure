@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add the pinned FastMCP fallback dependency lock and fail-closed OSV/PyPI metadata
+  checks in existing Required CI; retain unknown-malware, provenance and activation gates.
 - Add a pinned, non-root, read-only YNAB stdio runtime candidate with package/source
   parity checks, protected token-file policy, no-network Compose profile and bounded
   disposable CI tests; retain production dependency/security and activation gates.
