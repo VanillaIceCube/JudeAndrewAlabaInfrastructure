@@ -1,26 +1,24 @@
-FROM node@sha256:a43f7fc3e52e87d12a905f46eea0275def84ca8f2981a5b53fed44d7fb398ee0 AS node
+FROM node@sha256:e053394f15519046270b637f0655c284d2fc844e013451fcb36e02dcfba29280 AS node
 WORKDIR /app
 COPY --from=upstream package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund && npm cache clean --force
 RUN npm audit --omit=dev --audit-level=high
 
-FROM python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487 AS python-deps
+FROM python@sha256:1148dbb014615300fa7e713b2f94f550c0d1c69780c0805f84f093ceee34dd0b AS python-deps
 COPY requirements.txt /build/requirements.txt
 RUN python -m pip install --no-cache-dir --disable-pip-version-check pip==26.2 && \
     python -m pip install --no-cache-dir --require-hashes --only-binary=:all: \
     --no-deps --target /opt/gateway-deps -r /build/requirements.txt
 
-FROM python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487
+FROM python@sha256:1148dbb014615300fa7e713b2f94f550c0d1c69780c0805f84f093ceee34dd0b
 LABEL org.opencontainers.image.source="https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure" \
       infrastructure.ynab.upstream="076aa5836658f8332058fa2bd58500aa14326dc9" \
       infrastructure.ynab.gateway="4.1.4"
 RUN rm -rf /usr/local/lib/python3.12/site-packages/pip* /usr/local/lib/python3.12/ensurepip /usr/local/bin/pip*
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/LICENSE /usr/share/doc/node/LICENSE
-COPY --from=node /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6
-COPY --from=node /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
-# The immutable Debian bookworm base supplies glibc/libm/libdl/libpthread;
-# the two deliberate copies above supply Node's C++ runtime.
+# Both pinned slim stages use Debian trixie. The Python base already provides
+# Node's C/C++ libraries with native package records; copy no untracked libraries.
 RUN ldd /usr/local/bin/node > /tmp/node-libraries && \
     cat /tmp/node-libraries && ! grep -F 'not found' /tmp/node-libraries && \
     /usr/local/bin/node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)" && \

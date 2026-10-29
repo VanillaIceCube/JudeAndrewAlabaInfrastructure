@@ -2,6 +2,11 @@
 
 ## 2026-10-29
 
+### Changed
+
+- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
+  stages and native tracked C++ libraries; retain fresh artifact security gates.
+
 ### Added
 
 - Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL

@@ -167,11 +167,19 @@ These are candidate commands; placeholders are deliberately not usable productio
 configuration. Build requires Docker/Git/internet, reuses #58's source/tag/lock/
 package parity verification, verifies `manifest.json`, runs a fresh high/critical
 upstream npm audit and installs the hashed Python graph as wheels only. Pinned
-Node 24 and Python 3.12 Debian bookworm images share the C runtime; no fork or
-vendored source. The final image removes Python installers/build tools and
+Node 24.22.2 and Python 3.12.16 slim Debian trixie amd64 images share the C runtime;
+both stages are pinned by platform digest. No fork or vendored source. The final
+image removes Python installers/build tools and
 checks the copied Node binary with `ldd` (no missing libraries) and `node --version`.
-The Python base supplies glibc/libm/libdl/libpthread; libstdc++/libgcc are deliberately
-copied from the pinned Node image. It contains no fixture server or secrets.
+The Python base supplies glibc/libm/libdl/libpthread and Node's C++ runtime with
+native dpkg package records. No libstdc++/libgcc files are copied across images.
+The Node executable and its notice come from the pinned official Node stage.
+It contains no fixture server or secrets. The previous bookworm image has known
+HIGH/CRITICAL OS findings. The exact smaller trixie candidate's 2026-10-29 full
+scan still reports 44 HIGH and one UNKNOWN OS finding (zero CRITICAL); it remains
+blocked for production. No finding is suppressed or treated as approved. Fresh
+full-image audit, applicability, license/provenance and release approval remain
+required. A source/manifest update supplies none of those approvals by itself.
 Local image ID/record is explicitly
 unpublished and unapproved; a registry manifest digest and full-image/license/
 provenance review still belong to #61. The gateway runs as uid/gid 65532.

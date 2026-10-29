@@ -54,7 +54,9 @@ and requires coverage for every installed Node lock and gateway Python metadata
 record. A package-count threshold alone cannot establish coverage. An absent
 native package database or installed runtime lock fails closed. This is coverage
 of recorded packages; untracked/copied binaries still need source/base provenance
-review, including the two Node runtime libraries copied into the Python base.
+review, including the official Node executable copied into the Python base.
+The newer slim trixie recipe uses the Python base's tracked C/C++ packages instead
+of copying untracked runtime libraries; its exact final artifact must still pass.
 
 Repository CI tests the fail-closed policy without metadata requests. This
 prerequisite does not silently label the currently vulnerable candidate clean or
@@ -86,6 +88,12 @@ not an alternative deployment path. The remaining transaction and its enforcemen
 of this call require a separate reviewed #61 PR before activation.
 
 ## 🚧 Current blockers and limits
+
+The gateway's slimmer pinned trixie candidate still has 44 HIGH and one UNKNOWN
+OS finding in its 2026-10-29 exact-image scan. Both image roles must pass; a clean
+egress candidate cannot authorize this gateway. Keep production blocked until a
+reviewed maintained artifact resolves the gate. No unfixed-advisory exception is
+introduced by this source work.
 
 The #60 Squid digest `8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce`
 has five HIGH OS findings in the 2026-10-29 scan: CVE-2025-68973 (gpgv),
