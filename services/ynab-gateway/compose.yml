@@ -1,0 +1,37 @@
+# Inactive; no shared networks, published ports, production restart or deployment trigger.
+services:
+  gateway:
+    profiles: [manual-gateway]
+    image: ${YNAB_GATEWAY_REPOSITORY:?immutable image repository required}@sha256:${YNAB_GATEWAY_SHA256:?registry digest required}
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 0.5
+    network_mode: none
+    restart: "no"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,uid=65532,gid=65532,mode=0700
+    volumes:
+      - type: bind
+        source: ${YNAB_TOKEN_FILE:?protected token file required}
+        target: /run/secrets/ynab_api_token
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${YNAB_GATEWAY_IDENTITY_FILE:?protected identity file required}
+        target: /run/secrets/gateway_identity.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${YNAB_OAUTH_PUBLIC_KEY_FILE:?pinned issuer public key file required}
+        target: /run/secrets/oauth_public_key.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    logging:
+      driver: none

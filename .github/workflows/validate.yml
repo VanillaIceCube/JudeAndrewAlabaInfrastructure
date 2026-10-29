@@ -16,15 +16,46 @@ on:
         value: ${{ jobs.validate.outputs.recovery_log }}
       automation_status:
         description: Automation regression status.
-        value: ${{ jobs.validate.outputs.automation_status }}
+        value: ${{ jobs.validate.outputs.automation_status == 'success' && jobs.ynab-gateway.outputs.status == 'success' && 'success' || 'failure' }}
       automation_log:
         description: Automation diagnostics.
-        value: ${{ jobs.validate.outputs.automation_log }}
+        value: |
+          ${{ jobs.validate.outputs.automation_log }}
+          YNAB gateway (${{ jobs.ynab-gateway.outputs.status }}):
+          ${{ jobs.ynab-gateway.outputs.log }}
   push:
     branches: [main]
 permissions:
   contents: read
 jobs:
+  ynab-gateway:
+    name: Isolated authenticated YNAB gateway
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      log: ${{ steps.report.outputs.log }}
+      status: ${{ steps.gateway.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build and test the network-disabled synthetic gateway
+        id: gateway
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          identity="ynab-gateway-test-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+          trap 'python3 services/ynab-gateway/run_tests.py --cleanup "$identity"' EXIT
+          YNAB_GATEWAY_TEST_ID="$identity" timeout --kill-after=15s 7m python3 services/ynab-gateway/run_tests.py 2>&1 | tee "$RUNNER_TEMP/ynab-gateway.log"
+      - name: Report gateway acceptance
+        id: report
+        if: always()
+        env:
+          OUTCOME: ${{ steps.gateway.outcome }}
+        run: python3 scripts/ci_report.py log "$RUNNER_TEMP/ynab-gateway.log" "$OUTCOME"
+      - name: Require gateway acceptance
+        if: always() && steps.gateway.outcome != 'success'
+        run: exit 1
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15

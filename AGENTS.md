@@ -92,7 +92,12 @@ before execution, then record its result and any mutation; do not log secrets.
 `services/ynab-gateway/README.md`. Only its exact hashed Python lock has scanner
 support. Run `python scripts/check_gateway_dependencies.py` for lock changes;
 never bypass unsupported-manifest checks or treat known-advisory checks as proof
-against unknown malware. Auth/session acceptance and production gates remain open.
+against unknown malware. Run `python services/ynab-gateway/run_tests.py` on a
+disposable daemon for gateway changes; regenerate its source manifest explicitly.
+Keep one distinct transport per remote session (client clones share transports),
+offline pinned issuer public keys, fixed owner/client/resource, hidden write/admin
+tools and no retries after child failure. Production/provider/client acceptance
+and network activation remain separately gated.
 
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container

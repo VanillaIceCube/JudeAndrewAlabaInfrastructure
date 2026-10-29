@@ -8,9 +8,11 @@ Reviewed 2026-10-28. **No production service or public endpoint is enabled.**
 
 **2026-10-29 #59 amendment:** reopen the conditional choice below in favor of
 FastMCP 4.1.4's maintained stateful proxy/resource-server APIs, because no acceptable
-Supergateway artifact is available. The [hashed Python lock and scanner boundary](../services/ynab-gateway/README.md)
-are the first reviewable prerequisite. The 61 clean known-advisory pins support
-further implementation, not public activation or FastMCP lifecycle acceptance.
+Supergateway artifact is available. PR #65 supplies the hashed Python lock/scanner
+prerequisite. The [inactive authenticated gateway](../services/ynab-gateway/README.md)
+defines the replacement's exact OAuth resource-server/session/route contract and
+its independent synthetic image acceptance. Public/provider/client activation
+remains separately gated; known-advisory checks alone establish no lifecycle proof.
 The original Supergateway experiment remains historical regression evidence;
 its dependency findings are not waived. #59 authentication/session acceptance
 must pass before #60 can supply an inactive route.
@@ -172,16 +174,20 @@ dispatch: fixed issuer/JWKS, audience/resource, expiry, `ynab:read` scope, allow
 owner subject and registered client, plus session ownership by subject/client.
 Return resource-metadata 401 challenges, 403 for insufficient authorization,
 and 404 for another owner's session. Never relay an OAuth access token to YNAB;
-use a separate private bridge credential and server-held YNAB token. Isolate
+use the private server-held YNAB token, never a caller credential, for the stdio
+child. The selected colocated proxy needs no HTTP bridge credential. Isolate
 processes/caches/journals per owner; a future second owner requires a new design
 review. Do not trust any `X-Forwarded-User`, user-supplied Host, or session ID as
-identity. Strip bridge-key headers before injecting a private backend credential.
+identity. Strip alternate bridge-key/forwarded identity headers; they cannot bypass OAuth.
 
 Use authorization-code + S256 PKCE, exact preregistered HTTPS callbacks, resource
 binding, explicit owner consent, revocation and short-lived access tokens; no
 password/implicit grants or open dynamic registration. This follows #28's
-registered-client policy. The authorization-provider implementation and its
-artifact pin are a **remaining #59 gate**, not functionality delivered by #57.
+registered-client policy. #59 implements the protected resource with a pinned
+maintained verifier and static issuer public key, not an authorization server.
+Provider selection/provisioning (including a reviewed artifact pin if self-hosted),
+owner consent/client configuration and real-client acceptance remain **#62
+operator gates**; source acceptance does not waive them.
 Do not publish metadata or ingress forwarding for nonexistent endpoints.
 
 Codex supports local stdio and remote HTTP with bearer/OAuth configuration;
