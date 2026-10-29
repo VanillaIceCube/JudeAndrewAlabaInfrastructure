@@ -99,6 +99,14 @@ offline pinned issuer public keys, fixed owner/client/resource, hidden write/adm
 tools and no retries after child failure. Production/provider/client acceptance
 and network activation remain separately gated.
 
+#60's [inactive routing/egress contract](docs/ynab-ingress.md) preserves all existing
+network objects and Notoli trust. Keep the base ingress/profile inactive; use
+exact MCP/metadata routes and the explicit 410 disable profile. Node's fixed
+CONNECT proxy has no direct-bypass or caller-controlled authority. Never copy
+the fixture private-IP ACL exception or CA into production. Run both ingress
+suites and the gateway runner for route/egress changes; #61/#62 must approve
+artifact/security/release/capacity and provider operations before activation.
+
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,

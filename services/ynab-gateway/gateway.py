@@ -101,10 +101,12 @@ class Session:
 
 def child_transport():
     """Fixed app command and minimal environment; no HOME/config/token inheritance."""
-    return StdioTransport(command="/usr/local/bin/node", args=["/policy/entrypoint.mjs"],
+    return StdioTransport(command="/usr/local/bin/node", args=["--use-env-proxy", "/policy/entrypoint.mjs"],
                           cwd="/app", env={"PATH": "/usr/local/bin:/usr/bin:/bin",
                           "HOME": "/tmp", "YNAB_API_TOKEN_FILE": "/run/secrets/ynab_api_token",
-                          "YNAB_ALLOW_WRITES": "0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1"},
+                          "YNAB_ALLOW_WRITES": "0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1",
+                          "HTTPS_PROXY": "http://ynab-egress:3128", "HTTP_PROXY": "http://ynab-egress:3128",
+                          "NO_PROXY": ""},
                           log_file=Path(os.devnull), keep_alive=False)
 
 
@@ -140,7 +142,8 @@ class Gateway:
         # Client.new() shares its transport. Create a distinct transport factory
         # per remote session so even maintained client clones cannot share stdio.
         if session.backend is None:
-            session.backend = StatefulProxyClient(self.transport_factory(), mode="legacy", timeout=25)
+            session.backend = StatefulProxyClient(self.transport_factory(), mode="legacy", timeout=25,
+                                                  forward_incoming_headers=False)
         client = session.backend.new_stateful()
         if session.client is not None and (client is not session.client
                                            or session.connected and not client.is_connected()):

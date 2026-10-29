@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add inactive YNAB ingress/disable profiles and isolated route/CONNECT-egress
+  contracts with disposable DNS/streaming/rollback/TLS API tests; apply no provider changes.
 - Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated
   stdio children, read-only tool policy, bounded requests, safe readiness/errors
   and synthetic image acceptance in Required CI; provision no OAuth provider or ingress.
