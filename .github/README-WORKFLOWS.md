@@ -87,6 +87,12 @@ Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
 actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
 while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
 
+The existing validation job also runs the pinned [YNAB gateway experiment](../docs/ynab-mcp.md)
+with a four-minute limit, no application credentials and synthetic API fixtures.
+Its output feeds the existing automation result and Required CI. This is protocol
+evidence, not production dependency certification or service activation; the
+evaluated gateway's high/critical advisories and public OAuth gates remain blocking.
+
 See [setup](GITHUB_SETUP.md). Default-branch Dependabot/schedules activate after
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
 activation. No merge, promotion or production operation is implied.

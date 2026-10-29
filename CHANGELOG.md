@@ -2,6 +2,13 @@
 
 ## 2026-10-28
 
+### Added
+
+- Document the conditional YNAB MCP gateway choice, dependency/security blockers,
+  identity/route contracts and ordered #57–#62 handoff; add a pinned disposable
+  upstream protocol/preview experiment in existing validation CI without production
+  configuration or credentials.
+
 ### Fixed
 
 - Record the previously undocumented [PR #25](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/25) fix (merged 2026-10-18): emit bounded CI reports to stdout when `GITHUB_OUTPUT` is absent, avoiding a local-execution `KeyError` while preserving GitHub Actions output formatting.
