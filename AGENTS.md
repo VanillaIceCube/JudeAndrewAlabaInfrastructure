@@ -117,6 +117,12 @@ packages without a mutable resolver. Regenerate its recipe manifest and run the
 gateway runner plus both full-image artifact scans for changes. Keep unpublished
 local candidates distinct from approved registry digests.
 
+
+The [gateway profile contract](docs/gateway-profiles.md) uses the existing bundle/
+owner-promotion path. Preserve a disabled tombstone baseline before exposure,
+exact Notoli trust and accepted optional-route identity; never implicitly remove
+the hostname by reverting to `base`. No profile variable is a deployment approval.
+
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,

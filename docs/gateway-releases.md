@@ -244,3 +244,11 @@ cleanup or off-host backup is included. Never remove a mounted/current release,
 any pending attempt or its predecessor. Monitor disk space before future releases.
 Production acceptance still requires the separately authorized first and second
 independent release plus recovery evidence recorded on #4.
+
+## 🚦 Optional YNAB route
+
+The [profile contract](gateway-profiles.md) adds a permanent validated selection
+to this same bundle, transaction and owner-promotion path. The default stays
+`base`; first use requires the disabled tombstone baseline, and subsequent
+gateway releases preserve the accepted optional network/profile. No production
+variable, app service or provider setting is activated by merging this source.

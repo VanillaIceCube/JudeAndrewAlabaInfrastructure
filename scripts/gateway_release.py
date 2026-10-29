@@ -23,6 +23,7 @@ import time
 import uuid
 
 import check_host
+import gateway_profile as profiles
 
 ROOT = Path("/opt/host-ingress-deploy")
 LOCK = Path("/var/lib/jude-deploy-locks/maintenance.lock")
@@ -125,7 +126,7 @@ def durable_tree(directory):
 
 
 @contextmanager
-def maintenance(path=LOCK):
+def maintenance(path=LOCK, *, shared=False):
     import fcntl
 
     private(path.parent)
@@ -136,7 +137,7 @@ def maintenance(path=LOCK):
                 and info.st_uid == os.geteuid() and stat.S_IMODE(info.st_mode) == 0o600,
                 "Unsafe maintenance lock")
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fd, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise ReleaseError("Maintenance/app release already active") from error
         yield
@@ -159,7 +160,7 @@ def unpack(archive, destination):
                 (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
                 continue
             require(item.isfile() and name not in seen and
-                    (name == "compose.yml" or name in {"scripts/check_host.py", "scripts/gateway_release.py"}
+                    (name in {"compose.yml", profiles.MARKER} or name in {"scripts/check_host.py", "scripts/gateway_release.py", "scripts/gateway_profile.py"}
                      or (name.startswith("nginx/") and name.endswith(".conf"))), "Unexpected payload")
             seen.add(name)
             total += item.size
@@ -178,14 +179,19 @@ def validate_model(model, certs):
     require(DIGEST.fullmatch(proxy["image"]), "Immutable Nginx digest required")
     require(proxy["container_name"] == "host-ingress-proxy" and proxy["restart"] == "always",
             "Gateway runtime identity drift")
-    require(set(model["networks"]) == {"notoli_backend", "notoli_frontend", "macromapper"}, "Network policy drift")
+    enabled = "ynab_route" in model["networks"]
+    require(set(model["networks"]) == {"notoli_backend", "notoli_frontend", "macromapper"} | ({"ynab_route"} if enabled else set()), "Network policy drift")
     expected = {"notoli_backend": "notoli_backend_private", "notoli_frontend": "notoli_default",
                 "macromapper": "macromapper-ingress"}
+    if enabled:
+        expected["ynab_route"] = "ynab_mcp_private"
     require(all({k: v for k, v in model["networks"][key].items() if not (k == "ipam" and v == {})}
                 == {"name": name, "external": True}
                 for key, name in expected.items()), "Networks must be existing external objects")
-    require(proxy["networks"] == {"notoli_backend": {"ipv4_address": "172.30.88.2"},
-                                     "notoli_frontend": None, "macromapper": None}, "Proxy trust/address drift")
+    endpoints = {"notoli_backend": {"ipv4_address": "172.30.88.2"}, "notoli_frontend": None, "macromapper": None}
+    if enabled:
+        endpoints["ynab_route"] = {"ipv4_address": "172.30.89.2"}
+    require(proxy["networks"] == endpoints, "Proxy trust/address drift")
     require(len(proxy["ports"]) == 2 and
             {(p["target"], str(p["published"]), p.get("host_ip", ""), p["protocol"])
              for p in proxy["ports"]} == {(80, "80", "", "tcp"), (443, "443", "", "tcp")}, "Listener drift")
@@ -227,10 +233,10 @@ def runtime():
     return {key: value[key] for key in ("Id", "Image", "Config", "HostConfig", "Mounts")}
 
 
-def invariants(allow_missing_proxy=False):
+def invariants(allow_missing_proxy=False, *, ynab_enabled=False):
     # Never let a disconnected Actions pipe interrupt host mutation/recovery.
     with redirect_stdout(io.StringIO()):
-        check_host.verify("host", allow_missing_proxy=allow_missing_proxy)
+        check_host.verify("host", allow_missing_proxy=allow_missing_proxy, ynab_enabled=ynab_enabled)
     apps = {}
     for name in APPS:
         value = inspect("container", name)
@@ -290,13 +296,13 @@ def health_once(ca=None):
                     connection.close()
 
 
-def healthy(ca=None):
+def bounded_health(probe, *arguments):
     # A process deadline also bounds a peer that trickles bytes below socket timeouts.
     import multiprocessing
 
     context = multiprocessing.get_context("fork")
     for attempt in range(3):
-        process = context.Process(target=health_once, args=(ca,))
+        process = context.Process(target=probe, args=arguments)
         process.start()
         process.join(80)
         if process.is_alive():
@@ -307,6 +313,66 @@ def healthy(ca=None):
         if attempt == 2:
             raise ReleaseError("Gateway readiness exhausted its bounded retry budget")
         time.sleep(2)
+
+
+def healthy(ca=None):
+    bounded_health(health_once, ca)
+
+
+def ynab_health_once(profile, strict, ca):
+    domain = "ynab.judeandrewalaba.com"
+    for origin in ((True, False) if strict and profile == "enabled" else (True,)):
+        context = ssl.create_default_context(cafile=ca if origin else None)
+        paths = ["/mcp", "/.well-known/oauth-protected-resource/mcp"] if strict and profile == "enabled" else ["/mcp"]
+        for path in paths:
+            connection = http.client.HTTPSConnection(domain, timeout=5, context=context)
+            if origin:
+                import socket
+                connection._create_connection = lambda address, timeout, source_address: socket.create_connection(
+                    ("127.0.0.1", 443), timeout, source_address)
+            try:
+                post = profile == "enabled" and path == "/mcp"
+                connection.request("POST" if post else "GET", path, body=b"{}" if post else None,
+                    headers={"Content-Type": "application/json", "Accept": "application/json",
+                             "User-Agent": "JudeGatewayRelease/1.0", "Cache-Control": "no-cache, no-store"})
+                response = connection.getresponse()
+                body = response.read(16 * 1024)
+                require("no-store" in response.getheader("Cache-Control", ""), "Missing private route cache policy")
+                if profile == "disabled":
+                    require(response.status == 410, "Missing YNAB tombstone")
+                elif path == "/mcp":
+                    require(response.status in ({401} if strict else {401, 502, 503}), "Unexpected YNAB route status")
+                    if response.status == 401:
+                        require('resource_metadata="https://' + domain + '/.well-known/oauth-protected-resource/mcp"'
+                                in response.getheader("WWW-Authenticate", ""), "Invalid YNAB challenge")
+                else:
+                    require(response.status == 200 and json.loads(body).get("resource") == "https://" + domain + "/mcp",
+                            "Invalid YNAB resource metadata")
+            finally:
+                connection.close()
+
+
+def route_health(profile, strict=False, ca=None):
+    if profile != "base":
+        bounded_health(ynab_health_once, profile, strict, ca)
+
+
+def ynab_identity():
+    route = check_host.ynab_route(allow_missing_proxy=True)
+    apps = {}
+    for name in ("ynab-mcp-gateway-1", "ynab-mcp-egress-1"):
+        ids = docker("ps", "-aq", "--filter", "name=^/" + name + "$").split()
+        require(len(ids) <= 1, "Ambiguous YNAB app identity")
+        if ids:
+            value = inspect("container", ids[0])
+            apps[name] = [value["Id"], value["Image"], value["State"]["StartedAt"]]
+    return {"network": route["Id"], "apps": apps}
+
+
+def profile_invariants(profile, allow_missing_proxy=False):
+    if profile == "enabled":
+        return invariants(allow_missing_proxy=allow_missing_proxy, ynab_enabled=True)
+    return invariants(allow_missing_proxy=allow_missing_proxy)
 
 
 class Gateway:
@@ -323,6 +389,11 @@ class Gateway:
     def compose(self, directory, *args):
         return docker("compose", "-p", "host-ingress", "-f", directory / "model.json", *args)
 
+    def profile(self, record):
+        profile = profiles.model_profile(read(Path(record["directory"]) / "model.json"))
+        require(record.get("profile", profile) == profile, "Accepted route profile drift")
+        return profile
+
     def current(self):
         record = read(self.root / "current.json")
         directory = Path(record["directory"])
@@ -335,12 +406,14 @@ class Gateway:
             volume["source"] = mounts[volume["target"]]
         require(config_identity(live) == record["configuration"], "Live configuration drift")
         require(config_identity(read(directory / "model.json")) == record["configuration"], "Recovery configuration drift")
+        self.profile(record)
         return record
 
     def save(self, directory, source, run_url, recovery, model, previous=None):
         record = {"source": source, "directory": str(directory), "image": model["services"]["proxy"]["image"],
                   "configuration": config_identity(model), "actions_run": run_url,
                   "recovery": recovery, "runtime": runtime()}
+        record["profile"] = profiles.model_profile(model)
         if previous:
             record["previous_source"] = previous["source"]
         atomic(self.root / "current.json", record)
@@ -417,9 +490,13 @@ class Gateway:
         require(config_identity(model) == previous["configuration"], "Recovery checksum mismatch")
         self.syntax(model)
         self.compose(directory, "up", "-d", "--no-deps", "--pull", "never", "--force-recreate", "proxy")
-        require(invariants() == journal["invariants"], "Application/network identity changed")
+        profile = self.profile(previous)
+        require(profile_invariants(profile) == journal["invariants"], "Application/network identity changed")
+        if journal.get("ynab_state") is not None:
+            require(ynab_identity() == journal["ynab_state"], "YNAB app/network identity changed")
         require(certificate_identity(journal["certs"]) == journal["certificates"], "Certificates changed")
         healthy(ca)
+        route_health(profile, strict=journal.get("strict_restore", False), ca=ca)
         record = self.save(directory, previous["source"], previous["actions_run"], previous["recovery"], model)
         atomic(self.root / "attempts" / journal["id"] / "result.json",
                {"status": "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]})
@@ -434,14 +511,23 @@ class Gateway:
         if interrupted:
             require(read(pending)["id"] == identity, "Another interrupted release requires recovery")
         else:
-            require(self.current()["recovery"] == identity, "Only the current release may be rolled back")
+            current_record = self.current()
+            require(current_record["recovery"] == identity, "Only the current release may be rolled back")
+            profiles.transition(self.profile(current_record), self.profile(journal["previous"]))
+            journal["strict_restore"] = self.profile(current_record) != "enabled" and self.profile(journal["previous"]) == "enabled"
         # Reboot or an independent app release can change app identities while
         # an interrupted gateway journal remains. Revalidate them under the lock;
         # the gateway itself may be absent or only partially attached.
-        current = invariants(allow_missing_proxy=interrupted)
+        protected = journal.get("ynab_state") is not None
+        active_profile = ("enabled" if protected else "base") if interrupted else self.profile(current_record)
+        current = profile_invariants(active_profile, allow_missing_proxy=interrupted)
         if interrupted:
             require(current["networks"] == journal["invariants"]["networks"],
                     "Route network IDs changed since interruption")
+        if protected:
+            ynab = ynab_identity()
+            require(ynab["network"] == journal["ynab_state"]["network"], "YNAB route network was replaced")
+            journal["ynab_state"] = ynab
         journal["invariants"] = current
         atomic(pending, journal)
         return self.restore(journal, ca)
@@ -450,13 +536,16 @@ class Gateway:
         require(IDENTITY.fullmatch(identity), "Invalid release identity")
         require(not (self.root / "pending.json").exists(), "Interrupted release requires explicit rollback")
         previous = self.current()
-        before = invariants()
+        previous_profile = self.profile(previous)
+        before = profile_invariants(previous_profile)
         self.capacity()
         certs = next(m["Source"] for m in previous["runtime"]["Mounts"] if m["Destination"] == "/etc/nginx/certs")
         certificates = certificate_identity(certs)
         directory = self.root / "releases" / identity
         directory.mkdir(mode=0o700)
         unpack(archive, directory)
+        profile = profiles.read(directory)
+        profiles.transition(previous_profile, profile)
         environment = dict(os.environ, INGRESS_CERTS_DIR=certs)
         # Explicit env and project-directory prevent checkout/.env discovery.
         output = subprocess.run(["docker", "compose", "--env-file", "/dev/null", "-p", "host-ingress", "-f",
@@ -464,6 +553,7 @@ class Gateway:
                                 env=environment, capture_output=True, text=True, timeout=30)
         require(output.returncode == 0, "Candidate Compose expansion failed")
         model = json.loads(output.stdout)
+        profiles.apply(model, profile)
         validate_model(model, certs)
         require(all(volume["source"] == str(directory / TARGETS[volume["target"]])
                     for volume in model["services"]["proxy"]["volumes"] if volume["target"] in TARGETS),
@@ -477,11 +567,14 @@ class Gateway:
                    "invariants": before, "certs": certs, "certificates": certificates,
                    "actions_run": run_url, "configuration": configuration,
                    "image": model["services"]["proxy"]["image"]}
+        journal["profile"] = profile
+        journal["ynab_state"] = ynab_identity() if "enabled" in {previous_profile, profile} else None
         atomic(attempt / "journal.json", journal)
         durable_tree(attempt)
         # Validate baseline even for a no-op: a broken gateway is never accepted by skipping it.
         healthy(ca)
         if configuration == previous["configuration"]:
+            route_health(profile, ca=ca)
             atomic(attempt / "result.json", {"status": "unchanged", "promoted_source": identity[:40],
                                             "running_source": previous["source"]})
             return {"status": "unchanged", "running_source": previous["source"]}
@@ -494,9 +587,12 @@ class Gateway:
         try:
             self.compose(directory, "up", "-d", "--no-deps", "--pull", "never", "--force-recreate", "proxy")
             require(runtime()["Image"] == inspect("image", model["services"]["proxy"]["image"])["Id"], "Image mismatch")
-            require(invariants() == before, "Application/network identity changed")
+            require(profile_invariants(profile) == before, "Application/network identity changed")
+            if journal["ynab_state"] is not None:
+                require(ynab_identity() == journal["ynab_state"], "YNAB app/network identity changed")
             require(certificate_identity(certs) == certificates, "Certificates changed")
             healthy(ca)
+            route_health(profile, strict=profile == "enabled" and previous_profile != "enabled", ca=ca)
             self.save(directory, identity[:40], run_url, identity, model, previous)
             atomic(attempt / "result.json", {"status": "success", "running_source": identity[:40]})
             (self.root / "pending.json").unlink()
@@ -537,6 +633,7 @@ def main():
             require(hashlib.sha256(regular(args.archive).read_bytes()).hexdigest() == args.archive_sha256,
                     "Transport checksum mismatch")
             result = gateway.deploy(args.archive, args.id, args.run_url, ca)
+        result["profile"] = gateway.profile(read(ROOT / "current.json"))
         print(json.dumps(result))
 
 

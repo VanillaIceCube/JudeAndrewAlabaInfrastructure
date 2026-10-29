@@ -258,3 +258,13 @@ Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
+
+## 🚦 Optional YNAB gateway profile
+
+The permanent repository variable `YNAB_ROUTE_PROFILE` defaults to `base` and
+accepts only `base`, `disabled` or `enabled`. See the
+[profile contract](../docs/gateway-profiles.md) for ordered tombstone/activation
+and recovery checks. It selects reviewed source packaging; it is not an approval
+variable and adds no Environment/Deployment API boundary. The existing owner,
+env-prod, reviewed-main/workflow and fingerprint checks still run before key
+loading. No variable, credential or provider change is part of the source PR.
