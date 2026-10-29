@@ -21,6 +21,7 @@ preserved through the reviewed migration.
 | Adding an application | [Onboarding](docs/onboarding.md) |
 | YNAB MCP investigation | [Gateway decision and disposable proof](docs/ynab-mcp.md) — production blocked |
 | YNAB stdio runtime | [Pinned, inactive runtime and container tests](services/ynab-mcp/README.md) |
+| YNAB HTTP gateway | [Inactive owner-authenticated proxy and acceptance](services/ynab-gateway/README.md) |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
 | Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
 | Project history | [Changelog](CHANGELOG.md) |

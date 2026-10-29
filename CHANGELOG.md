@@ -4,6 +4,9 @@
 
 ### Added
 
+- Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated
+  stdio children, read-only tool policy, bounded requests, safe readiness/errors
+  and synthetic image acceptance in Required CI; provision no OAuth provider or ingress.
 - Add the pinned FastMCP fallback dependency lock and fail-closed OSV/PyPI metadata
   checks in existing Required CI; retain unknown-malware, provenance and activation gates.
 - Add a pinned, non-root, read-only YNAB stdio runtime candidate with package/source

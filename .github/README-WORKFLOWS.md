@@ -30,6 +30,13 @@ packages and fails closed on metadata errors. Its known-malware coverage does no
 establish absence of unknown malware, container vulnerabilities or license/provenance
 approval. The reusable scope job has a five-minute bound and remains a Required CI gate.
 
+The validation workflow separately builds/tests the inactive authenticated YNAB
+gateway against synthetic stdio/HTTP fixtures with network disabled. Its job has
+a ten-minute bound, a seven-minute process limit and exact-run cleanup on EXIT.
+Its result/log joins the existing automation evidence for Lint Eastwood; failure
+blocks the overall Tests/Required CI result. It publishes no image and loads no
+real credentials. See the [gateway contract](../services/ynab-gateway/README.md).
+
 ## 🔒 Required checks and permissions
 
 `Required CI` in the CI workflow requires independent gates and all applicable reviews.
