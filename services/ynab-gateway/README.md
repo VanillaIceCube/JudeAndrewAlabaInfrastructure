@@ -60,6 +60,11 @@ Production configuration has three separately mounted, regular files, owned by
 uid 65532 with mode 0400, in an operator/root-owned 0700 directory. Reuse the
 runtime's [secret metadata preflight](../ynab-mcp/README.md); never mount a HOME,
 Docker socket, shared application secret directory or inline token.
+Gateway startup checks all three files' regular-file type, uid, mode and bounded
+size before constructing the server or starting a child. The existing Node policy
+also validates the token before loading unchanged upstream code; Python never
+reads the token contents. Readiness still detects later missing/dead children or
+unavailable token mounts without claiming API validity.
 
 - `ynab_api_token`: Oliver's token, validated by the unchanged #58 policy, with
   `YNAB_ALLOW_WRITES=0` and fallback disabled regardless of client requests.

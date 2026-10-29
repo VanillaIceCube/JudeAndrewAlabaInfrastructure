@@ -2,7 +2,6 @@
 
 Fixture tools and write-factory options are mounted test code, never image code.
 """
-import asyncio
 import contextlib
 from concurrent.futures import ThreadPoolExecutor
 import io
@@ -93,7 +92,7 @@ class GatewayTests(unittest.TestCase):
             response = self.rpc("tools/list", sid=sid)
             names = {tool["name"] for tool in response.json()["result"]["tools"]}
             self.assertIn("list_budgets", names)
-            self.assertTrue(names <= g.READ_TOOLS)
+            self.assertLessEqual(names, g.READ_TOOLS)
             self.assertFalse(names & {"create_payee", "preview_write_tool", "ynab_tool_execute", "ynab_auth_status", "fixture_status"})
             for method, field in (("resources/list", "resources"), ("resources/templates/list", "resourceTemplates"), ("prompts/list", "prompts")):
                 self.assertEqual(self.rpc(method, sid=sid).json()["result"][field], [])
@@ -242,8 +241,7 @@ class GatewayTests(unittest.TestCase):
                 self.assertEqual(private.get("/health/ready").status_code, 503)
             self.assertEqual(self.http.get("/health/ready").status_code, 404)
         # The real policy cannot start without a token file; never contact YNAB.
-        actual = lambda: g.child_transport()
-        app = g.Gateway(self.identity, actual)
+        app = g.Gateway(self.identity, g.child_transport)
         with TestClient(app, base_url=g.ORIGIN, client=("127.0.0.1", 1234)) as private:
             self.assertEqual(private.get("/health/ready").status_code, 503)
         healthy = g.Gateway(self.identity, self.transport)
@@ -255,15 +253,19 @@ class GatewayTests(unittest.TestCase):
             directory = Path(temp)
             identity_file = directory / "gateway_identity.json"
             key_file = directory / "oauth_public_key.pem"
+            token_file = directory / "ynab_api_token"
             identity_file.write_text(json.dumps({"issuer": self.identity.issuer, "owner": self.identity.owner,
                                                  "clients": list(self.identity.clients)}))
             key_file.write_text(self.pair.public_key)
+            token_file.write_text("synthetic-fixture-only")
             identity_file.chmod(0o400)
             key_file.chmod(0o400)
+            token_file.chmod(0o400)
             self.assertIsInstance(g.from_config(directory), g.Gateway)
             identity_file.chmod(0o644)
             with self.assertRaises(ValueError):
                 g.from_config(directory)
+
             identity_file.chmod(0o400)
             with patch.dict(os.environ, {"YNAB_ALLOW_WRITES": "1"}), self.assertRaises(ValueError):
                 g.from_config(directory)
@@ -273,6 +275,53 @@ class GatewayTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 g.from_config(directory)
 
+    def test_startup_rejects_invalid_token_metadata_before_constructing_gateway(self):
+        import stat
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / "gateway_identity.json").write_text(json.dumps({"issuer": self.identity.issuer,
+                "owner": self.identity.owner, "clients": list(self.identity.clients)}))
+            (directory / "oauth_public_key.pem").write_text(self.pair.public_key)
+            token = directory / "ynab_api_token"
+            token.write_text("synthetic-fixture-only")
+            for file in directory.iterdir():
+                file.chmod(0o400)
+            with patch.object(g, "Gateway") as constructor:
+                token.chmod(0o644)
+                with self.assertRaises(ValueError):
+                    g.from_config(directory)
+                token.chmod(0o600)
+                token.write_text("")
+                token.chmod(0o400)
+                with self.assertRaises(ValueError):
+                    g.from_config(directory)
+                token.chmod(0o600)
+                token.write_text("x" * 4097)
+                token.chmod(0o400)
+                with self.assertRaises(ValueError):
+                    g.from_config(directory)
+                token.unlink()
+                token.mkdir()
+                with self.assertRaises(ValueError):
+                    g.from_config(directory)
+                token.rmdir()
+                token.symlink_to(directory / "oauth_public_key.pem")
+                with self.assertRaises(ValueError):
+                    g.from_config(directory)
+                token.unlink()
+                token.write_text("synthetic-fixture-only")
+                token.chmod(0o400)
+                original = Path.lstat
+                def wrong_owner(path):
+                    if path == token:
+                        return SimpleNamespace(st_mode=stat.S_IFREG | 0o400, st_uid=0, st_size=22)
+                    return original(path)
+                # The container intentionally lacks CAP_CHOWN. Actual wrong-uid
+                # mounts are also exercised by #58's runtime Docker suite.
+                with patch.object(Path, "lstat", wrong_owner), self.assertRaises(ValueError):
+                    g.from_config(directory)
+                constructor.assert_not_called()
     def test_preview_tokens_remain_process_local_single_use_and_expiring(self):
         # This synthetic factory option is not a gateway setting or YNAB_ALLOW_WRITES=1.
         additional = {"preview_write_tool", "create_payee", "fixture_expire"}

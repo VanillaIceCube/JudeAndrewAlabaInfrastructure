@@ -171,6 +171,7 @@ class Gateway:
                                   and status.get("authenticated") is True
                                   and status.get("writes_enabled") is False)
             except Exception:
+                # Keep readiness false; raw child/configuration errors are private.
                 pass
         return self.ready
 
@@ -377,6 +378,7 @@ class Gateway:
             self.inflight -= 1
             if fresh:
                 self.pending -= 1
+        return None
 
 
 def from_config(secret_root=Path("/run/secrets")):
@@ -385,7 +387,7 @@ def from_config(secret_root=Path("/run/secrets")):
             or os.environ.get("YNAB_DISABLE_AGENT_CONFIG_FALLBACK", "1") != "1"
             or os.environ.get("YNAB_API_TOKEN") or os.environ.get("SENTRY_DSN")):
         raise ValueError("Unsafe gateway environment")
-    files = [secret_root / name for name in ("gateway_identity.json", "oauth_public_key.pem")]
+    files = [secret_root / name for name in ("gateway_identity.json", "oauth_public_key.pem", "ynab_api_token")]
     for path in files:
         metadata = path.lstat()
         if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != 65532
