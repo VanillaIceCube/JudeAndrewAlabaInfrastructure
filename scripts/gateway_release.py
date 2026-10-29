@@ -236,7 +236,8 @@ def runtime():
 def invariants(allow_missing_proxy=False, *, ynab_enabled=False):
     # Never let a disconnected Actions pipe interrupt host mutation/recovery.
     with redirect_stdout(io.StringIO()):
-        check_host.verify("host", allow_missing_proxy=allow_missing_proxy, ynab_enabled=ynab_enabled)
+        options = {"allow_stopped_gateway": True} if ynab_enabled else {}
+        check_host.verify("host", allow_missing_proxy=allow_missing_proxy, ynab_enabled=ynab_enabled, **options)
     apps = {}
     for name in APPS:
         value = inspect("container", name)
@@ -358,7 +359,7 @@ def route_health(profile, strict=False, ca=None):
 
 
 def ynab_identity():
-    route = check_host.ynab_route(allow_missing_proxy=True)
+    route = check_host.ynab_route(allow_missing_proxy=True, allow_stopped_gateway=True)
     apps = {}
     for name in ("ynab-mcp-gateway-1", "ynab-mcp-egress-1"):
         ids = docker("ps", "-aq", "--filter", "name=^/" + name + "$").split()
