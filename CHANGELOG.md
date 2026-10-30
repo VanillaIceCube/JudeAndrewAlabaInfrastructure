@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Give the staged YNAB egress policy its service-owned read-only permissions,
+  preserving private release parents and exact matched-file recovery checks.
 - Enable explicitly consented full YNAB MCP access with separate read/write scopes,
   preserved upstream previews and a persistent operation journal that code/image
   rollback never rewinds. End the current rollout after YNAB and existing-app checks.
