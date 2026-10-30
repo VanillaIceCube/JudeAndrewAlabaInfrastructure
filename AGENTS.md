@@ -83,7 +83,7 @@ manual owner merge. A human PR smoke test does not prove Dependabot access.
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli and MacroMapper route MCP/discovery to their own backends; advertise each service only after its app registry and OAuth readiness pass. Preserve independent releases and exact app proxy trust.
 
 ## 🤖 Reviewer model policy
 
