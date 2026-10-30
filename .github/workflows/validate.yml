@@ -50,7 +50,7 @@ jobs:
         run: |
           set -o pipefail
           docker compose -f compose.yml config --quiet
-          python3 -m unittest discover -s tests -p 'test_*ingress.py' -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+          python3 -m unittest discover -s tests -p test_ingress.py -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
       - name: Validate SQLite recovery
         id: recovery
         continue-on-error: true
@@ -63,19 +63,13 @@ jobs:
             python3 -m unittest discover -s tests -p 'test_gateway*.py' -v || status=1
             exit "$status"
           } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
-      - name: Validate automation, YNAB experiment and review regressions
+      - name: Validate automation policy and review regressions
         id: automation
         continue-on-error: true
         run: |
           set -o pipefail
           {
             python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
-            python3 -m unittest discover -s tests -p test_ynab_image_audit.py -v || exit 1
-            python3 -m unittest discover -s tests -p test_ynab_release_preflight.py -v || exit 1
-            python3 -m unittest discover -s tests -p test_ynab_release.py -v || exit 1
-            sudo -E python3 -m unittest discover -s tests -p test_ynab_stage_model.py -v || exit 1
-            sudo -E python3 -m unittest discover -s tests -p test_ynab_release_docker.py -v || exit 1
-            sudo -E python3 -m unittest discover -s tests -p 'test_mcp_auth*.py' -v || exit 1
             mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
             node --test "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"

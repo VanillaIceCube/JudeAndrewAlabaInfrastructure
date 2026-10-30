@@ -110,7 +110,7 @@ class GatewayDockerTests(unittest.TestCase):
                         "networks": {name: release.inspect("network", name)["Id"] for name in networks},
                         "data": hashlib.sha256((root / "db.sqlite3").read_bytes()).hexdigest()}
 
-            def healthy(ca=None, *, macro_routes=True):
+            def healthy(ca=None):
                 for attempt in range(20):
                     connection = http.client.HTTPSConnection("localhost", port, timeout=2,
                                                            context=ssl.create_default_context(cafile=str(certs / "origin.pem")))
@@ -172,8 +172,6 @@ class GatewayDockerTests(unittest.TestCase):
                 gateway.compose(baseline, "up", "-d", "--no-deps", "proxy")
                 names.append(prefix + "-proxy")
                 with patch.object(release, "runtime", runtime), patch.object(release, "invariants", invariants), \
-                        patch.object(release, "macro_mcp_enabled", return_value=False), \
-                        patch.object(release, "shared_consumers_active", return_value=False), \
                         patch.object(release, "validate_model", validate), patch.object(release, "healthy", healthy):
                     healthy()
                     gateway.save(baseline, "a" * 40, "fixture-baseline", None, initial)
