@@ -19,9 +19,10 @@ class GatewayDependencyTests(unittest.TestCase):
                 deps.parse_lock(text)
 
     def test_only_exact_gateway_lock_is_supported(self):
-        self.assertEqual(unsupported_manifests([deps.LOCK]), [])
+        self.assertEqual(unsupported_manifests([deps.LOCK, deps.AUTH_LOCK]), [])
         for path in ("other/requirements.txt", "services/ynab-gateway/requirements.in",
-                     "services/ynab-gateway/pyproject.toml", "services/ynab-gateway/package.json"):
+                     "services/ynab-gateway/pyproject.toml", "services/ynab-gateway/package.json",
+                     "services/mcp-auth/requirements.in", "services/mcp-auth/pyproject.toml"):
             self.assertEqual(unsupported_manifests([path]), [path])
 
     def test_osv_batch_shape_pagination_and_all_advisories_fail_closed(self):
