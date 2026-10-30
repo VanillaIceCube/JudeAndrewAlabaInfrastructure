@@ -6,6 +6,11 @@ REST/frontend with no advertised MCP. FullStackTemplate is an onboarding example
 not a third production instance. Application tools, users, OAuth grants and domain
 authorization belong to their application repository.
 
+Until its MCP implementation is ready, MacroMapper rejects `/mcp`, `/mcp/`
+descendants and `/.well-known/` discovery paths with `404` and
+`Cache-Control: no-store`. Query strings do not bypass this boundary; ordinary
+frontend/API routing stays unchanged. These responses advertise no MCP service.
+
 ## 🌐 Routing and security contract
 
 Each enabled app vhost defines its own `$app_backend`, `$app_frontend`, fixed
