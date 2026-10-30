@@ -1,5 +1,100 @@
 # 📝 Changelog
 
+## 2026-10-29
+
+### Changed
+
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
+- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
+  preserving exact topology guards and rejecting unsupported modes.
+- Supply synthetic app-specific required secrets only in disposable shared release
+  fixtures; retain production missing/empty/malformed input rejection.
+- Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
+  test actual canonical staging with synthetic protected files in Linux CI.
+- Separate YNAB stop-only containment from freshly scanned active-image rollback;
+  require explicit stop-only recovery after an initial activation failure.
+- Compare Alpine image coverage using native package names and complete installed
+  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
+- Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
+  hashed C++ packages; verify complete native APK scan coverage.
+
+- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
+  stages and native tracked C++ libraries; retain fresh artifact security gates.
+
+### Added
+
+- Document the ordered YNAB/shared-issuer first activation, exact artifact/network
+  prerequisites, both-client acceptance and contained recovery before app adoption.
+
+- Add fixed inactive auth ingress, contained single-container issuer releases and
+  journal-preserving SQLite recovery with grant invalidation and offline JWT
+  quarantine; retain independent app releases and explicit recovery barriers.
+- Route MacroMapper MCP/discovery exactly to its app backend, preserve its existing
+  gateway peer172.20.0.3, and validate legacy/central app readiness without changing
+  ordinary login, frontend or estimation routes.
+- Add an inactive, independently packaged MCP authorization service with isolated
+  app resources, maintained-library PKCE/consent/refresh/revocation, protected
+  state/keys and pinned canonical framework policy; preserve ordinary app login.
+- Extend existing dependency and full-image audit gates for its exact hashed
+  Python lock and native/runtime inventory; run credential-free issuer container
+  acceptance in Required CI without publishing or activating the service.
+- Extend the existing gateway transaction with explicit YNAB profile packaging,
+  protected tombstone transitions, route identity and independent health checks.
+- Add an owner-operated YNAB-only stage/promotion/rollback controller using shared
+  host primitives, fresh paired artifact scans, matched private files and durable
+  recovery barriers; test actual Docker upgrades and SIGKILL without live services.
+- Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
+  fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
+  require independent immutable egress and gateway image references.
+- Add a pinned full-image YNAB audit prerequisite that rejects missing package
+  coverage, stale evidence, secrets and high/critical vulnerabilities; retain
+  explicit artifact/license/provenance and production activation gates.
+- Add inactive YNAB ingress/disable profiles and isolated route/CONNECT-egress
+  contracts with disposable DNS/streaming/rollback/TLS API tests; apply no provider changes.
+- Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated
+  stdio children, read-only tool policy, bounded requests, safe readiness/errors
+  and synthetic image acceptance in Required CI; provision no OAuth provider or ingress.
+- Add the pinned FastMCP fallback dependency lock and fail-closed OSV/PyPI metadata
+  checks in existing Required CI; retain unknown-malware, provenance and activation gates.
+- Add a pinned, non-root, read-only YNAB stdio runtime candidate with package/source
+  parity checks, protected token-file policy, no-network Compose profile and bounded
+  disposable CI tests; retain production dependency/security and activation gates.
+
+## 2026-10-28
+
+### Added
+
+- Document the conditional YNAB MCP gateway choice, dependency/security blockers,
+  identity/route contracts and ordered #57–#62 handoff; add a pinned disposable
+  upstream protocol/preview experiment in existing validation CI without production
+  configuration or credentials.
+
+### Fixed
+
+- Record the previously undocumented [PR #25](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/25) fix (merged 2026-10-18): emit bounded CI reports to stdout when `GITHUB_OUTPUT` is absent, avoiding a local-execution `KeyError` while preserving GitHub Actions output formatting.
+
+## 2026-10-27
+
+### Fixed
+
+- Align strict security-alert token-action assertions with the reviewed v3.3.0 immutable pin while preserving credential and permission checks.
+
+### Changed
+
+- Update CodeQL init/analyze together to v4.39.1 and Gitleaks to v3.0.0.
+- Pin Docker login v4.7.0 in the shared release template so application dependency updates retain deployment parity.
+
+## 2026-10-20
+
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+
+
 ## 2026-10-20
 
 ### Added

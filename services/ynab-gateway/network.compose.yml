@@ -1,0 +1,47 @@
+# Inactive, separately approved network overlay; all networks must already exist.
+services:
+  gateway:
+    network_mode: !reset null
+    networks:
+      route:
+        ipv4_address: 172.30.89.3
+        aliases: [ynab-mcp-gateway]
+      egress_private:
+        ipv4_address: 172.30.90.3
+  egress:
+    profiles: [manual-gateway]
+    image: ${YNAB_EGRESS_REPOSITORY:?immutable egress repository required}@sha256:${YNAB_EGRESS_SHA256:?egress registry digest required}
+    user: "13:13"
+    entrypoint: [/usr/sbin/squid]
+    command: [-N, -f, /etc/squid/squid.conf, -d0]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 128m
+    cpus: 0.25
+    restart: "no"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m,uid=13,gid=13,mode=0700
+      - /var/log/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
+      - /var/spool/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      egress_private:
+        ipv4_address: 172.30.90.2
+        aliases: [ynab-egress]
+      egress_public:
+        ipv4_address: 172.30.91.2
+    logging:
+      driver: none
+networks:
+  route:
+    external: true
+    name: ynab_mcp_private
+  egress_private:
+    external: true
+    name: ynab_mcp_egress_private
+  egress_public:
+    external: true
+    name: ynab_mcp_egress_public

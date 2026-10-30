@@ -45,7 +45,7 @@ properties separately: an external Compose declaration cannot assert IPAM.
 | --- | --- | --- |
 | `notoli_backend_private`, internal, `172.30.88.0/29` | Ingress and Notoli backend | Ingress `172.30.88.2`; backend `172.30.88.3`; `notoli-backend:8000` |
 | `notoli_default`, `172.18.0.0/16` | Ingress and Notoli frontend | `notoli-frontend:80` |
-| `macromapper-ingress`, `172.20.0.0/16` | Ingress and MacroMapper frontend/backend | `macromapper-frontend:80`, `macromapper-backend:8000` |
+| `macromapper-ingress`, `172.20.0.0/16` | Ingress and MacroMapper frontend/backend | Ingress retains172.20.0.3; `macromapper-frontend:80`, `macromapper-backend:8000` |
 | `notoli_backend_egress`, `172.19.0.0/16` | Notoli backend only | Existing outbound path retained; app-owned |
 | `macromapper_default`, `172.21.0.0/16` | MacroMapper frontend/backend | Existing egress and frontend's generic `backend` alias retained; app-owned |
 
@@ -62,6 +62,12 @@ inventory. Do not silently remove it during ingress transfer. The subsequent
 app-only Notoli release should remove it or bind it to loopback once approved.
 
 ## Routing and proxy trust
+
+The [YNAB optional ingress/egress plan](ynab-ingress.md) supplies an inactive
+fourth route-network attachment and independent app/CONNECT-proxy networks. It
+does not modify any existing network, enable the base profile or change Notoli's
+exact trusted peer. Its 410 disable profile preserves existing routes. Separate
+artifact/release/security and owner operation gates apply before use.
 
 Serve the existing `notoli.judeandrewalaba.com` and
 `macromapper.judeandrewalaba.com` vhosts on 80/443 with canonical HTTPS redirects.
@@ -87,7 +93,7 @@ Shared application release code, network ownership and Notoli policy are unchang
 | App | Direct backend routes | Frontend routes |
 | --- | --- | --- |
 | Notoli | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
-| MacroMapper | `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links |
+| MacroMapper | Exact `/mcp`, `/.well-known/oauth-protected-resource/mcp`, `/.well-known/oauth-authorization-server`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links |
 
 Use Docker DNS `127.0.0.11`, a short cache (`valid=10s`, `ipv6=off`), variable
 upstreams, and original `$request_uri`. A missing app must not prevent Nginx
