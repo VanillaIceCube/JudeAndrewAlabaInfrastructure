@@ -71,7 +71,10 @@ class BundleTests(unittest.TestCase):
                     (target / identity / ".backend.env").read_text(),
                 )
             for update in (None, "", "line\nbreak"):
-                with self.subTest(value=update), tempfile.TemporaryDirectory() as directory:
+                with (
+                    self.subTest(value=update),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
                     supplied = values.copy()
                     if update is None:
                         supplied.pop(key)
