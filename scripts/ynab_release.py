@@ -275,6 +275,10 @@ class Release:
         for name, content in recipe.items():
             (directory / name).write_text(content)
             (directory / name).chmod(0o600)
+        # Docker resolves the private host parent; the non-root Squid process
+        # still needs permission to read the individual read-only bind mount.
+        os.chown(directory / "squid.conf", 13, 13)
+        (directory / "squid.conf").chmod(0o400)
         secret_root = directory / "secrets"
         secret_root.mkdir(mode=0o700)
         for name, path in secrets.items():
