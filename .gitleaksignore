@@ -1,0 +1,9 @@
+# Exact false positives: public SHA-256 source-manifest digests, independently recomputed.
+# No credential, path-wide, rule-wide or future-commit exceptions.
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/backend/mcp-framework-manifest.json:generic-api-key:9
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:18
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:20
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:26
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:27
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:39
+b4645de60aa3e532fba9d886e3efec034fdb3d9f:services/mcp-auth/manifest.json:generic-api-key:53
