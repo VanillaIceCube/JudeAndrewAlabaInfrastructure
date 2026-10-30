@@ -143,3 +143,24 @@ The gateway image uses pinned Python/Node Alpine stages and two hash-pinned,
 signature-verified native APKs. Preserve complete APK inventory coverage in the
 artifact gate, the unchanged hashed Python/Node graphs and stdio-only advisory
 applicability; never copy untracked C++ libraries or waive image findings.
+
+## 🔐 Shared MCP authorization
+
+Follow [the MCP-only issuer contract](docs/mcp-oauth.md) and #71. The independently
+released Django OAuth Toolkit service owns separate accounts, database and keys;
+app tools, local user mapping and regular website/REST login remain app-owned.
+Keep exact per-app resources/scopes/clients and audience-bound introspection.
+Synchronize canonical FullStackTemplate source/manifest pins across consumers;
+never edit vendored framework files independently. Run
+`python services/mcp-auth/run_tests.py` against a disposable local/CI daemon and
+audit its exact hashed dependency lock through the existing dependency gate.
+Require native OS and complete Python inventory for authorization image scans;
+supporting that role must not weaken the paired YNAB image gate.
+
+Use the [issuer release/recovery contract](docs/mcp-auth-releases.md) for its
+single-container controller. Keep both auth/YNAB routes contained during database
+operations, preserve full journal namespaces and durable rename recovery, and
+invalidate restored grants/sessions before acceptance. The durable905second
+quarantine must survive rollback; ingress cannot re-expose offline YNAB JWTs early.
+Run all `test_mcp_auth*.py` suites on Linux/disposable Docker and preserve the
+existing apps and their exact peer addresses throughout.

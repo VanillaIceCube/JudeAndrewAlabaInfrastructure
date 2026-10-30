@@ -76,13 +76,24 @@ def companions():
     directory = Path(accepted["directory"])
     require(directory.parent == common.ROOT / "releases", "Invalid accepted gateway directory")
     common.private(directory)
-    profile = common.profiles.model_profile(common.read(directory / "model.json"))
+    model = common.read(directory / "model.json")
+    profile = common.profiles.model_profile(model)
+    auth_profile = common.profiles.model_profile(model, auth=True)
     require(accepted.get("profile", profile) == profile and common.runtime() == accepted["runtime"],
             "Gateway differs from accepted profile/runtime")
+    require(accepted.get("auth_profile", "base") == auth_profile, "Gateway differs from accepted authorization profile")
     enabled = profile == "enabled"
     require(("ynab_mcp_private" in proxy["NetworkSettings"]["Networks"]) == enabled,
             "Gateway route attachment differs from accepted profile")
-    stable = common.invariants(ynab_enabled=enabled)
+    stable = common.invariants(ynab_enabled=enabled, auth_enabled=auth_profile == "enabled")
+    if auth_profile == "enabled":
+        stable["authorization"] = common.auth_identity()
+    elif common.docker("ps", "-aq", "--filter", "name=^/mcp-auth-server$").split():
+        # Route containment does not remove the independently running companion.
+        # Reuse its canonical read-only ownership/runtime inventory, without
+        # requiring deployment directories or constructing a release controller.
+        from mcp_auth_release import runtime as authorization_runtime
+        stable["authorization"] = authorization_runtime()
     stable["proxy"] = common.runtime()
     certs = next(mount["Source"] for mount in proxy["Mounts"] if mount["Destination"] == "/etc/nginx/certs")
     stable["certificates"] = common.certificate_identity(certs)

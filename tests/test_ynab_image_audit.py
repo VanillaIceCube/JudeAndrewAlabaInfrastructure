@@ -33,6 +33,39 @@ def expected():
 
 
 class ImageAuditTests(unittest.TestCase):
+    def test_authorization_requires_complete_python_and_native_inventory_without_node(self):
+        packages = {("django", "5.2.18"), ("django-oauth-toolkit", "3.4.1"),
+                    ("oauthlib", "4.0.0"), ("pyjwt", "2.15.1"),
+                    ("cryptography", "50.0.2"), ("uvicorn", "0.54.0"), ("pip", "26.0")}
+        native = {("musl", "1.2.6-r3")} | {("fixture-" + str(n), "1-r0") for n in range(20)}
+        records = {"os_family": "alpine", "os": native, "python": packages, "node": set()}
+        report = fixture()
+        report["Metadata"]["OS"] = {"Family": "alpine", "Name": "3.24.3"}
+        report["Results"][0] = {"Class": "os-pkgs", "Type": "alpine", "Packages": [
+            {"Name": name, "Version": version} for name, version in native]}
+        report["Results"].append({"Class": "lang-pkgs", "Type": "python-pkg", "Packages": [
+            {"Name": name, "Version": version} for name, version in packages]})
+        audit.validate(report, IMAGE, "authorization", records, NOW)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "filesystem.tar"
+            with tarfile.open(path, "w") as archive:
+                files = {"lib/apk/db/installed": "\n\n".join("P:" + n + "\nV:" + v for n, v in native)}
+                for name, version in packages:
+                    prefix = "usr/local/lib/python3.12/site-packages/" if name == "pip" else "opt/auth-deps/"
+                    files[prefix + name + ".dist-info/METADATA"] = "Name: " + name + "\nVersion: " + version + "\n"
+                for name, text in files.items():
+                    data = text.encode()
+                    member = tarfile.TarInfo(name)
+                    member.size = len(data)
+                    archive.addfile(member, io.BytesIO(data))
+            self.assertEqual(audit.inventory(path, "authorization"), records)
+        report["Results"][-1]["Packages"].pop()
+        with self.assertRaisesRegex(audit.AuditError, "Python package coverage"):
+            audit.validate(report, IMAGE, "authorization", records, NOW)
+        records["python"] = {p for p in packages if p[0] != "django-oauth-toolkit"}
+        with self.assertRaisesRegex(audit.AuditError, "runtime inventory"):
+            audit.validate(report, IMAGE, "authorization", records, NOW)
+
     def test_captured_trivy_0761_alpine_package_identity_schema(self):
         captured = json.loads((Path(__file__).parent / "fixtures/ynab-trivy-0.76.1-alpine.json").read_text())
         report = captured["report"]

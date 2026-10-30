@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
 - Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
   preserving exact topology guards and rejecting unsupported modes.
 - Supply synthetic app-specific required secrets only in disposable shared release
@@ -22,6 +26,18 @@
 
 ### Added
 
+- Add fixed inactive auth ingress, contained single-container issuer releases and
+  journal-preserving SQLite recovery with grant invalidation and offline JWT
+  quarantine; retain independent app releases and explicit recovery barriers.
+- Route MacroMapper MCP/discovery exactly to its app backend, preserve its existing
+  gateway peer172.20.0.3, and validate legacy/central app readiness without changing
+  ordinary login, frontend or estimation routes.
+- Add an inactive, independently packaged MCP authorization service with isolated
+  app resources, maintained-library PKCE/consent/refresh/revocation, protected
+  state/keys and pinned canonical framework policy; preserve ordinary app login.
+- Extend existing dependency and full-image audit gates for its exact hashed
+  Python lock and native/runtime inventory; run credential-free issuer container
+  acceptance in Required CI without publishing or activating the service.
 - Extend the existing gateway transaction with explicit YNAB profile packaging,
   protected tombstone transitions, route identity and independent health checks.
 - Add an owner-operated YNAB-only stage/promotion/rollback controller using shared
