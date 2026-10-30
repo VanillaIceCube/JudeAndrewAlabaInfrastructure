@@ -1,5 +1,10 @@
 # 🛠️ Working in this repository
 
+The owner's October 30 decision retires the external YNAB integration and shared
+MCP issuer. Follow [the retirement sequence](docs/mcp-retirement.md) while cleanup
+is underway; it supersedes the activation plans below. Preserve existing Notoli
+MCP and route future MCP services to each application's own implementation/OAuth.
+
 This repository owns shared ingress and the versioned application release
 standard. Read [README.md](README.md), the [architecture](docs/architecture-v2.md)
 and the [release standard](docs/app-release-standard.md) before related changes.
