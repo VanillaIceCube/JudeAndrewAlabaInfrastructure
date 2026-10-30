@@ -34,7 +34,8 @@ class AppContractTests(unittest.TestCase):
         with patch.object(release.common, "inspect", return_value=proxy), \
              patch.object(release.common, "read", side_effect=[accepted, {}]), \
              patch.object(release.common, "private"), patch.object(release.common, "runtime", return_value={}), \
-             patch.object(release.common.profiles, "model_profile", return_value="enabled"), \
+             patch.object(release.common.profiles, "model_profile",
+                          side_effect=lambda model, auth=False: "base" if auth else "enabled"), \
              self.assertRaisesRegex(release.common.ReleaseError, "route attachment"):
             release.companions()
 

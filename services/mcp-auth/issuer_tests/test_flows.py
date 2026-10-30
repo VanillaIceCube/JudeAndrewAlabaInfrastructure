@@ -226,6 +226,11 @@ class Flows(TestCase):
         self.assertEqual(response.status_code, 200)
         fields = Inputs(response.content).values
         fields["allow"] = "Authorize"
+        self.assertEqual(browser.post(
+            "/o/authorize/", fields, secure=True,
+            HTTP_ORIGIN="https://untrusted.example",
+            HTTP_REFERER="https://untrusted.example/consent",
+        ).status_code, 403)
         granted = browser.post("/o/authorize/", fields, secure=True, HTTP_REFERER=settings.ISSUER + "/o/authorize/")
         self.assertEqual(granted.status_code, 302)
         self.assertIn("code=", granted["Location"])
