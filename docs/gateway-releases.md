@@ -267,10 +267,13 @@ any pending attempt or its predecessor. Monitor disk space before future release
 Production acceptance still requires the separately authorized first and second
 independent release plus recovery evidence recorded on #4.
 
-## 🚦 Optional YNAB route
+## 🧹 Retired MCP routes
 
-The [profile contract](gateway-profiles.md) adds a permanent validated selection
-to this same bundle, transaction and owner-promotion path. The default stays
-`base`; first use requires the disabled tombstone baseline, and subsequent
-gateway releases preserve the accepted optional network/profile. No production
-variable, app service or provider setting is activated by merging this source.
+The [retirement record](mcp-retirement.md) governs the removal in #96. This
+controller accepts the ordinary three-network gateway and can read the exact
+previously accepted disabled tombstones for rollback. Enabled legacy profiles,
+unmatched marker/vhost bytes and extra route networks are rejected. Contain
+retired routes with their matched historical controller before using this source.
+New source bundles contain no retired vhosts or profile selectors. Preserve
+private accepted/recovery generations; historical controllers are evidence, not
+authorization to reactivate retired services.

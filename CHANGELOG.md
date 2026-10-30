@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Keep disabled MacroMapper MCP/discovery paths behind uncached 404 responses
+  instead of falling through to the frontend during external MCP retirement.
+
 - Allow the validated MCP client's callback origin on its consent page so Chromium
   can complete authorization, preserving exact callback and OAuth checks.
 
@@ -20,6 +23,15 @@
   intentional release holds for unready source changes.
 - Clarify final ChatGPT callback verification after discovery and Codex's
   metadata-derived resource setup, preserving strict issuer validation.
+
+### Removed
+
+- Retire the external YNAB runtime, gateway, egress proxy and shared MCP issuer,
+  their rollout controllers, dependency scanners and isolated CI suites (#96).
+  Restore app-owned MCP/OAuth routing and preserve exact disabled gateway
+  recovery compatibility, existing app networks and historical release evidence.
+- Remove central-issuer topology/mode assumptions from canonical release tests;
+  retain the generic required-environment fixture and independent app releases.
 
 ## 2026-10-29
 
