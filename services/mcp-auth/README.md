@@ -40,6 +40,13 @@ Discovery is `/.well-known/oauth-authorization-server`. Endpoints are
 Consent is required for every grant, including previously authorized clients.
 Users revoke their own connections at `/o/authorized_tokens/`.
 
+The consent page's browser policy permits form submission to the issuer and the
+single callback origin already validated by DOT, including the actual Codex
+loopback port. This lets Chromium follow the successful consent redirect. Login,
+errors and other pages retain same-origin-only form submission. Never use a global
+callback wildcard or derive this permission from unvalidated request parameters;
+the exact callback/path, CSRF, PKCE, owner and resource checks remain mandatory.
+
 Authorization codes expire after 120 seconds and require S256 PKCE. Register
 exact HTTPS callbacks; Codex also supports RFC8252 literal loopback callbacks
 (`127.0.0.1` or `[::1]`, variable ephemeral port). `localhost`, wildcards,
