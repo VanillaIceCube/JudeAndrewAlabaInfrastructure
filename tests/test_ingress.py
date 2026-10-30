@@ -1,6 +1,7 @@
 """Run only disposable resources on the selected local/CI Docker daemon."""
 
 import json
+import gzip
 from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
@@ -33,6 +34,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         self.send_response(200)
+        self.send_header('Content-Type','application/json')
         self.send_header('Cache-Control','public, max-age=300')
         self.end_headers()
         self.wfile.write(json.dumps({'service':os.environ['SERVICE'],'path':self.path,
@@ -91,6 +93,9 @@ class IngressTests(unittest.TestCase):
                 ).stdout
             )
             proxy = config["services"]["proxy"]
+            gzip_config = target / "nginx.conf"
+            gzip_config.write_text((ROOT / "nginx/nginx.conf").read_text().replace(
+                "http {", "http {\n  gzip on;\n  gzip_min_length 1;\n  gzip_types application/json;", 1))
             # Exercise the reusable include on a second enabled app without
             # activating a real production route or changing MacroMapper.
             vhosts = target / "vhosts"
@@ -101,6 +106,8 @@ class IngressTests(unittest.TestCase):
             example = example.replace("example-frontend", "optional-frontend")
             (vhosts / "optional.conf").write_text(example)
             for volume in proxy["volumes"]:
+                if volume["target"] == "/etc/nginx/nginx.conf":
+                    volume["source"] = str(gzip_config)
                 if volume["target"] == "/etc/nginx/conf.d":
                     volume["source"] = str(vhosts)
             self.assertEqual(set(config["services"]), {"proxy"})
@@ -239,6 +246,12 @@ class IngressTests(unittest.TestCase):
 
                 compose("legacy", "up", "-d")
                 docker("exec", prefix + "-legacy", "nginx", "-t")
+                gzip_port = docker("port", prefix + "-legacy", "443/tcp").stdout.strip().rsplit(":", 1)[1]
+                gzip_request = urllib.request.Request("https://127.0.0.1:" + gzip_port + "/api/gzip-fixture/",
+                    headers={"Host": "notoli.judeandrewalaba.com", "Accept-Encoding": "gzip"})
+                with urllib.request.urlopen(gzip_request, context=ssl._create_unverified_context(), timeout=5) as response:
+                    self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
+                    self.assertEqual(json.loads(gzip.decompress(response.read()))["service"], "notoli-backend")
                 request("legacy", "macromapper", "/api/?code=NEVER_LOG_THIS", 502)
                 for path in (
                     "/mcp?code=NEVER_LOG_THIS",

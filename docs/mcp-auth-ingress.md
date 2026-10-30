@@ -57,6 +57,16 @@ A disabled application registry must return backend 404, not a frontend page;
 `/mcp/` is rejected. This routing source does not enable the registry, create a
 network, or change ordinary REST, frontend or meal-estimation behavior.
 
+Central Notoli or enabled MacroMapper requires an accepted authorization route.
+An active consumer cannot introduce `base` or replace an unaccepted issuer with
+its first disabled baseline. Enabled-route acceptance always checks real issuer
+metadata with strict origin/public TLS while these consumers are active, even
+on repeat gateway updates; unavailable upstream 502/503 is never called ready.
+Explicit `enabled → disabled` or repeated disabled maintenance remains supported
+and records the issuer as unavailable, so database containment stays possible.
+YNAB's independently configured issuer remains subject to its own identity/client
+acceptance contract.
+
 ## 🛑 Accepted state before database operations
 
 `scripts/mcp_auth_containment.py` runs under the app controller's shared host

@@ -11,6 +11,15 @@ Record initial setup, the designated operator, rollout/recovery scope and result
 on [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Independent Notoli/MacroMapper workflows and shared release code are unchanged.
 
+The current source candidate pins the official Nginx **1.31.8 Alpine 3.24 slim**
+Linux/amd64 image at
+`nginx@sha256:f9238a4aacf18df0f059cf0389490fc2e876352f75d019f475a48e8765576f24`.
+Its complete native-package assessment and existing TLS, proxy, gzip, DNS, MCP
+streaming and recovery fixtures must pass before source promotion. This replaces
+the blocked Debian candidate without changing the Nginx release version. Historical
+image references in the one-time cutover guide remain matched recovery evidence;
+they are not an approval to deploy an image with unresolved advisories.
+
 ## 🔒 Approval and prerequisites
 
 Keep repository variable `DEPLOY_ENABLED` unset until initial host setup

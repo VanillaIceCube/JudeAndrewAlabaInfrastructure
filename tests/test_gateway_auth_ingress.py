@@ -135,6 +135,12 @@ class AuthorizationIngressTests(unittest.TestCase):
                 self.assertEqual(received["Authorization"], "Basic synthetic-client")
                 self.assertEqual(received["Host"], AUTH)
                 self.assertEqual(received["X-Forwarded-Proto"], "https")
+                for protocol in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
+                    context.minimum_version = protocol
+                    context.maximum_version = protocol
+                    request(AUTH, "/accounts/login/")
+                context.minimum_version = ssl.TLSVersion.TLSv1_2
+                context.maximum_version = ssl.TLSVersion.MAXIMUM_SUPPORTED
                 self.assertNotEqual(received["X-Forwarded-For"], "untrusted")
                 for header in ("Forwarded", "X-Forwarded-Host", "X-API-Key", "X-Forwarded-User", "CF-Connecting-IP"):
                     self.assertNotIn(header, received)

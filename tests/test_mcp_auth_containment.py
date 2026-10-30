@@ -24,6 +24,25 @@ class Response:
 
 
 class ContainmentTests(unittest.TestCase):
+    def test_shared_consumers_require_an_issuer_baseline_but_allow_explicit_maintenance(self):
+        with patch.object(gate.common, "notoli_auth_mode", return_value="central"), \
+             patch.object(gate.common, "macro_mcp_enabled", return_value=False):
+            for previous, candidate in (("base", "base"), ("disabled", "base"), ("enabled", "base"), ("base", "disabled")):
+                with self.subTest(previous=previous, candidate=candidate), self.assertRaises(gate.common.ReleaseError):
+                    gate.common.require_auth_transition(previous, candidate)
+            self.assertFalse(gate.common.require_auth_transition("enabled", "disabled"))
+            self.assertFalse(gate.common.require_auth_transition("disabled", "disabled"))
+            self.assertTrue(gate.common.require_auth_transition("disabled", "enabled"))
+            self.assertTrue(gate.common.require_auth_transition("enabled", "enabled"))
+        with patch.object(gate.common, "notoli_auth_mode", return_value="legacy"), \
+             patch.object(gate.common, "macro_mcp_enabled", return_value=False):
+            self.assertFalse(gate.common.require_auth_transition("base", "base"))
+            self.assertFalse(gate.common.require_auth_transition("base", "disabled"))
+        with patch.object(gate.common, "notoli_auth_mode", return_value="central"), \
+             patch.object(gate.common, "macro_mcp_enabled", side_effect=gate.common.ReleaseError("invalid registry setting")), \
+             self.assertRaises(gate.common.ReleaseError):
+            gate.common.shared_consumers_active()
+
     def test_ynab_release_tracks_auth_companions_while_both_routes_are_disabled(self):
         record = {"directory": str(gate.common.ROOT / "releases" / "fixture"), "profile": "disabled",
                   "auth_profile": "disabled", "runtime": {"accepted": True}}

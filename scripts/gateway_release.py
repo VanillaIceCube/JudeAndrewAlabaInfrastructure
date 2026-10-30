@@ -285,8 +285,27 @@ def macro_mcp_enabled():
     return values == ["1"]
 
 
+def shared_consumers_active():
+    notoli = notoli_auth_mode()
+    macro = macro_mcp_enabled()
+    return notoli == "central" or macro
+
+
+def require_auth_transition(previous, candidate):
+    active = shared_consumers_active()
+    if active:
+        require(candidate != "base", "Active MCP consumers require an explicit authorization route")
+        require(not (previous == "base" and candidate == "disabled"),
+                "Active MCP consumers cannot substitute for an accepted issuer baseline")
+    # Intentional disabled maintenance remains available while app modes stay
+    # central. It truthfully records an unavailable issuer, never ready exposure.
+    return active and candidate == "enabled"
+
+
 def macro_route_contract(model):
-    attachment = model["services"]["proxy"].get("networks", {}).get("macromapper")
+    endpoints = model["services"]["proxy"].get("networks")
+    require(isinstance(endpoints, dict) and "macromapper" in endpoints, "Missing accepted MacroMapper proxy attachment")
+    attachment = endpoints["macromapper"]
     require(attachment is None or attachment == {"ipv4_address": "172.20.0.3"}, "Invalid accepted MacroMapper proxy attachment")
     return attachment is not None
 
@@ -610,7 +629,16 @@ class Gateway:
         model = json.loads(docker("compose", "-p", "host-ingress", "-f", directory / "compose.yml", "config", "--format", "json"))
         live = runtime()
         certs = next(m["Source"] for m in live["Mounts"] if m["Destination"] == "/etc/nginx/certs")
-        validate_model(model, certs)
+        macro_routes = macro_route_contract(model)
+        baseline_policy = copy.deepcopy(model)
+        if not macro_routes:
+            require(not macro_mcp_enabled(), "Enabled MacroMapper MCP blocks legacy gateway adoption")
+            # Validate the historical DHCP model against today's remaining
+            # policy without rewriting its source, mounted config or recovery.
+            baseline_policy["services"]["proxy"]["networks"]["macromapper"] = {"ipv4_address": "172.20.0.3"}
+        validate_model(baseline_policy, certs)
+        auth_profile = profiles.model_profile(model, auth=True)
+        strict_auth = require_auth_transition("base", auth_profile)
         expected_mounts = {(v["target"], v["source"], False) for v in model["services"]["proxy"]["volumes"]}
         require({(m["Destination"], m["Source"], m["RW"]) for m in live["Mounts"]} == expected_mounts,
                 "Baseline mounts do not match live gateway")
@@ -625,7 +653,8 @@ class Gateway:
                         for port, bindings in live["HostConfig"]["PortBindings"].items()), "Baseline port drift")
         config_identity(model)
         invariants()
-        healthy(ca)
+        healthy(ca, macro_routes=macro_routes)
+        auth_route_health(auth_profile, strict=strict_auth, ca=ca)
         target = self.root / "releases" / (source + "-0-0")
         target.mkdir(mode=0o700)
         captured = self.snapshot(model, target)
@@ -652,6 +681,7 @@ class Gateway:
         require(config_identity(model) == previous["configuration"], "Recovery checksum mismatch")
         profile = self.profile(previous)
         auth_profile = self.auth_profile(previous)
+        strict_auth = require_auth_transition(journal.get("auth_profile", "base"), auth_profile)
         ynab_exposure_transition(journal.get("profile", "base"), profile)
         macro_routes = macro_route_contract(model)
         require(macro_routes or not macro_mcp_enabled(), "Enabled MacroMapper MCP blocks legacy gateway restoration")
@@ -667,7 +697,7 @@ class Gateway:
         require(certificate_identity(journal["certs"]) == journal["certificates"], "Certificates changed")
         healthy(ca, macro_routes=macro_routes)
         route_health(profile, strict=profile == "enabled" and journal.get("profile") == "disabled", ca=ca)
-        auth_route_health(auth_profile, strict=auth_profile == "enabled" and journal.get("auth_profile") == "disabled", ca=ca)
+        auth_route_health(auth_profile, strict=strict_auth or auth_profile == "enabled" and journal.get("auth_profile") == "disabled", ca=ca)
         record = self.save(directory, previous["source"], previous["actions_run"], previous["recovery"], model)
         atomic(self.root / "attempts" / journal["id"] / "result.json",
                {"status": "protected" if protected else "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]})
@@ -725,6 +755,7 @@ class Gateway:
         profile = profiles.read(directory)
         auth_profile = profiles.read(directory, auth=True)
         profiles.transition_pair(previous_profile, profile, previous_auth_profile, auth_profile)
+        strict_auth = require_auth_transition(previous_auth_profile, auth_profile)
         ynab_exposure_transition(previous_profile, profile)
         environment = dict(os.environ, INGRESS_CERTS_DIR=certs)
         # Explicit env and project-directory prevent checkout/.env discovery.
@@ -759,7 +790,7 @@ class Gateway:
         healthy(ca, macro_routes=macro_route_contract(previous_model))
         if configuration == previous["configuration"]:
             route_health(profile, ca=ca)
-            auth_route_health(auth_profile, ca=ca)
+            auth_route_health(auth_profile, strict=strict_auth, ca=ca)
             atomic(attempt / "result.json", {"status": "unchanged", "promoted_source": identity[:40],
                                             "running_source": previous["source"]})
             return {"status": "unchanged", "running_source": previous["source"]}
@@ -780,7 +811,7 @@ class Gateway:
             require(certificate_identity(certs) == certificates, "Certificates changed")
             healthy(ca)
             route_health(profile, strict=profile == "enabled" and previous_profile != "enabled", ca=ca)
-            auth_route_health(auth_profile, strict=auth_profile == "enabled" and previous_auth_profile != "enabled", ca=ca)
+            auth_route_health(auth_profile, strict=strict_auth or auth_profile == "enabled" and previous_auth_profile != "enabled", ca=ca)
             self.save(directory, identity[:40], run_url, identity, model, previous)
             atomic(attempt / "result.json", {"status": "success", "running_source": identity[:40]})
             (self.root / "pending.json").unlink()
