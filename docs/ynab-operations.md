@@ -149,10 +149,17 @@ Use the current CLI's explicit client/resource options:
 
 ```sh
 codex mcp add ynab --url https://ynab.judeandrewalaba.com/mcp \
-  --oauth-client-id ynab-codex \
-  --oauth-resource https://ynab.judeandrewalaba.com/mcp
+  --oauth-client-id ynab-codex
 codex mcp login ynab --scopes ynab:read,ynab:write
 ```
+
+Codex discovers the resource from the endpoint metadata. With the observed
+`0.165.0-alpha.1.2` client, an additional `--oauth-resource` override duplicates
+the authorization request parameter and the issuer correctly rejects it. For an
+existing entry with this override, remove only `oauth_resource` from
+`[mcp_servers.ynab]`, preserving its registered client/callback settings, then
+start a fresh login. Verify exactly one resource parameter; do not relax the
+issuer's single-resource validation to accommodate duplicate client settings.
 
 Register the exact callback shown by the installed client; callback paths may be
 server-specific. An OAuth error before registration is not an acceptance result.
@@ -166,6 +173,17 @@ API token or claim the Codex result proves ChatGPT support.
 Request both `ynab:read` and `ynab:write` in ChatGPT's scope field; reconnect and
 consent again when upgrading an existing read-only grant. Enabling capability
 does not constitute consent to any particular financial change.
+
+Complete OAuth discovery before relying on a draft ChatGPT callback: discovery
+can reset the draft's client ID and callback. Re-enter the fixed client ID and
+verify the callback in the actual authorization request. The observed saved
+plugin used `https://chatgpt.com/connector_platform_oauth_redirect`, which differed
+from its pre-discovery draft. If correcting an ungranted registration, retain
+before/after evidence and use a separately recorded operator transaction under
+the issuer lock: require the exact old callback, expected owner/resource/public
+client/code grant/explicit consent and zero grants/tokens, then change only the
+exact callback. Do not rerun the create-only registration command, recreate the
+owner, broaden redirect matching or treat a login page as successful acceptance.
 
 Owner interaction is required for actual client login/consent. A synthetic token
 exchange, direct stdio test or private health probe cannot substitute for either
