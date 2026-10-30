@@ -146,8 +146,8 @@ class ContractTests(unittest.TestCase):
             # from the network/address policy being checked. Canonical fixtures
             # stay legacy; central app adoption must be an explicit config change.
             if release.APP == "notoli":
-                mode = builder.FIXED.get("DJANGO_MCP_AUTH_MODE", "local")
-                self.assertIn(mode, {"local", "central"})
+                mode = builder.FIXED.get("DJANGO_MCP_AUTH_MODE", "legacy")
+                self.assertIn(mode, {"legacy", "central"})
                 central = mode == "central"
             else:
                 enabled = builder.FIXED.get("DJANGO_MCP_ENABLED", "0")

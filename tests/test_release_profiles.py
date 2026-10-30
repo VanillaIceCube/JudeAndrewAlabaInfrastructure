@@ -37,7 +37,7 @@ class ReleaseProfileTests(unittest.TestCase):
                     {"notoli_backend_private": "172.30.88.2"},
                 )
                 fixed = config["environment"]["fixed"]
-                self.assertEqual(fixed.get("DJANGO_MCP_AUTH_MODE", "local"), "local")
+                self.assertEqual(fixed.get("DJANGO_MCP_AUTH_MODE", "legacy"), "legacy")
                 if app == "macromapper":
                     self.assertEqual(fixed.get("DJANGO_MCP_ENABLED", "0"), "0")
 

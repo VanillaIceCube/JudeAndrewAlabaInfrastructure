@@ -8,6 +8,8 @@
   package assessment and TLS, gzip, streaming, DNS and recovery validation.
 - Require strict issuer readiness for active central MCP consumers, preserve
   explicit disabled maintenance, and validate legacy gateway adoption separately.
+- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
+  preserving exact topology guards and rejecting unsupported modes.
 - Supply synthetic app-specific required secrets only in disposable shared release
   fixtures; retain production missing/empty/malformed input rejection.
 - Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
