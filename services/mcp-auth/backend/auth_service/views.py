@@ -36,6 +36,14 @@ class MetadataView(OAuthServerMetadataView):
 @method_decorator(sensitive_post_parameters(), name="dispatch")
 @method_decorator(csrf_protect, name="dispatch")
 class ConsentView(AuthorizationView):
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        if response.status_code == 200 and "form" in getattr(response, "context_data", {}):
+            # DOT populated this only after validating the client's exact callback.
+            # Chromium also checks form-action when following the consent redirect.
+            response.mcp_consent_callback = self.oauth2_data.get("redirect_uri")
+        return response
+
     def dispatch(self, request, *args, **kwargs):
         if request.method not in {"GET", "POST"}:
             return JsonResponse({"error": "invalid_request"}, status=405)
