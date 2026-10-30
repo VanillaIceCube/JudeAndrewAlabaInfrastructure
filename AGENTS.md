@@ -12,6 +12,10 @@ and the [release standard](docs/app-release-standard.md) before related changes.
 - Change common release code under `app-release/v1`, regenerate its manifest,
   then synchronize both app PRs to the same commit. Do not edit vendored copies
   independently. App configuration and Compose remain app-specific.
+- For the owner-approved central MCP adoption in #56/#71, follow the explicit
+  legacy/central policy table in `docs/app-release-standard.md`. Both exact
+  topologies are intentional supported source configurations; preserve the
+  independent legacy-fixture anchor and exact existing peers in either mode.
 - Validate Compose and run `python -m unittest discover -s tests -v` against a
   disposable local/CI Docker daemon. Also run
   `python scripts/update_release_manifest.py --check`; shared behavior changes
