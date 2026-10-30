@@ -117,8 +117,7 @@
       "DJANGO_CSRF_TRUSTED_ORIGINS": "https://notoli.judeandrewalaba.com",
       "DJANGO_FRONTEND_BASE_URL": "https://notoli.judeandrewalaba.com",
       "DJANGO_MCP_BASE_URL": "https://notoli.judeandrewalaba.com",
-      "DJANGO_TRUSTED_PROXY_IPS": "172.30.88.2",
-      "DJANGO_MCP_AUTH_MODE": "legacy"
+      "DJANGO_TRUSTED_PROXY_IPS": "172.30.88.2"
     }
   },
   "readiness": {

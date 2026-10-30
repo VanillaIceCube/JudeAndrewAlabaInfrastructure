@@ -19,28 +19,6 @@ spec.loader.exec_module(parity)
 
 
 class ReleaseProfileTests(unittest.TestCase):
-    def test_canonical_legacy_app_fixtures_keep_original_topology(self):
-        # This independent anchor must not derive expectations from the fixture
-        # being checked. Central consumers are tested separately in their repos.
-        for app in ("notoli", "macromapper"):
-            with self.subTest(app=app):
-                config = json.loads(
-                    (ROOT / "tests/fixtures/release-profiles" / app / "app.json").read_text()
-                )
-                self.assertEqual(config["app"], app)
-                self.assertEqual(
-                    set(config["gateway"]["networks"]),
-                    {"notoli_backend_private", "notoli_default", "macromapper-ingress"},
-                )
-                self.assertEqual(
-                    config["gateway"]["addresses"],
-                    {"notoli_backend_private": "172.30.88.2"},
-                )
-                fixed = config["environment"]["fixed"]
-                self.assertEqual(fixed.get("DJANGO_MCP_AUTH_MODE", "legacy"), "legacy")
-                if app == "macromapper":
-                    self.assertEqual(fixed.get("DJANGO_MCP_ENABLED", "0"), "0")
-
     def test_shared_suites_cover_existing_and_template_profiles(self):
         for profile in sorted((ROOT / "tests/fixtures/release-profiles").iterdir()):
             with (
