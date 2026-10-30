@@ -10,7 +10,7 @@ services:
         ipv4_address: 172.30.90.3
   egress:
     profiles: [manual-gateway]
-    image: ubuntu/squid@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce
+    image: ${YNAB_EGRESS_REPOSITORY:?immutable egress repository required}@sha256:${YNAB_EGRESS_SHA256:?egress registry digest required}
     user: "13:13"
     entrypoint: [/usr/sbin/squid]
     command: [-N, -f, /etc/squid/squid.conf, -d0]
@@ -23,6 +23,8 @@ services:
     restart: "no"
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=8m,uid=13,gid=13,mode=0700
+      - /var/log/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
+      - /var/spool/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
     volumes:
       - ./squid.conf:/etc/squid/squid.conf:ro
     networks:

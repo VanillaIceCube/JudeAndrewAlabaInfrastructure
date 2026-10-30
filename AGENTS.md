@@ -107,8 +107,35 @@ the fixture private-IP ACL exception or CA into production. Run both ingress
 suites and the gateway runner for route/egress changes; #61/#62 must approve
 artifact/security/release/capacity and provider operations before activation.
 
+#61's [artifact gate](docs/ynab-artifact-security.md) requires complete OS/runtime
+inventory, a hash-pinned scanner and fresh evidence for both images. Never waive
+the pinned Squid candidate's known HIGH findings or approve a zero-inventory scan.
+Run `python -m unittest discover -s tests -p test_ynab_image_audit.py -v` for gate
+changes. Scans neither approve licenses/provenance nor authorize deployment.
+The [egress recipe](services/ynab-egress/README.md) pins official Ubuntu security
+packages without a mutable resolver. Regenerate its recipe manifest and run the
+gateway runner plus both full-image artifact scans for changes. Keep unpublished
+local candidates distinct from approved registry digests.
+
+The [gateway profile contract](docs/gateway-profiles.md) uses the existing bundle/
+owner-promotion path. Preserve a disabled tombstone baseline before exposure,
+exact Notoli trust and accepted optional-route identity; never implicitly remove
+the hostname by reverting to `base`. No profile variable is a deployment approval.
+
+Use the [YNAB-only release contract](docs/ynab-releases.md) for its stateless app
+controller. Keep paired fresh scans under shared maintenance/exclusive app locks,
+matched private files/images, durable pending barriers and explicit recovery.
+Never retry ambiguous Docker mutations, accept saved approval JSON or mutate
+ingress/networks/other apps. Run both `test_ynab_release*.py` state/Docker suites;
+source tests substitute only synthetic providers, never a production bypass.
+
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,
 uid 65532, read-only, token-file-only and financially read-only. No source PR
 approves a production image, provisions a credential or supplies live acceptance.
+
+The gateway image uses pinned Python/Node Alpine stages and two hash-pinned,
+signature-verified native APKs. Preserve complete APK inventory coverage in the
+artifact gate, the unchanged hashed Python/Node graphs and stdio-only advisory
+applicability; never copy untracked C++ libraries or waive image findings.

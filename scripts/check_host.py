@@ -26,9 +26,39 @@ def inspect(kind, name):
     return json.loads(result.stdout)[0]
 
 
-def verify(phase, allow_missing_proxy=False):
+def ynab_route(allow_missing_proxy=False, *, allow_stopped_gateway=False):
+    route = inspect("network", "ynab_mcp_private")
+    members = {item["Name"]: item for item in route["Containers"].values()}
+    allowed = {"host-ingress-proxy": "172.30.89.2", "ynab-mcp-gateway-1": "172.30.89.3"}
+    if (not route["Internal"] or route["Driver"] != "bridge" or route.get("EnableIPv6") or
+            route["IPAM"]["Config"] != [{"Subnet": "172.30.89.0/29", "Gateway": "172.30.89.1"}] or
+            not set(members) <= set(allowed) or
+            any(item["IPv4Address"].split("/")[0] != allowed[name] for name, item in members.items()) or
+            (not allow_missing_proxy and "host-ingress-proxy" not in members)):
+        raise ValueError("YNAB route topology drift")
+    if "ynab-mcp-gateway-1" not in members:
+        if not allow_stopped_gateway:
+            raise ValueError("Missing required YNAB gateway endpoint")
+        # App-only stop/recovery must not block an unrelated gateway update.
+        # Permit only the exact stopped, project-owned container still configured
+        # for this network; never a missing/running/disconnected foreign member.
+        app = inspect("container", "ynab-mcp-gateway-1")
+        labels = app["Config"].get("Labels") or {}
+        attachment = app["NetworkSettings"]["Networks"].get("ynab_mcp_private")
+        state = app["State"]
+        if (state.get("Status") != "exited" or state["Running"] or state.get("Dead") or state.get("Restarting")
+                or labels.get("com.docker.compose.project") != "ynab-mcp"
+                or labels.get("com.docker.compose.service") != "gateway" or attachment is None
+                or attachment.get("NetworkID") != route["Id"] or attachment.get("IPAddress")):
+            raise ValueError("Unowned or inconsistent stopped YNAB gateway")
+    return route
+
+
+def verify(phase, allow_missing_proxy=False, *, ynab_enabled=False, allow_stopped_gateway=False):
     if allow_missing_proxy and phase != "host":
         raise ValueError("Optional gateway is only valid during host recovery")
+    if ynab_enabled and phase != "host":
+        raise ValueError("YNAB route requires an existing host gateway")
     proxy = {"legacy": "notoli-proxy", "host": "host-ingress-proxy", "vacant": None}[
         phase
     ]
@@ -59,8 +89,13 @@ def verify(phase, allow_missing_proxy=False):
         ingress = inspect("container", proxy)
         if not ingress["State"]["Running"]:
             raise ValueError("Ingress is not running")
-        if set(ingress["NetworkSettings"]["Networks"]) != set(NETWORKS):
+        expected_networks = set(NETWORKS) | ({"ynab_mcp_private"} if ynab_enabled else set())
+        if set(ingress["NetworkSettings"]["Networks"]) != expected_networks:
             raise ValueError("Unexpected ingress network")
+        if ynab_enabled and ingress["NetworkSettings"]["Networks"]["ynab_mcp_private"]["IPAddress"] != "172.30.89.2":
+            raise ValueError("YNAB proxy address drift")
+    if ynab_enabled:
+        ynab_route(allow_missing_proxy, allow_stopped_gateway=allow_stopped_gateway)
     print(
         "PASS: network membership, fixed trust and backend port invariants ("
         + phase
@@ -71,9 +106,10 @@ def verify(phase, allow_missing_proxy=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phase", choices=["legacy", "vacant", "host"])
+    parser.add_argument("--ynab-enabled", action="store_true")
     args = parser.parse_args()
     try:
-        verify(args.phase)
+        verify(args.phase, ynab_enabled=args.ynab_enabled)
     except (
         ValueError,
         KeyError,

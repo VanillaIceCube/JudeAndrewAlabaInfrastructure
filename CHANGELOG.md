@@ -2,8 +2,31 @@
 
 ## 2026-10-29
 
+### Changed
+
+- Separate YNAB stop-only containment from freshly scanned active-image rollback;
+  require explicit stop-only recovery after an initial activation failure.
+- Compare Alpine image coverage using native package names and complete installed
+  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
+- Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
+  hashed C++ packages; verify complete native APK scan coverage.
+
+- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
+  stages and native tracked C++ libraries; retain fresh artifact security gates.
+
 ### Added
 
+- Extend the existing gateway transaction with explicit YNAB profile packaging,
+  protected tombstone transitions, route identity and independent health checks.
+- Add an owner-operated YNAB-only stage/promotion/rollback controller using shared
+  host primitives, fresh paired artifact scans, matched private files and durable
+  recovery barriers; test actual Docker upgrades and SIGKILL without live services.
+- Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
+  fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
+  require independent immutable egress and gateway image references.
+- Add a pinned full-image YNAB audit prerequisite that rejects missing package
+  coverage, stale evidence, secrets and high/critical vulnerabilities; retain
+  explicit artifact/license/provenance and production activation gates.
 - Add inactive YNAB ingress/disable profiles and isolated route/CONNECT-egress
   contracts with disposable DNS/streaming/rollback/TLS API tests; apply no provider changes.
 - Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated
