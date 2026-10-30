@@ -261,6 +261,32 @@ class Flows(TestCase):
         self.assertIn("code=", granted["Location"])
         self.assertEqual(browser.get("/accounts/signup/", secure=True).status_code, 404)
 
+    def test_consent_form_policy_allows_only_validated_callback_origin(self):
+        baseline = "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+        for client, callback, origin in (
+            ("ynab-chatgpt", "https://client.example/callback", "https://client.example"),
+            ("ynab-codex", "http://127.0.0.1:49181/callback", "http://127.0.0.1:49181"),
+        ):
+            with self.subTest(client=client):
+                data = self.authorization(client, redirect_uri=callback)
+                response = self.browser.get("/o/authorize/", data, secure=True)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Security-Policy"],
+                                 baseline.replace("form-action 'self'", "form-action 'self' " + origin))
+                # A real HTML form posts to its current URL, retaining the query.
+                data["allow"] = "Authorize"
+                granted = self.browser.post("/o/authorize/?" + urlencode(data), data, secure=True)
+                self.assertEqual(granted.status_code, 302)
+                self.assertTrue(granted["Location"].startswith(callback + "?"))
+        for callback in ("https://unregistered.example/callback", "http://localhost/callback",
+                         "https://client.example/callback?injected=1"):
+            response = self.browser.get("/o/authorize/", self.authorization("ynab-chatgpt", redirect_uri=callback), secure=True)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response["Content-Security-Policy"], baseline)
+        self.assertEqual(self.browser.get("/accounts/login/", secure=True)["Content-Security-Policy"], baseline)
+        self.assertEqual(Client().get("/o/authorize/", self.authorization("ynab-chatgpt"), secure=True)
+                         ["Content-Security-Policy"], baseline)
+
     def test_loopback_and_key_rotation_restore_invalidation(self):
         code, callback = self.code("ynab-codex", redirect_uri="http://127.0.0.1:49181/callback")
         self.assertEqual(self.post_token(grant_type="authorization_code", client_id="ynab-codex", code=code,
