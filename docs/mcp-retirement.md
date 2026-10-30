@@ -8,10 +8,16 @@ first-party YNAB application is a separate task, not part of this retirement.
 
 ## 🚦 Ordered retirement
 
-All source changes require review and normal CI, merge to `main`, then promotion
-to `env-prod`. Preserve history and unrelated fixes. The owner has authorized
-this retirement, including its scoped provider cleanup, in the current session;
-record exact operation evidence in #56/#4 and privately in KnowledgeVault.
+Each source merge, promotion and provider/host operation requires explicit owner
+authorization and must stay within the designated operator's authorized scope.
+Source changes require review and normal CI, merge to `main`, then promotion to
+`env-prod`. Preserve history and unrelated fixes. The owner has asked Codex to
+coordinate and execute this scoped retirement in the current session, recorded
+in [#4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6530655656)
+and #96. Record exact identities, operation plans and outcomes there and privately
+in KnowledgeVault before/after execution. This runbook itself grants no merge,
+promotion, provider, host or rollback authorization; unrelated operations and
+future deployments require their own owner authorization.
 
 1. Inventory accepted generations, pending barriers, exact app/container/network
    identities and the two DNS records. Log each provider request and purpose
