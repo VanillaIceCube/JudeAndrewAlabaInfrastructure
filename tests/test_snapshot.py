@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 import uuid
 
 spec = importlib.util.spec_from_file_location(
@@ -108,3 +109,69 @@ class SnapshotTests(unittest.TestCase):
             with self.assertRaises(sqlite3.DatabaseError):
                 snapshot.capture(source, root / "recovery")
             self.assertFalse((root / "recovery/verified.json").exists())
+
+    def test_capture_container_cleanup_failure_does_not_mask_primary_exception(self):
+        import io, sys
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "recovery"
+
+            def mock_run(cmd, *args, **kwargs):
+                cmd_str = " ".join(cmd)
+                if "import os,sys" in cmd_str:
+                    return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="cleanup failed")
+                raise subprocess.CalledProcessError(1, cmd, output="", stderr="primary container error")
+
+            stderr = io.StringIO()
+            with patch("subprocess.run", side_effect=mock_run), patch("sys.stderr", stderr):
+                with self.assertRaises(subprocess.CalledProcessError) as cm:
+                    snapshot.capture_container("fake-container", destination)
+                self.assertEqual(cm.exception.stderr, "primary container error")
+                self.assertIn("snapshot cleanup failed after primary error", stderr.getvalue())
+
+    def test_capture_container_cleanup_exit_code_failure_on_success_raises_runtime_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "recovery"
+
+            def mock_run(cmd, *args, **kwargs):
+                cmd_str = " ".join(cmd)
+                if "import os,sys" in cmd_str:
+                    return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="cleanup error")
+                if "docker" in cmd and "exec" in cmd:
+                    return subprocess.CompletedProcess(cmd, 0, stdout='{"uid":0,"gid":0,"mode":"0700"}', stderr="")
+                if "docker" in cmd and "cp" in cmd:
+                    local_path = cmd[-1]
+                    with closing(sqlite3.connect(local_path)) as db:
+                        db.execute("CREATE TABLE t(x)")
+                        db.commit()
+                    return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+            with patch("subprocess.run", side_effect=mock_run):
+                with self.assertRaises(RuntimeError) as cm:
+                    snapshot.capture_container("fake-container", destination)
+                self.assertIn("Snapshot cleanup failed", str(cm.exception))
+                self.assertIn("Cleanup command exited with code 1", str(cm.exception))
+
+    def test_capture_container_cleanup_timeout_on_success_raises_runtime_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "recovery"
+
+            def mock_run(cmd, *args, **kwargs):
+                cmd_str = " ".join(cmd)
+                if "import os,sys" in cmd_str:
+                    raise subprocess.TimeoutExpired(cmd, 30)
+                if "docker" in cmd and "exec" in cmd:
+                    return subprocess.CompletedProcess(cmd, 0, stdout='{"uid":0,"gid":0,"mode":"0700"}', stderr="")
+                if "docker" in cmd and "cp" in cmd:
+                    local_path = cmd[-1]
+                    with closing(sqlite3.connect(local_path)) as db:
+                        db.execute("CREATE TABLE t(x)")
+                        db.commit()
+                    return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+            with patch("subprocess.run", side_effect=mock_run):
+                with self.assertRaises(RuntimeError) as cm:
+                    snapshot.capture_container("fake-container", destination)
+                self.assertIn("Snapshot cleanup failed", str(cm.exception))
+                self.assertIn("TimeoutExpired", str(cm.exception))

@@ -1,8 +1,13 @@
 """Security boundary regressions for repository automation."""
 import importlib.util
+import os
 from pathlib import Path
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 from scripts import check_dependency_scope as scope
@@ -110,6 +115,33 @@ class AutomationPolicyTests(unittest.TestCase):
         self.assertTrue(ci_result.failures(results, True))
         results["tests"] = {"result": "skipped"}
         self.assertTrue(ci_result.failures(results, False))
+
+    def test_ci_report_utf8_and_gateway_transport_evidence_without_step_summary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            log_file = temp_path / "test_check.log"
+            log_file.write_text("line 1\nline 2\nUTF-8 data: 🦀\n", encoding="utf-8")
+            output_file = temp_path / "github_output"
+            env = dict(os.environ, GITHUB_OUTPUT=str(output_file))
+            subprocess.run(
+                [sys.executable, str(ROOT / "scripts/ci_report.py"), "test_check", str(log_file), "success"],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=True,
+            )
+            report_content = output_file.read_text(encoding="utf-8")
+            self.assertIn("test_check_status=success", report_content)
+            self.assertIn("UTF-8 data: 🦀", report_content)
+
+        if str(ROOT / "scripts") not in sys.path:
+            sys.path.insert(0, str(ROOT / "scripts"))
+        spec = importlib.util.spec_from_file_location("gateway_transport", ROOT / "scripts/gateway_transport.py")
+        gt = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gt)
+        env_no_summary = {k: v for k, v in os.environ.items() if k != "GITHUB_STEP_SUMMARY"}
+        with patch.dict(os.environ, env_no_summary, clear=True):
+            gt.evidence("Safe evidence without summary file")
 
 
 if __name__ == "__main__":
