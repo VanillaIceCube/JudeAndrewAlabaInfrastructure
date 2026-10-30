@@ -33,7 +33,8 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
 SOCKET = "import socket;s=socket.socket();s.bind(('0.0.0.0',3128));s.listen();\nwhile True: c,_=s.accept();c.close()"
 
 
-@unittest.skipUnless(os.name != "nt" and shutil.which("docker"), "Linux disposable Docker transaction fixture")
+@unittest.skipUnless(os.name != "nt" and os.geteuid() == 0 and shutil.which("docker"),
+                     "Linux root-owned disposable journal and Docker transaction fixture")
 class AppDockerReleaseTests(unittest.TestCase):
     def test_upgrade_failed_upgrade_rollback_and_sigkill_preserve_companions(self):
         prefix = "ynab-release-test-" + uuid.uuid4().hex[:10]
@@ -46,6 +47,12 @@ class AppDockerReleaseTests(unittest.TestCase):
             root.chmod(0o700)
             for directory in ("releases", "records", "attempts", "locks"):
                 (root / directory).mkdir(mode=0o700)
+            (root / "data").mkdir(mode=0o700)
+            os.chown(root / "data", 65532, 65532)
+            journal = root / "data" / ".ynab-mcp-undo.json"
+            journal.write_text('[{"fixture":"initial"}]')
+            journal.chmod(0o600)
+            os.chown(journal, 65532, 65532)
             for filename in ("maintenance.lock", "ynab-mcp.lock"):
                 (root / "locks" / filename).touch(mode=0o600)
             with sqlite3.connect(root / "db.sqlite3") as database:
@@ -92,8 +99,10 @@ class AppDockerReleaseTests(unittest.TestCase):
                         "logging": {"driver": "none"}}
                     gateway = dict(common, container_name=names["gateway"], entrypoint=["/usr/local/bin/python"],
                         command=["-c", "raise SystemExit(3)"] if source == "c" * 40 else ["-B", "/fixture/handler.py"],
-                        environment={"YNAB_ALLOW_WRITES": "0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1"},
-                        volumes=[{"type": "bind", "source": str(handler), "target": "/fixture/handler.py", "read_only": True}],
+                        environment={"YNAB_ALLOW_WRITES": "1", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1"},
+                        volumes=[{"type": "bind", "source": str(handler), "target": "/fixture/handler.py", "read_only": True},
+                                 {"type": "bind", "source": str(root / "data"), "target": "/data", "read_only": False,
+                                  "bind": {"create_host_path": False}}],
                         networks={key: {"ipv4_address": address(key, "gateway")} for key in ("route", "egress_private")})
                     egress = dict(common, container_name=names["egress"], entrypoint=["/usr/local/bin/python"],
                         command=["-c", SOCKET], volumes=[],
@@ -104,7 +113,7 @@ class AppDockerReleaseTests(unittest.TestCase):
                         "gateway": gateway, "egress": egress}, "networks": model_networks})
                     release.common.durable_tree(directory)
                     return {"id": directory.name, "source": source, "directory": str(directory), "images": images,
-                            "files": release.files_identity(directory)}
+                            "files": release.files_identity(directory), "journal": app.journal_identity()}
                 with patch.object(release, "PROJECT", prefix), patch.object(release, "NAMES", names), \
                      patch.object(release, "NETWORKS", networks), patch.object(release, "companions", side_effect=companions), \
                      patch.object(release, "preflight", return_value={"fixture": "only"}) as scanner, \
@@ -116,11 +125,16 @@ class AppDockerReleaseTests(unittest.TestCase):
                         app.deploy("a" * 40, images, {}, initial=True)
                         first = release.common.read(root / "current.json")
                         app.deploy("b" * 40, images, {})
+                        # Financial state is external: image rollback must retain
+                        # new operation evidence instead of rewinding its journal.
+                        docker("exec", "--user", "65532:65532", names["gateway"], "python", "-c",
+                               "from pathlib import Path;Path('/data/.ynab-mcp-undo.json').write_text('[{\"fixture\":\"new-operation\"}]')")
                         app.rollback(outcome_confirmed=True)
                     restored = release.common.read(root / "current.json")
                     self.assertEqual(restored["files"], first["files"])
                     self.assertEqual(restored["images"], first["images"])
                     self.assertEqual(companions(), baseline)
+                    self.assertEqual(journal.read_text(), '[{"fixture":"new-operation"}]')
                     with release.locks(root / "locks"):
                         with self.assertRaises(release.common.ReleaseError):
                             app.deploy("c" * 40, images, {})
@@ -153,6 +167,8 @@ class AppDockerReleaseTests(unittest.TestCase):
                     self.assertEqual(release.topology(require_app=True), network_ids)
                     self.assertEqual(companions(), baseline)
                     self.assertFalse((root / "pending.json").exists())
+                    self.assertEqual(journal.read_text(), '[{"fixture":"new-operation"}]')
+                    self.assertEqual(accepted["journal"], first["journal"])
                     # The forked child's mock calls live in its private memory.
                     self.assertEqual(scanner.call_count, 6)
             finally:

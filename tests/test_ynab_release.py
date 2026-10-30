@@ -55,6 +55,9 @@ class AppContractTests(unittest.TestCase):
              patch.object(release, "runtime", return_value={"gateway": live}):
             record = {"images": {"gateway": "fixture-image"}}
             app.ownership([record])
+            with patch.dict(live["Config"], {"Env": ["YNAB_ALLOW_WRITES=1", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"]}), \
+                    self.assertRaisesRegex(release.common.ReleaseError, "ownership"):
+                app.ownership([record])
             for field, value in (("CapAdd", ["NET_ADMIN"]), ("SecurityOpt", ["no-new-privileges:true", "seccomp=unconfined"]),
                                  ("SecurityOpt", ["no-new-privileges:false"])):
                 with patch.dict(live["HostConfig"], {field: value}), self.assertRaises(release.common.ReleaseError):

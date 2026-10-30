@@ -83,8 +83,10 @@ Follow [the gateway decision](docs/ynab-mcp.md) and #56/#57–#62 dependency ord
 The disposable `experiments/ynab-mcp` harness is not deployable application code.
 Run it with Node 24 for harness/pin changes; existing validation CI enforces the
 same credential-free experiment with a four-minute limit.
-Keep upstream source/lock pins, one stdio child per logical session, independent
-owner identity boundaries and `YNAB_ALLOW_WRITES=0`. Do not ship fixture tools,
+Keep upstream source/lock pins, one stdio child per logical session and independent
+owner identity boundaries. The owner's #56 scope change enables full YNAB features:
+base images stay `YNAB_ALLOW_WRITES=0`; the reviewed deployment opts in to writes,
+and each child additionally requires an explicit `ynab:write` grant. Do not ship fixture tools,
 fork/vendor Oliver's application, or treat native gateway keys as public OAuth.
 The evaluated gateway pin has unresolved high/critical advisories: public ingress,
 credentials and activation remain blocked pending #58/#59 review and separately
@@ -99,8 +101,9 @@ never bypass unsupported-manifest checks or treat known-advisory checks as proof
 against unknown malware. Run `python services/ynab-gateway/run_tests.py` on a
 disposable daemon for gateway changes; regenerate its source manifest explicitly.
 Keep one distinct transport per remote session (client clones share transports),
-offline pinned issuer public keys, fixed owner/client/resource, hidden write/admin
-tools and no retries after child failure. Production/provider/client acceptance
+offline pinned issuer public keys, fixed owner/client/resource, exact scope checks
+on concrete and generic tool dispatch, upstream preview/confirmation and no retries
+after child failure. Production/provider/client acceptance
 and network activation remain separately gated.
 
 #60's [inactive routing/egress contract](docs/ynab-ingress.md) preserves all existing
@@ -126,17 +129,22 @@ owner-promotion path. Preserve a disabled tombstone baseline before exposure,
 exact Notoli trust and accepted optional-route identity; never implicitly remove
 the hostname by reverting to `base`. No profile variable is a deployment approval.
 
-Use the [YNAB-only release contract](docs/ynab-releases.md) for its stateless app
+Use the [YNAB-only release contract](docs/ynab-releases.md) for its app
 controller. Keep paired fresh scans under shared maintenance/exclusive app locks,
 matched private files/images, durable pending barriers and explicit recovery.
 Never retry ambiguous Docker mutations, accept saved approval JSON or mutate
 ingress/networks/other apps. Run both `test_ynab_release*.py` state/Docker suites;
 source tests substitute only synthetic providers, never a production bypass.
+Preserve the protected persistent upstream financial journal and its directory
+identity across release/recovery. Code/image rollback must never rewind journal
+bytes or imply that an external financial change was undone. No fork or replacement
+journal engine is needed; use Oliver's existing implementation unchanged.
 
 The [YNAB stdio runtime](services/ynab-mcp/README.md) uses its canonical
 `upstream.json` pin and unchanged upstream code. Run its disposable container
 suite for runtime/pin changes. Keep the initial profile network-disabled,
-uid 65532, read-only, token-file-only and financially read-only. No source PR
+uid 65532, read-only root and token-file-only. Write-enabled children require the
+protected persistent data directory and explicit OAuth permission. No source PR
 approves a production image, provisions a credential or supplies live acceptance.
 
 The gateway image uses pinned Python/Node Alpine stages and two hash-pinned,
@@ -172,7 +180,8 @@ effective entrypoint/command exactly; explicit empty overrides are not inheritan
 Follow [first activation and client acceptance](docs/ynab-operations.md) for #62.
 Use the existing issuer, YNAB and gateway controllers sequentially; keep exact
 image/source identities, paired fresh scans, disabled tombstones and private
-provider-request evidence. Real ChatGPT and Codex acceptance precedes the Notoli
-MCP migration, then MacroMapper. Preserve ordinary app login and financially
-read-only YNAB. Never replace actual callback registration or owner consent with
+provider-request evidence. The current owner-authorized window ends after full
+YNAB acceptance in ChatGPT and Codex plus health checks of Notoli, MacroMapper and
+existing Notoli MCP; defer their migrations. Preserve ordinary app login and
+upstream financial preview/exact-confirmation safeguards. Never replace actual callback registration or owner consent with
 synthetic acceptance; retain every durable recovery/quarantine barrier.
