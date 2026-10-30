@@ -41,6 +41,14 @@ inside private directories. Secrets never enter Compose environment values,
 arguments, public diagnostics or Git. Staging/provisioning credentials still
 needs the separate owner authorization required by #62.
 
+The staged nonsecret `squid.conf` is owned13:13 mode0400 so the unprivileged
+egress service can read its read-only bind mount. Its parent remains root0700;
+Compose/model files remain root0600 and credential files retain their separate
+65532 ownership. The matched release record includes the policy's ownership,
+mode and hash. Never repair an already recorded generation by changing its files:
+contain a failed first activation with explicit stop-only recovery, then stage a
+new generation from reviewed corrected source with fresh paired scans.
+
 `records/<source>-<uuid>.json` tracks exact images, configuration/secret hashes and
 runtime identity. `current.json` identifies accepted state. `pending.json` is the
 durable mutation barrier; `attempts/<uuid>.json` retains success/recovery evidence.

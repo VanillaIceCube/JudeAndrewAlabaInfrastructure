@@ -1,4 +1,4 @@
-"""Real canonical Compose staging and secret preflight; no daemon mutations."""
+"""Canonical Compose staging and isolated service-user file-read proof."""
 import copy
 import json
 import os
@@ -135,6 +135,26 @@ class CanonicalStageModel(unittest.TestCase):
         journal.symlink_to(self.root / "retained-journal", target_is_directory=True)
         with self.assertRaisesRegex(release.common.ReleaseError, "journal directory"):
             self.app.directory(record)
+
+    def test_staged_proxy_policy_is_readable_only_by_its_service_user(self):
+        record = self.stage()
+        policy = Path(record["directory"]) / "squid.conf"
+        info = policy.stat()
+        self.assertEqual((info.st_uid, info.st_gid, info.st_mode & 0o777), (13, 13, 0o400))
+        image = "python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487"
+        command = ["docker", "run", "--rm", "--pull", "never", "--network", "none",
+            "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+            "--user", "13:13", "--memory", "32m", "--memory-swap", "32m", "--pids-limit", "16",
+            "--mount", f"type=bind,source={policy},target=/policy.conf,readonly", image,
+            "python", "-c", "from pathlib import Path; assert 'http_access deny all' in Path('/policy.conf').read_text()"]
+        result = self.real_run(command, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Reproduce the old root-only staging defect with the same mounted file.
+        os.chown(policy, 0, 0)
+        policy.chmod(0o600)
+        result = self.real_run(command, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PermissionError", result.stderr)
 
     def test_invalid_secret_metadata_fails_before_compose(self):
         self.secrets["ynab_api_token"].chmod(0o600)
