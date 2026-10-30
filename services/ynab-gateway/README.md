@@ -1,4 +1,4 @@
-# 🔐 Inactive YNAB authenticated gateway
+# 🔐 YNAB authenticated gateway
 
 This #59 candidate wraps Oliver's unchanged stdio application with FastMCP's
 maintained stateful HTTP proxy and OAuth resource-server APIs. The manual Compose
@@ -68,7 +68,9 @@ reads the token contents. Readiness still detects later missing/dead children or
 unavailable token mounts without claiming API validity.
 
 - `ynab_api_token`: Oliver's token, validated by the unchanged #58 policy, with
-  `YNAB_ALLOW_WRITES=0` and fallback disabled regardless of client requests.
+  fallback disabled regardless of client requests. The image defaults to
+  `YNAB_ALLOW_WRITES=0`. The separately approved network profile permits writes,
+  but each child also requires its session's explicit `ynab:write` grant.
 - `gateway_identity.json`: exactly `issuer` (HTTPS authorization-server issuer),
   `owner` (one fixed subject), and `clients` (one to eight explicit registered client
   IDs). These private identity details do not belong in Git or public issue notes.
@@ -79,9 +81,12 @@ The maintained pinned `JWTVerifier` verifies RS256 signatures/issuer/audience.
 The owner policy additionally requires `typ: at+jwt`, integer `iat`/`exp`, at most
 15 minutes of token lifetime, no future `nbf`, exact resource audience (a string),
 the configured subject/client and consistent `azp` if present. Every MCP method
-requires a bearer and `ynab:read`; no cookies, query credentials, API keys or
+requires a bearer and `ynab:read`; write tools additionally require `ynab:write`.
+There are no cookies, query credentials, API keys or
 forwarded user identity. A refreshed token for the same principal can retain a
-session. Another client/subject/issuer cannot use it. Session IDs are not credentials.
+session only while its write permission is unchanged. A scope upgrade or downgrade
+requires a fresh session; a read-only bearer can never reuse a write-enabled child.
+Another client/subject/issuer cannot use it. Session IDs are not credentials.
 
 This is a **protected resource**, not an authorization server. Select/provision a
 separately reviewed maintained authorization provider before #62 activation. It
@@ -101,7 +106,7 @@ instant revocation or protection if a valid bearer is stolen.
 
 | Exact path | Contract |
 | --- | --- |
-| `/mcp` POST | Auth before JSON parsing; protocol `2025-11-25`, initialized stateful session, JSON responses for initialize/list/read-only calls and notifications |
+| `/mcp` POST | Auth before JSON parsing; protocol `2025-11-25`, initialized stateful session, JSON responses for tools/resources/prompts and notifications; writes require both deployment opt-in and granted scope |
 | `/mcp` DELETE | Authenticated, principal-bound session termination; same protocol header required |
 | `/mcp` GET | Authenticated 405; this server does not offer an unsolicited SSE channel or event replay/resumption |
 | `/.well-known/oauth-protected-resource/mcp` GET | Maintained RFC 9728 metadata; resource is `https://ynab.judeandrewalaba.com/mcp`, authorization server comes from the reviewed fixed configuration |
@@ -121,7 +126,8 @@ connection. FastMCP client cloning alone shares a transport and is insufficient.
 No child per request, shared connected backend or custom protocol engine. A
 read-only ping verifies an established child before dispatch; child failure
 invalidates its old ID with 404 rather than reconnecting silently. DELETE, idle
-expiry and process restart discard previews. No automatic request retries.
+expiry and process restart discard previews. The gateway never retries a tool
+call or reconnects a failed child automatically.
 
 The maintained SDK handles MCP negotiation/dispatch/cancellation and its native
 principal binding; the policy also enforces owner/client session ownership. Newer
@@ -138,18 +144,37 @@ ten-minute idle sessions, 512 unique RPC IDs/session, five-second body read and
 this prevents repeated logical calls, **not stolen-bearer replay**. Output is
 bounded to 2 MiB. Pending initializations count toward the session quota. The
 inactive profile uses 512 MiB, half a CPU and 64 PIDs; live host capacity remains
-a separate acceptance check. It has a 32 MiB temporary filesystem and no journal
-volume because writes/undo/operation executors are not exposed.
+a separate acceptance check. It has a 32 MiB temporary filesystem. The write-enabled
+network profile additionally binds the protected, persistent YNAB journal directory
+at `/data`; it is not ephemeral temporary storage.
 
-Only the explicit read-tool allowlist in `gateway.py` is advertised/accepted.
-Generic executors, credential diagnostics/configuration and all write/preview/
-undo/admin tools stay hidden and blocked even if an upstream change adds them.
-Maintained resource/template/prompt discovery returns empty lists; resource reads
-and prompt execution are denied. This matches the frontend's discovery capabilities
-without exposing another data or execution path.
-Financial strings remain data, never authorization or instructions. Future writes
-require a separate design; the fixture-only factory option cannot enable them in
-this image. No Sentry, request/response logging, raw child stderr, sensitive
+The explicit pinned tool catalogs in `gateway.py` cover all upstream tools,
+including discovery helpers, exports, suggestions, undo and durable operations.
+Generic executors validate their concrete target against the corresponding catalog;
+the read helper cannot dispatch writes or previews. Four static upstream guide
+resources and six prompts are available through the maintained SDK. Unknown tools,
+resources, prompts and methods remain blocked until reviewed with the source pin.
+
+Financial strings remain data, never authorization or instructions. Write permission
+does not constitute approval of a financial change: unchanged upstream requires an
+exact, unexpired, single-use preview and explicit `confirmed:true`. Both direct tools
+and the generic write executor retain that guard. The pinned upstream may retry
+transient read failures and explicit HTTP429 rejections; it does not retry an
+ambiguous financial write failure. The gateway adds no tool-call retry layer.
+An execution timeout can leave an unknown or partial external result; inspect the
+retained journal and fresh YNAB state before approving recovery.
+
+The writable profile uses unchanged upstream `~/.ynab-mcp-undo.json` under `/data`,
+uid/gid65532, directory0700 and file0600. Its atomic replacement and cross-process
+locking support both owner-authorized clients. Each child retains a distinct preview
+and session boundary; the owner's durable history survives reconnection and container
+replacement. Read-only sessions in this profile may read that history but cannot
+write financially. Corrupt/unsafe existing journal metadata blocks startup rather
+than being replaced with empty history. Code/image rollback never restores stale
+journal bytes or rolls back external YNAB changes. Token rotation changes upstream's
+tenant identity; retain earlier history privately and review recovery separately.
+
+No Sentry, request/response logging, raw child stderr, sensitive
 metrics or token/error-body logging. Errors are generic and authenticated
 responses are no-store; logging is disabled before production startup.
 
@@ -201,7 +226,7 @@ the signing key is never mounted, and exact-run cleanup removes the container/vo
 Its result/log is included in Required CI/Lint Eastwood evidence. No credentials
 or actual financial/API requests are used.
 
-Tests cover successful initialize/discovery/read-only invocation, negative token/
+Tests cover successful initialize/discovery/read invocation, negative token/
 scope/identity/route/Host/Origin cases, safe errors/logs, quotas, expired tokens in
 flight, stable distinct children, child death, cancellation, readiness and private
 configuration. Test-only mounted factory options prove separate confirmation,
