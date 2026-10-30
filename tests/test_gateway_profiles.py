@@ -18,6 +18,56 @@ import gateway_transport as transport
 
 
 class ProfileTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "Linux private baseline adoption")
+    def test_adopt_preserves_legacy_dhcp_model_and_requires_disabled_macro_registry(self):
+        repository = Path(__file__).resolve().parents[1]
+        model = json.loads(subprocess.check_output(["docker", "compose", "-f", str(repository / "compose.yml"),
+            "config", "--format", "json"], env=dict(os.environ, INGRESS_CERTS_DIR="/synthetic/certs"), text=True))
+        model["services"]["proxy"]["networks"]["macromapper"] = None
+        service = model["services"]["proxy"]
+        live = {"Id": "fixture-proxy", "Image": "fixture-image", "Mounts": [
+            {"Source": item["source"], "Destination": item["target"], "RW": False} for item in service["volumes"]],
+            "HostConfig": {"RestartPolicy": {"Name": "always"},
+                "LogConfig": {"Type": service["logging"]["driver"], "Config": service["logging"]["options"]},
+                "PortBindings": {str(port) + "/tcp": [{"HostPort": str(port), "HostIp": ""}] for port in (80, 443)}}}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            root.chmod(0o700)
+            for name in ("incoming", "attempts", "releases"):
+                (root / name).mkdir(mode=0o700)
+            gateway = release.Gateway(root)
+            with patch.object(release, "run", side_effect=["a" * 40, ""]) as command, \
+                 patch.object(release, "docker", return_value=json.dumps(model)) as compose, \
+                 patch.object(release, "runtime", return_value=live), patch.object(release, "inspect", return_value={"Id": "fixture-image"}), \
+                 patch.object(release, "macro_mcp_enabled", return_value=False) as enabled, \
+                 patch.object(release, "shared_consumers_active", return_value=False), \
+                 patch.object(release, "config_identity"), patch.object(release, "invariants"), \
+                 patch.object(release, "healthy") as healthy, patch.object(gateway, "snapshot", return_value=model) as snapshot, \
+                 patch.object(gateway, "save") as save:
+                gateway.adopt(root / "source", "a" * 40, None)
+                healthy.assert_called_once_with(None, macro_routes=False)
+                self.assertIsNone(snapshot.call_args.args[0]["services"]["proxy"]["networks"]["macromapper"])
+                self.assertIsNone(save.call_args.args[4]["services"]["proxy"]["networks"]["macromapper"])
+                missing = copy.deepcopy(model)
+                missing["services"]["proxy"]["networks"].pop("macromapper")
+                compose.return_value = json.dumps(missing)
+                command.side_effect = ["a" * 40, ""]
+                snapshot.reset_mock()
+                save.reset_mock()
+                with self.assertRaises(release.ReleaseError):
+                    gateway.adopt(root / "source", "a" * 40, None)
+                snapshot.assert_not_called()
+                save.assert_not_called()
+                compose.return_value = json.dumps(model)
+                command.side_effect = ["a" * 40, ""]
+                enabled.return_value = True
+                snapshot.reset_mock()
+                save.reset_mock()
+                with self.assertRaises(release.ReleaseError):
+                    gateway.adopt(root / "source", "a" * 40, None)
+                snapshot.assert_not_called()
+                save.assert_not_called()
+
     def test_unknown_profile_is_rejected_before_source_api_or_credentials(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
                "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": "a" * 40, "DEPLOY_ENABLED": "true",
@@ -136,9 +186,9 @@ class ProfileTests(unittest.TestCase):
                 (staged / vhost).write_bytes(b"synthetic-disabled-vhost")
                 release.atomic(staged / marker, profiles.descriptor("disabled", b"synthetic-disabled-vhost"))
                 image = "nginx@sha256:" + "c" * 64
-                candidate = {"services": {"proxy": {"image": image, "volumes": [{"target": "/etc/nginx/conf.d",
+                candidate = {"services": {"proxy": {"image": image, "networks": {"macromapper": None}, "volumes": [{"target": "/etc/nginx/conf.d",
                     "source": str(staged / "nginx/vhosts")}]}}, "networks": {}}
-                previous_model = {"services": {"proxy": {"image": image, "volumes": []}},
+                previous_model = {"services": {"proxy": {"image": image, "volumes": [], "networks": {"macromapper": None}}},
                                   "networks": {"mcp_auth_route" if auth else "ynab_route": {}} if previous_profile == "enabled" else {}}
                 release.atomic(staged / "model.json", candidate)
                 release.atomic(old / "model.json", previous_model)
@@ -159,6 +209,7 @@ class ProfileTests(unittest.TestCase):
                      patch.object(release, "auth_identity", return_value=journal["auth_state"]), \
                      patch.object(release, "certificate_identity", return_value="same"), patch.object(release, "healthy"), \
                      patch.object(release, "macro_mcp_enabled", return_value=False), \
+                     patch.object(release, "shared_consumers_active", return_value=False), \
                      patch.object(release, "auth_route_health" if auth else "route_health") as health, \
                      patch.object(release, "runtime", return_value={"Id": "recovered"}):
                     if auth and previous_profile == "enabled":
@@ -167,6 +218,13 @@ class ProfileTests(unittest.TestCase):
                             gateway.restore(journal, None)
                         compose.assert_not_called()
                     result = gateway.restore(journal, None)
+                    if auth and previous_profile == "enabled":
+                        journal["auth_profile"] = "enabled"
+                        compose.reset_mock()
+                        health.reset_mock()
+                        with patch.object(release, "shared_consumers_active", return_value=True):
+                            gateway.restore(journal, None)
+                        health.assert_called_once_with("enabled", strict=True, ca=None)
                 if previous_profile == "base":
                     self.assertEqual(compose.call_args.args[0], staged)
                     self.assertEqual(result["outcome"], "protected")

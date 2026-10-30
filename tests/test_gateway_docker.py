@@ -173,6 +173,7 @@ class GatewayDockerTests(unittest.TestCase):
                 names.append(prefix + "-proxy")
                 with patch.object(release, "runtime", runtime), patch.object(release, "invariants", invariants), \
                         patch.object(release, "macro_mcp_enabled", return_value=False), \
+                        patch.object(release, "shared_consumers_active", return_value=False), \
                         patch.object(release, "validate_model", validate), patch.object(release, "healthy", healthy):
                     healthy()
                     gateway.save(baseline, "a" * 40, "fixture-baseline", None, initial)

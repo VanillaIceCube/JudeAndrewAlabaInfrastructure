@@ -1,7 +1,7 @@
 name: host-ingress
 services:
   proxy:
-    image: nginx@sha256:4c41e2d0a3a55b325ed572cd0200bdb72af1433c3daa2bca6ef8eea68ce504a2
+    image: nginx@sha256:f9238a4aacf18df0f059cf0389490fc2e876352f75d019f475a48e8765576f24
     container_name: host-ingress-proxy
     restart: always
     ports: ["80:80", "443:443"]

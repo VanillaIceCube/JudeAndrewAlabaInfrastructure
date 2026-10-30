@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
 - Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
   test actual canonical staging with synthetic protected files in Linux CI.
 - Separate YNAB stop-only containment from freshly scanned active-image rollback;

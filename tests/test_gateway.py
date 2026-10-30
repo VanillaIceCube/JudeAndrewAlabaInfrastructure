@@ -437,7 +437,7 @@ class TransactionTests(unittest.TestCase):
             (self.root / name).mkdir(mode=0o700)
         self.gateway = release.Gateway(self.root)
         self.live = {"Id": "old", "Image": "old-image", "Mounts": [{"Source": "/certs", "Destination": "/etc/nginx/certs"}]}
-        self.model = {"services": {"proxy": {"image": "nginx@sha256:" + "c" * 64, "volumes": []}}}
+        self.model = {"services": {"proxy": {"image": "nginx@sha256:" + "c" * 64, "volumes": [], "networks": {"macromapper": None}}}}
         self.previous_directory = self.root / "releases" / (SOURCE + "-0-0")
         self.previous_directory.mkdir(mode=0o700)
         release.atomic(self.previous_directory / "model.json", self.model)
@@ -460,7 +460,8 @@ class TransactionTests(unittest.TestCase):
                    patch.object(release, "docker"),
                    patch.object(release, "ensure_image"),
                    patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(self.model))),
-                   patch.object(release, "macro_mcp_enabled", return_value=False)]
+                   patch.object(release, "macro_mcp_enabled", return_value=False),
+                   patch.object(release, "shared_consumers_active", return_value=False)]
         self.mocks = [self.enterContext(item) for item in patches]
 
     def compose(self, directory, *args):
@@ -491,6 +492,12 @@ class TransactionTests(unittest.TestCase):
         with patch.object(release, "macro_mcp_enabled", return_value=True), self.assertRaises(release.ReleaseError):
             self.gateway.restore(journal, None)
         self.assertEqual(self.calls, before)
+
+    def test_active_shared_consumers_block_an_unrouted_authorization_candidate(self):
+        with patch.object(release, "shared_consumers_active", return_value=True), self.assertRaises(release.ReleaseError):
+            self.deploy()
+        self.assertEqual(self.calls, [])
+        self.assertFalse((self.root / "pending.json").exists())
 
     def prepare_old(self):
         release.atomic(self.previous_directory / "model.json", {**self.model, "old": True})
