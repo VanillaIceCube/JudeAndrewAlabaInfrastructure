@@ -15,6 +15,7 @@ services:
         ipv4_address: 172.30.88.2
       notoli_frontend:
       macromapper:
+        ipv4_address: 172.20.0.3
     logging:
       driver: json-file
       options:

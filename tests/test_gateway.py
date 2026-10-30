@@ -152,7 +152,7 @@ class AuthorizationTests(unittest.TestCase):
                     patch.object(transport, "ssh_configuration", return_value=directory / "config"), \
                     patch.object(transport, "run", side_effect=run):
                 result = transport.execute(SOURCE, "rollback", SECOND + "-9-1", directory)
-            self.assertEqual(result, {"status": "rolled_back", "running_source": SOURCE, "profile": "base"})
+            self.assertEqual(result, {"status": "rolled_back", "running_source": SOURCE, "profile": "base", "auth_profile": "base"})
             self.assertFalse(any(args[0] == "git" for args in calls))
             self.assertEqual([Path(args[-2]).as_posix() for args in calls if args[0] == "scp"],
                              ["scripts/gateway_release.py", "scripts/check_host.py", "scripts/gateway_profile.py"])
@@ -189,6 +189,8 @@ class AuthorizationTests(unittest.TestCase):
                     status, body, headers = 200, b"<html>ready</html>", {}
                 elif self.path == "/api/notifications/":
                     status, body, headers = 401, b'{"detail":"unauthenticated"}', {"Content-Type": "application/json"}
+                elif self.domain == "macromapper.judeandrewalaba.com":
+                    status, body, headers = 404, b"", {"Cache-Control": "no-store"}
                 elif self.path.endswith("oauth-authorization-server"):
                     status, body, headers = 200, json.dumps({"issuer": domain}).encode(), {}
                 elif self.path.endswith("/mcp") and self.path != "/mcp":
@@ -201,11 +203,12 @@ class AuthorizationTests(unittest.TestCase):
             def close(self):
                 pass
         with patch.object(release.http.client, "HTTPSConnection", Connection), \
+                patch.object(release, "inspect", return_value={"Config": {"Env": []}}), \
                 patch.object(release.ssl, "create_default_context", return_value="verified-context") as contexts:
             release.health_once("origin-ca.pem")
         self.assertEqual(contexts.call_args_list[0].kwargs, {"cafile": None})
         self.assertEqual(contexts.call_args_list[1].kwargs, {"cafile": "origin-ca.pem"})
-        self.assertEqual(len(connections), 14)
+        self.assertEqual(len(connections), 20)
         self.assertTrue(all(item.headers["User-Agent"] == "JudeGatewayRelease/1.0" for item in connections))
         self.assertFalse(hasattr(connections[0], "_create_connection"))
         self.assertTrue(hasattr(connections[-1], "_create_connection"))
@@ -216,8 +219,70 @@ class AuthorizationTests(unittest.TestCase):
         connection = unittest.mock.Mock()
         connection.getresponse.return_value = response
         with patch.object(release.http.client, "HTTPSConnection", return_value=connection), \
+                patch.object(release, "inspect", return_value={"Config": {"Env": []}}), \
                 self.assertRaises(release.ReleaseError):
             release.health_once()
+
+    def test_notoli_central_health_requires_retired_issuer_and_exact_resource_authority(self):
+        class Response:
+            def __init__(self, status, body=b"", headers=None):
+                self.status, self.body, self.headers = status, body, headers or {}
+            def read(self, limit):
+                return self.body[:limit]
+            def getheader(self, key, default=None):
+                return self.headers.get(key, default)
+        issuer = "https://auth.judeandrewalaba.com"
+        resource = {"resource": "https://notoli.judeandrewalaba.com/mcp", "authorization_servers": [issuer]}
+        rows = [Response(200, b"<html>ready</html>"), Response(401, b'{"detail":"unauthenticated"}', {"Content-Type": "application/json"}),
+                Response(410, headers={"Cache-Control": "no-store"}), Response(200, json.dumps(resource).encode()),
+                Response(401, headers={"WWW-Authenticate": "Bearer resource_metadata=..."}),
+                Response(200, b"<html>ready</html>"), Response(401, b'{"detail":"unauthenticated"}', {"Content-Type": "application/json"}),
+                *[Response(404, headers={"Cache-Control": "no-store"}) for _ in range(3)]]
+        with patch.object(release, "inspect", return_value={"Config": {"Env": ["DJANGO_MCP_AUTH_MODE=central"]}}), \
+             patch.object(release.http.client, "HTTPSConnection") as connection:
+            connection.return_value.getresponse.side_effect = rows * 2
+            release.health_once()
+            self.assertEqual({call.args[0] for call in connection.call_args_list}, set(release.DOMAINS))
+            macro_resource = {"resource": "https://macromapper.judeandrewalaba.com/mcp", "authorization_servers": [issuer]}
+            enabled_rows = rows[:8] + [Response(200, json.dumps(macro_resource).encode()),
+                                      Response(401, headers={"WWW-Authenticate": 'Bearer resource_metadata="https://macromapper.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp"'})]
+            with patch.object(release, "macro_mcp_enabled", return_value=True):
+                connection.return_value.getresponse.side_effect = enabled_rows * 2
+                release.health_once()
+                invalid = list(enabled_rows)
+                invalid[8] = Response(200, b"<html>wrong SPA</html>")
+                connection.return_value.getresponse.side_effect = invalid * 2
+                with self.assertRaises((release.ReleaseError, ValueError)):
+                    release.health_once()
+                for challenge in ('Basic resource_metadata="https://macromapper.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp"',
+                                  'Bearer resource_metadata="https://other.example/.well-known/oauth-protected-resource/mcp"',
+                                  'Bearer resource_metadata="https://macromapper.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp",resource_metadata="https://other.example"'):
+                    invalid = list(enabled_rows)
+                    invalid[-1] = Response(401, headers={"WWW-Authenticate": challenge})
+                    connection.return_value.getresponse.side_effect = invalid * 2
+                    with self.assertRaises(release.ReleaseError):
+                        release.health_once()
+            for index, bad in ((2, Response(200)), (2, Response(410)),
+                               (3, Response(200, json.dumps({**resource, "authorization_servers": ["https://other.example"]}).encode()))):
+                changed = list(rows)
+                changed[index] = bad
+                connection.return_value.getresponse.side_effect = changed * 2
+                with self.assertRaises(release.ReleaseError):
+                    release.health_once()
+
+    def test_notoli_health_mode_rejects_unknown_or_duplicate_configuration(self):
+        for values in (["DJANGO_MCP_AUTH_MODE=unknown"], ["DJANGO_MCP_AUTH_MODE=central", "DJANGO_MCP_AUTH_MODE=legacy"],
+                       ["DJANGO_MCP_AUTH_MODE=central", "DJANGO_MCP_AUTH_MODE=central"]):
+            with patch.object(release, "inspect", return_value={"Config": {"Env": values}}), self.assertRaises(release.ReleaseError):
+                release.notoli_auth_mode()
+
+    def test_macromapper_registry_health_setting_is_explicit_and_unique(self):
+        for values, expected in (([], False), (["DJANGO_MCP_ENABLED=0"], False), (["DJANGO_MCP_ENABLED=1"], True)):
+            with patch.object(release, "inspect", return_value={"Config": {"Env": values}}):
+                self.assertEqual(release.macro_mcp_enabled(), expected)
+        for values in (["DJANGO_MCP_ENABLED=true"], ["DJANGO_MCP_ENABLED=1", "DJANGO_MCP_ENABLED=0"]):
+            with patch.object(release, "inspect", return_value={"Config": {"Env": values}}), self.assertRaises(release.ReleaseError):
+                release.macro_mcp_enabled()
 
     def test_authorization_rejects_main_pr_stale_source_and_disabled_deployment(self):
         env = {"GITHUB_REPOSITORY": transport.REPOSITORY, "GITHUB_REF": "refs/heads/env-prod",
@@ -394,7 +459,8 @@ class TransactionTests(unittest.TestCase):
                    patch.object(release, "inspect", return_value={"Id": "new-image"}),
                    patch.object(release, "docker"),
                    patch.object(release, "ensure_image"),
-                   patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(self.model)))]
+                   patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps(self.model))),
+                   patch.object(release, "macro_mcp_enabled", return_value=False)]
         self.mocks = [self.enterContext(item) for item in patches]
 
     def compose(self, directory, *args):
@@ -405,6 +471,26 @@ class TransactionTests(unittest.TestCase):
 
     def deploy(self):
         return self.gateway.deploy(self.bundle, self.identity, "https://github.com/run/1", None)
+
+    def test_legacy_accepted_macro_attachment_is_loaded_without_rewriting_recovery(self):
+        legacy = copy.deepcopy(self.model)
+        legacy["old"] = True
+        legacy["services"]["proxy"]["networks"] = {"macromapper": None}
+        path = self.previous_directory / "model.json"
+        release.atomic(path, legacy)
+        before = path.read_bytes()
+        result = release.Gateway.current(self.gateway)
+        self.assertEqual(result["source"], SOURCE)
+        self.assertEqual(result["configuration"], "old-config")
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_legacy_gateway_recovery_cannot_replace_active_macro_mcp_routes(self):
+        self.deploy()
+        journal = release.read(self.root / "attempts" / self.identity / "journal.json")
+        before = list(self.calls)
+        with patch.object(release, "macro_mcp_enabled", return_value=True), self.assertRaises(release.ReleaseError):
+            self.gateway.restore(journal, None)
+        self.assertEqual(self.calls, before)
 
     def prepare_old(self):
         release.atomic(self.previous_directory / "model.json", {**self.model, "old": True})

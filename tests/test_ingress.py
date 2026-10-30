@@ -21,6 +21,10 @@ STUB = """import json, os, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if os.environ.get('SERVICE')=='macromapper-backend' and self.path.split('?',1)[0]=='/.well-known/oauth-authorization-server':
+            self.send_response(404);self.end_headers();return
+        if os.environ.get('MCP_DISABLED')=='1' and self.path.split('?',1)[0] in ('/mcp','/.well-known/oauth-protected-resource/mcp','/.well-known/oauth-authorization-server'):
+            self.send_response(404);self.end_headers();return
         if self.path in ('/api/slow-estimate-test/', '/mcp?slow-test=1'):
             time.sleep(65)
         if self.path == '/mcp?challenge-test=1':
@@ -107,17 +111,20 @@ class IngressTests(unittest.TestCase):
             try:
                 # Test-only subnet; never create the actual production networks.
                 subnet = f"10.231.{random.randrange(1, 250)}"
+                macro_subnet = f"10.232.{random.randrange(1, 250)}"
                 for key in config["networks"]:
                     name = prefix + "-" + key
                     extra = (
                         ["--internal", "--subnet", subnet + ".0/29"]
                         if key == "notoli_backend"
+                        else ["--subnet", macro_subnet + ".0/29"] if key == "macromapper"
                         else []
                     )
                     docker("network", "create", *extra, name)
                     networks.append(name)
                     config["networks"][key]["name"] = name
                 proxy["networks"]["notoli_backend"]["ipv4_address"] = subnet + ".2"
+                proxy["networks"]["macromapper"]["ipv4_address"] = macro_subnet + ".3"
                 proxy["ports"] = [
                     {
                         "target": 443,
@@ -127,7 +134,7 @@ class IngressTests(unittest.TestCase):
                     }
                 ]
 
-                def start_stub(app, service):
+                def start_stub(app, service, *, mcp_disabled=False):
                     name = prefix + "-" + app + "-" + service
                     if name not in names:
                         names.append(name)
@@ -143,6 +150,8 @@ class IngressTests(unittest.TestCase):
                     ip = (
                         ["--ip", subnet + ".3"]
                         if app == "notoli" and service == "backend"
+                        else ["--ip", macro_subnet + (".2" if service == "backend" else ".4")] if app == "macromapper"
+                        else ["--ip", macro_subnet + (".5" if service == "backend" else ".6")] if app == "optional"
                         else []
                     )
                     docker(
@@ -159,6 +168,7 @@ class IngressTests(unittest.TestCase):
                         "SERVICE=" + app + "-" + service,
                         "-e",
                         "PORT=" + ("8000" if service == "backend" else "80"),
+                        "-e", "MCP_DISABLED=" + ("1" if mcp_disabled else "0"),
                         "python:3.12-alpine",
                         "python",
                         "-u",
@@ -269,10 +279,30 @@ class IngressTests(unittest.TestCase):
                     "notoli-frontend",
                 )
 
-                start_stub("macromapper", "backend")
+                start_stub("macromapper", "backend", mcp_disabled=True)
                 start_stub("macromapper", "frontend")
-                for path in ("/mcp", "/.well-known/oauth-protected-resource/mcp"):
-                    self.assertEqual(request("legacy", "macromapper", path)[1]["service"], "macromapper-frontend")
+                for path in ("/mcp", "/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-authorization-server"):
+                    response, _ = request("legacy", "macromapper", path, 404)
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+                docker("rm", "-f", prefix + "-macromapper-backend")
+                start_stub("macromapper", "backend")
+                response, _ = request("legacy", "macromapper", "/.well-known/oauth-authorization-server", 404)
+                self.assertEqual(response.headers["Cache-Control"], "no-store")
+                for path in ("/mcp?code=NEVER_LOG_THIS", "/.well-known/oauth-protected-resource/mcp"):
+                    response, body = request("legacy", "macromapper", path)
+                    self.assertEqual(body["service"], "macromapper-backend")
+                    self.assertEqual(body["path"], path)
+                    self.assertEqual(body["headers"]["Host"], "macromapper.judeandrewalaba.com")
+                    self.assertEqual(body["headers"]["X-Forwarded-Proto"], "https")
+                    self.assertEqual(body["peer"], macro_subnet + ".3")
+                    self.assertNotIn("Forwarded", body["headers"])
+                    self.assertNotIn("X-Forwarded-Host", body["headers"])
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+                for path in ("/mcp/", "/.well-known/oauth-protected-resource/mcp/", "/.well-known/oauth-authorization-server/extra"):
+                    response, _ = request("legacy", "macromapper", path, 404)
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+                response, _ = request("legacy", "macromapper", "/mcp?challenge-test=1", 401)
+                self.assertIn("macromapper.judeandrewalaba.com/.well-known/", response.headers["WWW-Authenticate"])
                 self.assertEqual(
                     request("legacy", "macromapper", "/api/notifications/")[1][
                         "service"
