@@ -68,7 +68,9 @@ is globally silenced. Missing keys, unsafe runtime settings, dependency findings
 and malformed callback/resource policy remain blocking failures.
 
 Private process/database readiness does not prove owner/client registration or
-real OAuth acceptance. Closed bootstrap and fixed-client registration use the
+real OAuth acceptance. A migrated empty user table passes readiness: the probe
+executes a schema query without requiring a row. This lets initial promotion
+complete under disabled routes before closed bootstrap. Closed bootstrap and fixed-client registration use the
 [service management interfaces](../services/mcp-auth/README.md) in the separately
 reviewed operator sequence while routes remain contained and app locks are held.
 Protect transient password/credential inputs and record ambiguous command outcomes;
