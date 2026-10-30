@@ -32,23 +32,23 @@ class GatewayTests(unittest.TestCase):
         cls.identity = g.Identity("https://issuer.fixture.example", "owner-fixture",
                                  frozenset({"client-a", "client-b"}), cls.pair.public_key)
 
-    def transport(self, preview=False, missing=False):
+    def transport(self, writes=False, missing=False):
         return StdioTransport("/usr/local/bin/node", [
             "/missing-child" if missing else str(ROOT / "experiments/ynab-mcp/fake-child.mjs"),
-            "/app", *( ["synthetic-preview-tests"] if preview else [])],
+            "/app", *( ["synthetic-preview-tests"] if writes else [])],
             env={"YNAB_ALLOW_WRITES": "0"}, keep_alive=False, log_file=Path(os.devnull))
 
-    def token(self, client="client-a", changes=None, header=None):
+    def token(self, client="client-a", changes=None, header=None, writes=False):
         now = int(time.time())
         claims = {"iss": self.identity.issuer, "sub": self.identity.owner,
                   "client_id": client, "aud": g.RESOURCE, "iat": now, "exp": now + 300,
-                  "scope": "ynab:read"}
+                  "scope": "ynab:read" + (" ynab:write" if writes else "")}
         claims.update(changes or {})
         return jwt.encode(header or {"alg": "RS256", "typ": "at+jwt"}, claims, self.key, algorithms=["RS256"])
 
     @contextlib.contextmanager
-    def running(self, preview=False, missing=False):
-        self.app = g.Gateway(self.identity, lambda: self.transport(preview, missing))
+    def running(self, missing=False, allow_writes=False):
+        self.app = g.Gateway(self.identity, lambda writes: self.transport(writes, missing), allow_writes=allow_writes)
         self.number = 0
         with TestClient(self.app, base_url=g.ORIGIN) as self.http:
             yield self.http
@@ -77,8 +77,8 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(self.rpc("notifications/initialized", sid=sid, token=token).status_code, 202)
         return sid
 
-    def call(self, sid, name, args=None):
-        return self.rpc("tools/call", {"name": name, "arguments": args or {}}, sid=sid)
+    def call(self, sid, name, args=None, token=None):
+        return self.rpc("tools/call", {"name": name, "arguments": args or {}}, sid=sid, token=token)
 
     @staticmethod
     def content(response):
@@ -93,12 +93,20 @@ class GatewayTests(unittest.TestCase):
             names = {tool["name"] for tool in response.json()["result"]["tools"]}
             self.assertIn("list_budgets", names)
             self.assertLessEqual(names, g.READ_TOOLS)
-            self.assertFalse(names & {"create_payee", "preview_write_tool", "ynab_tool_execute", "ynab_auth_status", "fixture_status"})
-            for method, field in (("resources/list", "resources"), ("resources/templates/list", "resourceTemplates"), ("prompts/list", "prompts")):
-                self.assertEqual(self.rpc(method, sid=sid).json()["result"][field], [])
+            self.assertFalse(names & {"create_payee", "preview_write_tool", "fixture_status"})
+            self.assertTrue({"ynab_tool_execute", "ynab_auth_status", "export_transactions", "suggest_transaction_categories"} <= names)
+            resources = self.rpc("resources/list", sid=sid).json()["result"]["resources"]
+            self.assertEqual({value["uri"] for value in resources}, g.RESOURCES)
+            prompts = self.rpc("prompts/list", sid=sid).json()["result"]["prompts"]
+            self.assertEqual({value["name"] for value in prompts}, g.PROMPTS)
+            self.assertEqual(self.rpc("resources/templates/list", sid=sid).json()["result"]["resourceTemplates"], [])
+            self.assertIn("contents", self.rpc("resources/read", {"uri": "ynab://guide/write-safety"}, sid=sid).json()["result"])
+            self.assertIn("messages", self.rpc("prompts/get", {"name": "weekly-triage"}, sid=sid).json()["result"])
             self.assertEqual(self.content(self.call(sid, "list_budgets"))["budgets"][0]["name"], "Synthetic budget")
-            for tool in ("create_payee", "preview_write_tool", "ynab_tool_execute", "ynab_write_tool_execute"):
+            self.assertEqual(self.content(self.call(sid, "ynab_tool_execute", {"tool_name": "list_budgets"}))["budgets"][0]["name"], "Synthetic budget")
+            for tool in ("create_payee", "preview_write_tool", "ynab_write_tool_execute"):
                 self.assertEqual(self.call(sid, tool).status_code, 403)
+            self.assertEqual(self.call(sid, "ynab_tool_execute", {"tool_name": "create_payee", "input": {}}).status_code, 403)
 
     def test_anonymous_expired_wrong_identity_scope_and_malformed_tokens(self):
         with self.running():
@@ -267,7 +275,7 @@ class GatewayTests(unittest.TestCase):
                 g.from_config(directory)
 
             identity_file.chmod(0o400)
-            with patch.dict(os.environ, {"YNAB_ALLOW_WRITES": "1"}), self.assertRaises(ValueError):
+            with patch.dict(os.environ, {"YNAB_ALLOW_WRITES": "invalid"}), self.assertRaises(ValueError):
                 g.from_config(directory)
             key_file.chmod(0o600)
             key_file.write_text(self.pair.private_key.get_secret_value())
@@ -323,26 +331,58 @@ class GatewayTests(unittest.TestCase):
                     g.from_config(directory)
                 constructor.assert_not_called()
     def test_preview_tokens_remain_process_local_single_use_and_expiring(self):
-        # This synthetic factory option is not a gateway setting or YNAB_ALLOW_WRITES=1.
-        additional = {"preview_write_tool", "create_payee", "fixture_expire"}
-        with patch.object(g, "READ_TOOLS", g.READ_TOOLS | additional), self.running(preview=True):
-            a = self.initialize()
-            b = self.initialize(self.token("client-b"))
+        # Actual gateway write policy, pinned upstream guard, synthetic API only.
+        with patch.object(g, "READ_TOOLS", g.READ_TOOLS | {"fixture_expire"}), self.running(allow_writes=True):
+            token = self.token(writes=True)
+            other = self.token("client-b", writes=True)
+            a = self.initialize(token)
+            b = self.initialize(other)
             args = {"budgetId": "fixture-budget", "name": "Synthetic payee"}
-            preview = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}))
+            preview = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}, token))
             preview_token = preview["preview_token"]
             request = {**args, "confirmed": True, "previewToken": preview_token}
-            cross = self.rpc("tools/call", {"name": "create_payee", "arguments": request}, sid=b, token=self.token("client-b"))
+            cross = self.rpc("tools/call", {"name": "create_payee", "arguments": request}, sid=b, token=other)
             self.assertIn("error", cross.json())
-            self.assertIn("error", self.call(a, "create_payee", {**request, "confirmed": False}).json())
-            self.assertNotIn("error", self.call(a, "create_payee", request).json())
-            self.assertIn("error", self.call(a, "create_payee", request).json())
-            changed = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}))
-            self.assertIn("error", self.call(a, "create_payee", {**args, "name": "Changed", "confirmed": True, "previewToken": changed["preview_token"]}).json())
-            self.assertIn("error", self.call(a, "create_payee", {**args, "confirmed": True, "previewToken": changed["preview_token"]}).json())
-            next_preview = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}))
-            self.call(a, "fixture_expire")
-            self.assertIn("error", self.call(a, "create_payee", {**args, "confirmed": True, "previewToken": next_preview["preview_token"]}).json())
+            self.assertIn("error", self.call(a, "create_payee", {**request, "confirmed": False}, token).json())
+            self.assertNotIn("error", self.call(a, "create_payee", request, token).json())
+            self.assertIn("error", self.call(a, "create_payee", request, token).json())
+            changed = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}, token))
+            self.assertIn("error", self.call(a, "create_payee", {**args, "name": "Changed", "confirmed": True, "previewToken": changed["preview_token"]}, token).json())
+            self.assertIn("error", self.call(a, "create_payee", {**args, "confirmed": True, "previewToken": changed["preview_token"]}, token).json())
+            next_preview = self.content(self.call(a, "preview_write_tool", {"tool_name": "create_payee", "input": args}, token))
+            self.call(a, "fixture_expire", token=token)
+            self.assertIn("error", self.call(a, "create_payee", {**args, "confirmed": True, "previewToken": next_preview["preview_token"]}, token).json())
+
+    def test_write_scope_session_boundary_and_generic_dispatch_cannot_escalate(self):
+        with self.running(allow_writes=True):
+            read = self.token()
+            write = self.token(writes=True)
+            a = self.initialize(read)
+            b = self.initialize(write)
+            readonly = {tool["name"] for tool in self.rpc("tools/list", sid=a, token=read).json()["result"]["tools"]}
+            writable = {tool["name"] for tool in self.rpc("tools/list", sid=b, token=write).json()["result"]["tools"]}
+            self.assertEqual(readonly, g.READ_TOOLS)
+            self.assertEqual(writable, g.READ_TOOLS | g.WRITE_TOOLS)
+            self.assertEqual(self.rpc("tools/list", sid=a, token=write).status_code, 404)
+            self.assertEqual(self.rpc("tools/list", sid=b, token=read).status_code, 404)
+            self.assertEqual(self.rpc("tools/list", sid=b, token=self.token(writes=True)).status_code, 200)
+            self.assertEqual(self.call(a, "create_payee", token=read).status_code, 403)
+            self.assertEqual(self.call(a, "preview_write_tool", {"tool_name": "create_payee"}, read).status_code, 403)
+            for sid, token in ((a, read), (b, write)):
+                self.assertEqual(self.call(sid, "ynab_tool_execute", {"tool_name": "create_payee"}, token).status_code, 403)
+                self.assertEqual(self.call(sid, "ynab_tool_execute", {"tool_name": "preview_write_tool"}, token).status_code, 403)
+            self.assertEqual(self.call(a, "ynab_write_tool_execute", {"tool_name": "create_payee", "confirmed": True}, read).status_code, 403)
+            self.assertIn("error", self.call(b, "ynab_write_tool_execute", {"tool_name": "create_payee", "confirmed": True,
+                "input": {"budgetId": "fixture-budget", "name": "No preview"}}, write).json())
+            self.assertFalse(self.content(self.call(a, "ynab_auth_status", token=read))["writes_enabled"])
+            self.assertTrue(self.content(self.call(b, "ynab_auth_status", token=write))["writes_enabled"])
+
+    def test_deployment_write_opt_in_is_required_even_for_a_write_token(self):
+        with self.running():
+            token = self.token(writes=True)
+            sid = self.initialize(token)
+            self.assertEqual(self.call(sid, "create_payee", token=token).status_code, 403)
+            self.assertFalse(self.content(self.call(sid, "ynab_auth_status", token=token))["writes_enabled"])
 
     def test_inflight_token_expiry_invalidates_the_session_without_retry(self):
         with patch.object(g, "READ_TOOLS", g.READ_TOOLS | {"fixture_wait"}), self.running():

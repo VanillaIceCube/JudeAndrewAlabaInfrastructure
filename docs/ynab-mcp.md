@@ -6,6 +6,15 @@ Reviewed 2026-10-28. **No production service or public endpoint is enabled.**
 
 ## 🧭 Decision and boundaries
 
+**Owner full-capability amendment:** the later
+[scope decision on #56](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/56#issuecomment-6515846399)
+supersedes this investigation's initial financially read-only restriction. Follow
+the current gateway, issuer and [release contract](ynab-releases.md) for explicit
+write consent, per-session scope enforcement and persistent upstream operation
+history. Oliver's pinned source stays unchanged. Original experiment results and
+read-only assumptions below remain historical evidence, not the write acceptance
+criteria. The current window stops after YNAB and existing-app regression checks.
+
 **2026-10-29 #59 amendment:** reopen the conditional choice below in favor of
 FastMCP 4.1.4's maintained stateful proxy/resource-server APIs, because no acceptable
 Supergateway artifact is available. PR #65 supplies the hashed Python lock/scanner
