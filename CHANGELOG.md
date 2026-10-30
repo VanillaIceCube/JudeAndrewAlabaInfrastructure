@@ -9,6 +9,8 @@
 
 ### Changed
 
+- Retire the external YNAB integration and shared MCP issuer in favor of nginx
+  routing to app-owned MCP/OAuth; document the ordered, main-first cleanup (#56).
 - Reconcile existing production promotion history into main and document
   main-first releases, prompt return of exceptional deployment fixes, and
   intentional release holds for unready source changes.
