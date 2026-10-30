@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
+  test actual canonical staging with synthetic protected files in Linux CI.
 - Separate YNAB stop-only containment from freshly scanned active-image rollback;
   require explicit stop-only recovery after an initial activation failure.
 - Compare Alpine image coverage using native package names and complete installed

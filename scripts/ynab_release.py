@@ -258,6 +258,15 @@ class Release:
         require(set(model["services"]) == set(NAMES) and all(not service.get("ports") for service in model["services"].values()), "Unexpected service/host publication")
         require({name: service["image"] for name, service in model["services"].items()} == images, "Immutable image mismatch")
         require(all(network.get("external") for network in model["networks"].values()), "App cannot create networks")
+        for service in model["services"].values():
+            # Compose's JSON renderer emits parsed byte limits as decimal text;
+            # Docker inspect reports Memory as an integer. Persist that same
+            # exact byte value so ownership checks can compare without coercion.
+            memory = service.get("mem_limit")
+            require(type(memory) is int or (type(memory) is str and re.fullmatch(r"[0-9]+", memory)),
+                    "Invalid parsed app memory limit")
+            service["mem_limit"] = int(memory)
+            require(service["mem_limit"] > 0, "Invalid parsed app memory limit")
         common.atomic(directory / "model.json", model)
         common.durable_tree(directory)
         return {"id": directory.name, "source": source, "directory": str(directory), "images": images,
