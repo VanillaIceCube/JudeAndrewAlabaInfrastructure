@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Separate YNAB stop-only containment from freshly scanned active-image rollback;
+  require explicit stop-only recovery after an initial activation failure.
 - Compare Alpine image coverage using native package names and complete installed
   versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
 - Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,

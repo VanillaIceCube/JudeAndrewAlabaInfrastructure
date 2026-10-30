@@ -147,6 +147,10 @@ class Release:
         require(path.parent == self.root / "releases" and common.SHA.fullmatch(record["source"]), "Invalid release record")
         common.private(path)
         require(files_identity(path) == record["files"], "Matched release files changed")
+        services = common.read(path / "model.json").get("services", {})
+        require(set(services) == set(NAMES) and record.get("images") == {
+            role: service.get("image") for role, service in services.items()},
+            "Artifact references differ from matched Compose model")
         return path
 
     def current(self):
@@ -321,14 +325,17 @@ class Release:
         (self.root / "pending.json").unlink()
         common.durable_tree(self.root)
 
-    def recover(self, *, outcome_confirmed=False):
+    def recover(self, *, outcome_confirmed=False, stop_only=False):
         require(outcome_confirmed, "Confirm the prior host unit and Docker mutation are no longer active")
         journal = common.read(self.root / "pending.json")
         candidate, previous = journal["candidate"], journal["previous"]
+        restarting = bool(previous and not previous.get("disabled"))
+        require(stop_only != restarting,
+                "Choose explicit stop-only recovery when there is no active previous generation")
         require(companions() == journal["companions"] and topology() == journal["networks"], "Host changed; inspect recovery evidence")
         directory = self.directory(previous or candidate)
         self.ownership([candidate, previous], strict_limits=False)
-        if previous and not previous.get("disabled"):
+        if restarting:
             preflight(previous["images"], self.scanner, self.cache)
             self.compose(directory, "up", "-d", "--no-deps", "--force-recreate", "--pull", "never", "egress", "gateway")
             self.ready()
@@ -341,6 +348,16 @@ class Release:
         journal["phase"] = "recovered"
         self.finish(journal)
 
+    def disable(self, *, outcome_confirmed=False):
+        """Contain accepted services without starting/scanning any image."""
+        require(outcome_confirmed and not (self.root / "pending.json").exists(), "Use explicit pending recovery first")
+        current = self.current()
+        require(current is not None, "No accepted app release")
+        journal = {"id": uuid.uuid4().hex, "phase": "stop-only", "candidate": current, "previous": None,
+                   "companions": companions(), "networks": topology(require_app=not current.get("disabled"))}
+        common.atomic(self.root / "pending.json", journal)
+        self.recover(outcome_confirmed=True, stop_only=True)
+
     def rollback(self, *, outcome_confirmed=False):
         require(outcome_confirmed and not (self.root / "pending.json").exists(), "Use explicit pending recovery first")
         current = self.current()
@@ -351,6 +368,8 @@ class Release:
             require(re.fullmatch(r"[a-f0-9]{40}-[a-f0-9]{32}", previous_id), "Invalid previous release identity")
             previous = common.read(self.root / "records" / (previous_id + ".json"))
             self.directory(previous)
+        require(previous and not previous.get("disabled"),
+                "No active previous generation; use explicit disable for stop-only containment")
         journal = {"id": uuid.uuid4().hex, "phase": "rollback", "candidate": current, "previous": previous,
                    "companions": companions(), "networks": topology(require_app=not current.get("disabled"))}
         common.atomic(self.root / "pending.json", journal)
@@ -359,7 +378,7 @@ class Release:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("stage", "promote", "deploy", "recover", "rollback"))
+    parser.add_argument("operation", choices=("stage", "promote", "deploy", "recover", "rollback", "disable"))
     parser.add_argument("--id")
     parser.add_argument("--source")
     parser.add_argument("--gateway")
@@ -369,7 +388,9 @@ def main():
     parser.add_argument("--cache", required=True, type=Path)
     parser.add_argument("--initial", action="store_true")
     parser.add_argument("--confirm-stopped-attempt", action="store_true")
+    parser.add_argument("--stop-only", action="store_true", help="Recover to stopped services; never start an image")
     args = parser.parse_args()
+    require(not args.stop_only or args.operation == "recover", "Stop-only applies only to pending recovery")
     require(os.name == "posix" and os.geteuid() == 0, "Use the separately authorized Linux operator")
     require(re.fullmatch(r"[a-f0-9]{32}", os.environ.get("INVOCATION_ID", "")), "Run in the authorized persistent systemd unit")
     require(os.environ.get("DOCKER_HOST", "") in {"", "unix:///var/run/docker.sock", "unix:///run/docker.sock"}, "Local Docker daemon required")
@@ -389,6 +410,8 @@ def main():
         elif args.operation == "promote":
             require(args.id, "Staged candidate identity required")
             release.promote(args.id, initial=args.initial)
+        elif args.operation == "recover":
+            release.recover(outcome_confirmed=args.confirm_stopped_attempt, stop_only=args.stop_only)
         else:
             getattr(release, args.operation)(outcome_confirmed=args.confirm_stopped_attempt)
     print("YNAB operation completed; private release evidence retained")

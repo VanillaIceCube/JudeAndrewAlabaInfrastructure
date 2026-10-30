@@ -95,7 +95,8 @@ class AppReleaseTests(unittest.TestCase):
         self.events.append("stage")
         directory = self.root / "releases" / (source + "-" + uuid.uuid4().hex)
         directory.mkdir(mode=0o700)
-        release.common.atomic(directory / "model.json", {"source": source})
+        release.common.atomic(directory / "model.json", {"source": source,
+            "services": {role: {"image": image} for role, image in images.items()}})
         return {"id": directory.name, "source": source, "directory": str(directory),
                 "images": images, "files": release.files_identity(directory)}
 
@@ -144,6 +145,18 @@ class AppReleaseTests(unittest.TestCase):
         with self.assertRaises(release.common.ReleaseError):
             self.app.promote(identity)
 
+    def test_staged_record_cannot_scan_different_images_from_compose(self):
+        identity = self.app.stage_only(SOURCE, self.images(SOURCE), {})
+        path = self.root / "records" / (identity + ".json")
+        record = release.common.read(path)
+        record["images"] = self.images(SECOND)
+        release.common.atomic(path, record)
+        before = list(self.events)
+        with self.assertRaisesRegex(release.common.ReleaseError, "Compose model"):
+            self.app.promote(identity, initial=True)
+        self.assertEqual(self.events, before)
+        self.assertFalse((self.root / "pending.json").exists())
+
     def test_interrupted_mutation_blocks_new_process_until_confirmed_recovery(self):
         self.deploy(SOURCE, initial=True)
         def interrupted(app, directory, *arguments):
@@ -190,11 +203,42 @@ class AppReleaseTests(unittest.TestCase):
         with patch.object(release.Release, "ready", side_effect=release.common.ReleaseError("not ready")):
             with self.assertRaises(release.common.ReleaseError):
                 self.deploy(SOURCE, initial=True)
-        self.app.recover(outcome_confirmed=True)
+        before = list(self.events)
+        with self.assertRaises(release.common.ReleaseError):
+            self.app.recover(outcome_confirmed=True)
+        self.assertEqual(self.events, before)
+        with patch.object(release, "preflight", side_effect=ValueError("artifact rejected")):
+            self.app.recover(outcome_confirmed=True, stop_only=True)
+        self.assertEqual(self.events[len(before):], ["stop"])
         self.assertTrue(release.common.read(self.root / "current.json")["disabled"])
         self.assertTrue(all(not value["running"] for value in self.live.values()))
         self.deploy(SECOND)
         self.assertFalse(release.common.read(self.root / "current.json")["disabled"])
+
+    def test_initial_rollback_requires_explicit_stop_only_disable(self):
+        self.deploy(SOURCE, initial=True)
+        before = list(self.events)
+        with self.assertRaises(release.common.ReleaseError):
+            self.app.rollback(outcome_confirmed=True)
+        self.assertEqual(self.events, before)
+        self.assertFalse((self.root / "pending.json").exists())
+        with patch.object(release, "preflight", side_effect=ValueError("artifact rejected")):
+            self.app.disable(outcome_confirmed=True)
+        self.assertEqual(self.events[len(before):], ["stop"])
+        self.assertTrue(release.common.read(self.root / "current.json")["disabled"])
+        self.assertTrue(all(not value["running"] for value in self.live.values()))
+
+    def test_stop_only_flag_cannot_replace_fresh_scanned_active_recovery(self):
+        self.deploy(SOURCE, initial=True)
+        self.deploy(SECOND)
+        with patch.object(release.Release, "recover"):
+            self.app.rollback(outcome_confirmed=True)
+        before = list(self.events)
+        with self.assertRaises(release.common.ReleaseError):
+            self.app.recover(outcome_confirmed=True, stop_only=True)
+        self.assertEqual(self.events, before)
+        self.app.recover(outcome_confirmed=True)
+        self.assertEqual(self.events[-2:], ["paired-fresh-scan", "up"])
 
     def test_shared_maintenance_and_exclusive_app_lock_preserve_existing_inode(self):
         directory = self.root / "locks"

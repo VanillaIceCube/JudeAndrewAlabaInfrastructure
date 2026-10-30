@@ -59,6 +59,11 @@ Every **stage**, **deploy**, **promote** and active-image **rollback/recovery** 
 the paired exact-image preflight afresh under the locks. No saved approval JSON
 or passing egress scan can replace the gateway scan. Stopping a failed initial
 activation remains possible even if its artifacts are now rejected.
+`rollback` always selects an active previous generation and scans both images
+before restarting it. If no such generation exists, use the separate `disable`
+operation to stop services. Pending initial-failure recovery requires the explicit
+`--stop-only` flag. These containment paths only stop owned services, never start
+an image, and remain available when scanning is unavailable or an artifact is rejected.
 
 The operator invokes the reviewed controller in a persistent `systemd-run` unit,
 with UMask0077, a finite deadline and reviewed memory/CPU/PID limits. Reserve
@@ -81,6 +86,14 @@ python3 scripts/ynab_release.py promote --id STAGED_SOURCE_UUID --initial \
   --scanner /private/trivy --cache /private/audit-cache
 
 python3 scripts/ynab_release.py recover --confirm-stopped-attempt \
+  --scanner /private/trivy --cache /private/audit-cache
+
+# Pending initial activation with no active previous generation:
+python3 scripts/ynab_release.py recover --confirm-stopped-attempt --stop-only \
+  --scanner /private/trivy --cache /private/audit-cache
+
+# Stop an accepted generation without starting any image:
+python3 scripts/ynab_release.py disable --confirm-stopped-attempt \
   --scanner /private/trivy --cache /private/audit-cache
 ```
 
