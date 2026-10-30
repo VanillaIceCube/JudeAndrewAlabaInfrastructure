@@ -2,11 +2,17 @@
 
 This is the ordered operator procedure for #56/#62/#71. It composes the existing
 gateway, issuer and YNAB controllers; it is not a new deployment framework.
-Record the exact approved source, registry digests, operator and resulting
-acceptance on #56. Source review alone does not authorize host operations.
-The owner's direct coordinated-deployment instruction is recorded separately
-from the architecture decision. Do not request an already recorded blanket
-approval again or extend it to a paid resize, new host or financial writes.
+Before each production mutation, record the exact operation (or precisely
+enumerated coordinated operation set), source, registry digests, designated
+operator and owner authorization in [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4),
+then link that record from #56. Keep private details in KnowledgeVault.
+Network provisioning, image publication, DNS changes, credential/client setup,
+route exposure and each app rollout must all be within that recorded scope.
+Source review, an architecture decision or reviewer approval alone does not
+authorize any of them. When the owner has already explicitly authorized the
+exact operation, reference that authorization; otherwise obtain it before acting.
+Additional paid resources, unrelated changes and financial writes require their
+own authorization and are outside this procedure.
 
 ## 📋 Before the maintenance window
 
