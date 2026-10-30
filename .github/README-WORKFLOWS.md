@@ -230,3 +230,7 @@ Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
+
+## 🤖 Reviewer model
+
+Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models and Jules schedules are independent of this setting.
