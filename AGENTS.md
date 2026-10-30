@@ -164,3 +164,13 @@ invalidate restored grants/sessions before acceptance. The durable905second
 quarantine must survive rollback; ingress cannot re-expose offline YNAB JWTs early.
 Run all `test_mcp_auth*.py` suites on Linux/disposable Docker and preserve the
 existing apps and their exact peer addresses throughout.
+
+## 🚀 Coordinated MCP activation
+
+Follow [first activation and client acceptance](docs/ynab-operations.md) for #62.
+Use the existing issuer, YNAB and gateway controllers sequentially; keep exact
+image/source identities, paired fresh scans, disabled tombstones and private
+provider-request evidence. Real ChatGPT and Codex acceptance precedes the Notoli
+MCP migration, then MacroMapper. Preserve ordinary app login and financially
+read-only YNAB. Never replace actual callback registration or owner consent with
+synthetic acceptance; retain every durable recovery/quarantine barrier.
