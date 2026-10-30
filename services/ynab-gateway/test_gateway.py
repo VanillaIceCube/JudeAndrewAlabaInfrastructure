@@ -94,7 +94,7 @@ class GatewayTests(unittest.TestCase):
             self.assertIn("list_budgets", names)
             self.assertLessEqual(names, g.READ_TOOLS)
             self.assertFalse(names & {"create_payee", "preview_write_tool", "fixture_status"})
-            self.assertTrue({"ynab_tool_execute", "ynab_auth_status", "export_transactions", "suggest_transaction_categories"} <= names)
+            self.assertLessEqual({"ynab_tool_execute", "ynab_auth_status", "export_transactions", "suggest_transaction_categories"}, names)
             resources = self.rpc("resources/list", sid=sid).json()["result"]["resources"]
             self.assertEqual({value["uri"] for value in resources}, g.RESOURCES)
             prompts = self.rpc("prompts/list", sid=sid).json()["result"]["prompts"]

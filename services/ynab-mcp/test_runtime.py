@@ -102,7 +102,7 @@ class RuntimeTests(unittest.TestCase):
                     {'jsonrpc': '2.0', 'id': 4, 'method': 'tools/call', 'params': {'name': 'list_undo_history', 'arguments': {}}}])
                 self.assertEqual(result.returncode, 0, result.stderr)
                 replies = {m['id']: m for line in result.stdout.splitlines() if (m := json.loads(line)).get('id')}
-                self.assertTrue({'create_payee', 'preview_write_tool', 'undo_operation', 'resume_operation'} <=
+                self.assertLessEqual({'create_payee', 'preview_write_tool', 'undo_operation', 'resume_operation'},
                                 {tool['name'] for tool in replies[2]['result']['tools']})
                 status = replies[3]['result'].get('structuredContent', {}).get('result') or json.loads(replies[3]['result']['content'][0]['text'])
                 self.assertTrue(status['writes_enabled'])
