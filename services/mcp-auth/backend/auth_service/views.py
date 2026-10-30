@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET
 from oauth2_provider.models import AccessToken, Application
@@ -34,6 +34,7 @@ class MetadataView(OAuthServerMetadataView):
 
 @method_decorator(never_cache, name="dispatch")
 @method_decorator(sensitive_post_parameters(), name="dispatch")
+@method_decorator(csrf_protect, name="dispatch")
 class ConsentView(AuthorizationView):
     def dispatch(self, request, *args, **kwargs):
         if request.method not in {"GET", "POST"}:
