@@ -1,5 +1,15 @@
 # 📝 Changelog
 
+## 2026-10-30
+
+### Changed
+
+- Reconcile existing production promotion history into main and document
+  main-first releases, prompt return of exceptional deployment fixes, and
+  intentional release holds for unready source changes.
+- Clarify final ChatGPT callback verification after discovery and Codex's
+  metadata-derived resource setup, preserving strict issuer validation.
+
 ## 2026-10-29
 
 ### Changed
