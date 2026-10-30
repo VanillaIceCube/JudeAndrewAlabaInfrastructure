@@ -3,9 +3,9 @@ from pathlib import Path
 import os
 import subprocess
 if __package__:
-    from .check_gateway_dependencies import LOCK, audit
+    from .check_gateway_dependencies import LOCK, AUTH_LOCK, ROOT, audit
 else:
-    from check_gateway_dependencies import LOCK, audit
+    from check_gateway_dependencies import LOCK, AUTH_LOCK, ROOT, audit
 
 PACKAGE_FILES = {"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
                  "requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock", "poetry.lock",
@@ -13,7 +13,7 @@ PACKAGE_FILES = {"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.ya
 
 
 def unsupported_manifests(paths):
-    return sorted(path for path in paths if path != LOCK and (Path(path).name in PACKAGE_FILES
+    return sorted(path for path in paths if path not in {LOCK, AUTH_LOCK} and (Path(path).name in PACKAGE_FILES
                   or Path(path).name.startswith("requirements") and Path(path).suffix in {".txt", ".in"}))
 
 
@@ -22,7 +22,8 @@ def main():
     unsupported = unsupported_manifests(paths)
     if unsupported:
         raise SystemExit("Package scanner setup required before adding manifests: " + ", ".join(unsupported))
-    report = audit() if LOCK in paths else ("No npm/pip or other package manifests are tracked. Package malware scanning is not applicable; "
+    reports = [audit(ROOT / lock) for lock in (LOCK, AUTH_LOCK) if lock in paths]
+    report = " ".join(reports) if reports else ("No npm/pip or other package manifests are tracked. Package malware scanning is not applicable; "
               "Nginx and Compose are not package malware scan targets. Actions changes receive Dependency Review, "
               "CodeQL Actions analysis and immutable-action policy checks. Docker image advisories require "
               "image scanning/operator review; this check does not claim container malware coverage.")

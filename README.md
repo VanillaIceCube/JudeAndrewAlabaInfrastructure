@@ -16,6 +16,7 @@ preserved through the reviewed migration.
 | --- | --- |
 | Host ingress | [Compose](compose.yml), [Nginx](nginx/nginx.conf) |
 | Application releases | [Shared standard and parity matrix](docs/app-release-standard.md), [versioned source](app-release/v1) |
+| Shared MCP authorization | [Ownership and app isolation](docs/mcp-oauth.md), [inactive issuer candidate](services/mcp-auth/README.md) |
 | Production operations | [Cutover and reversal](docs/cutover.md) |
 | Subsequent gateway releases | [Promotion, approval and rollback](docs/gateway-releases.md) |
 | Adding an application | [Onboarding](docs/onboarding.md) |

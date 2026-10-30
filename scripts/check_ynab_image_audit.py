@@ -49,6 +49,7 @@ def inventory(filesystem, role):
     This checks recorded packages; provenance review still owns untracked/copied
     binaries and the Node/Python interpreter base pins.
     """
+    require(role in {"gateway", "egress", "authorization"}, "Unsupported image role")
     expected = {"os": set(), "python": set(), "node": set()}
     records = {}
     total = 0
@@ -58,7 +59,9 @@ def inventory(filesystem, role):
             name = member.name.removeprefix("./")
             selected = (name in {"var/lib/dpkg/status", "lib/apk/db/installed"} or
                         name == "app/node_modules/.package-lock.json" or
-                        (name.startswith("opt/gateway-deps/") and name.endswith(".dist-info/METADATA")))
+                        (name.startswith("opt/gateway-deps/") and name.endswith(".dist-info/METADATA")) or
+                        (role == "authorization" and name.startswith(("opt/auth-deps/", "usr/local/lib/python3.12/site-packages/"))
+                         and name.endswith(".dist-info/METADATA")))
             if not selected:
                 continue
             require(member.isfile() and name not in records and 0 < member.size <= 10_000_000,
@@ -106,11 +109,14 @@ def inventory(filesystem, role):
                     "Incomplete installed Node package record")
             expected["node"].add((path.rsplit("node_modules/", 1)[1], package["version"]))
         require(expected["node"], "Missing installed Node dependencies")
+    if role in {"gateway", "authorization"}:
         for text in records.values():
             package = Parser().parsestr(text)
             require(package.get("Name") and package.get("Version"), "Incomplete installed Python package record")
             expected["python"].add((re.sub(r"[-_.]+", "-", package["Name"]).lower(), package["Version"]))
-        require(any(name == "fastmcp-slim" for name, _ in expected["python"]), "Missing installed gateway Python inventory")
+        required = ({"fastmcp-slim"} if role == "gateway" else
+                    {"django", "django-oauth-toolkit", "oauthlib", "pyjwt", "cryptography", "uvicorn"})
+        require(required <= {name for name, _ in expected["python"]}, "Missing installed service Python inventory")
     return expected
 
 
@@ -121,7 +127,7 @@ def validate(report, image_id, role, expected, now=None):
     Inventory is required; a separate license/provenance review remains mandatory.
     """
     now = now or datetime.now(timezone.utc)
-    require(role in {"gateway", "egress"}, "Unsupported image role")
+    require(role in {"gateway", "egress", "authorization"}, "Unsupported image role")
     require(isinstance(report, dict) and report.get("SchemaVersion") == 2,
             "Unsupported scanner report schema")
     require(report.get("Trivy", {}).get("Version") == VERSION, "Scanner version mismatch")
@@ -136,7 +142,7 @@ def validate(report, image_id, role, expected, now=None):
     require(family in {"ubuntu", "debian", "alpine"}, "Unsupported OS inventory")
     require((family == "alpine") == (expected.get("os_family") == "alpine"),
             "Native OS database differs from scanner family")
-    require(family != "alpine" or role == "gateway", "Unsupported Alpine image role")
+    require(family != "alpine" or role in {"gateway", "authorization"}, "Unsupported Alpine image role")
     require(not metadata.get("OS", {}).get("EOSL", False), "End-of-life OS")
     results = report.get("Results")
     require(isinstance(results, list) and results, "Missing scanner results")
@@ -182,15 +188,21 @@ def validate(report, image_id, role, expected, now=None):
             licenses.add((license_item.get("PkgName") or license_item["FilePath"], license_item["Name"]))
     # A newer Rock candidate reports its OS but zero recognized OS packages.
     # Refuse that blind spot rather than treating zero CVEs as a clean image.
-    required_packages = {"musl", "libgcc", "libstdc++"} if family == "alpine" else {"libc6"}
+    required_packages = (({"musl", "libgcc", "libstdc++"} if role == "gateway" else {"musl"})
+                         if family == "alpine" else {"libc6"})
     require(len(packages) >= 20 and required_packages <= packages, "Missing/thin OS package inventory")
     require(expected.get("os") and observed["os"] == expected["os"], "OS package coverage differs from image records")
     if role == "egress":
         require("squid" in packages, "Missing proxy package inventory")
-    else:
+    elif role == "gateway":
         require(expected.get("python") and expected.get("node"), "Missing expected gateway runtime inventory")
         require(expected["python"] <= observed["python"] and expected["node"] <= observed["node"],
                 "Missing gateway Python/Node package coverage")
+    else:
+        required = {"django", "django-oauth-toolkit", "oauthlib", "pyjwt", "cryptography", "uvicorn"}
+        require(required <= {name for name, _ in expected.get("python", set())},
+                "Missing expected authorization runtime inventory")
+        require(expected["python"] <= observed["python"], "Missing authorization Python package coverage")
     require(licenses, "Missing license inventory")
     summary = {"image_id": image_id, "role": role, "scanner": VERSION,
                "os_packages": len(packages), "license_entries": len(licenses),
@@ -253,7 +265,7 @@ if __name__ == "__main__":
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--filesystem", type=Path, required=True)
     parser.add_argument("--image-id", required=True)
-    parser.add_argument("--role", choices=("gateway", "egress"), required=True)
+    parser.add_argument("--role", choices=("gateway", "egress", "authorization"), required=True)
     parser.add_argument("--scanner", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
     args = parser.parse_args()
