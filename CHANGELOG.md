@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Permit the pinned SDK's supported stateful MCP handshakes and a bounded full
+  discovery burst for YNAB clients (#62), retaining session protocol consistency,
+  sustained rate limits and all owner/scope/write checks.
 - Allow the validated MCP client's callback origin on its consent page so Chromium
   can complete authorization, preserving exact callback and OAuth checks.
 

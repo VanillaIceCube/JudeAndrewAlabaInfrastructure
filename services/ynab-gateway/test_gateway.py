@@ -12,6 +12,7 @@ from pathlib import Path
 import signal
 import tempfile
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -53,12 +54,12 @@ class GatewayTests(unittest.TestCase):
         with TestClient(self.app, base_url=g.ORIGIN) as self.http:
             yield self.http
 
-    def headers(self, sid=None, token=None):
+    def headers(self, sid=None, token=None, protocol=g.PROTOCOL):
         return {"authorization": "Bearer " + (token or self.token()),
                 "accept": "application/json, text/event-stream",
-                **({"mcp-session-id": sid, "mcp-protocol-version": g.PROTOCOL} if sid else {})}
+                **({"mcp-session-id": sid, "mcp-protocol-version": protocol} if sid else {})}
 
-    def rpc(self, method, params=None, sid=None, token=None, rpc_id=None, **kwargs):
+    def rpc(self, method, params=None, sid=None, token=None, rpc_id=None, protocol=g.PROTOCOL, **kwargs):
         self.number += 1
         # Most tests isolate a security control from rate limiting; its own test
         # below leaves the bucket untouched. This changes no production setting.
@@ -66,16 +67,80 @@ class GatewayTests(unittest.TestCase):
         payload = {"jsonrpc": "2.0", "method": method, "params": params or {}}
         if not isinstance(method, str) or not method.startswith("notifications/"):
             payload["id"] = self.number if rpc_id is None else rpc_id
-        return self.http.post("/mcp", headers=self.headers(sid, token), json=payload, **kwargs)
+        return self.http.post("/mcp", headers=self.headers(sid, token, protocol), json=payload, **kwargs)
 
-    def initialize(self, token=None):
-        response = self.rpc("initialize", {"protocolVersion": g.PROTOCOL, "capabilities": {},
+    def initialize(self, token=None, protocol=g.PROTOCOL):
+        response = self.rpc("initialize", {"protocolVersion": protocol, "capabilities": {},
                                           "clientInfo": {"name": "fixture", "version": "1"}}, token=token)
         self.assertEqual(response.status_code, 200, response.text)
-        self.assertEqual(response.json()["result"]["protocolVersion"], g.PROTOCOL)
+        self.assertEqual(response.json()["result"]["protocolVersion"], protocol)
         sid = response.headers["mcp-session-id"]
-        self.assertEqual(self.rpc("notifications/initialized", sid=sid, token=token).status_code, 202)
+        self.assertEqual(self.rpc("notifications/initialized", sid=sid, token=token, protocol=protocol).status_code, 202)
         return sid
+
+    def test_handshake_versions_keep_session_protocol_and_scope_boundaries(self):
+        self.assertEqual(g.PROTOCOLS, {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"})
+        for version in sorted(g.PROTOCOLS):
+            with self.subTest(protocol=version), self.running(allow_writes=True):
+                sid = self.initialize(protocol=version)
+                self.assertEqual(self.app.sessions[sid].protocol, version)
+                listed = self.rpc("tools/list", sid=sid, protocol=version)
+                self.assertEqual(listed.status_code, 200)
+                names = {tool["name"] for tool in listed.json()["result"]["tools"]}
+                self.assertIn("list_budgets", names)
+                self.assertLessEqual(names, g.READ_TOOLS)
+                self.assertEqual(self.rpc("tools/call", {"name": "create_payee", "arguments": {}},
+                                          sid=sid, protocol=version).status_code, 403)
+                other = "2025-06-18" if version == g.PROTOCOL else g.PROTOCOL
+                self.assertEqual(self.rpc("tools/list", sid=sid, protocol=other).status_code, 400)
+                self.assertEqual(self.http.delete("/mcp", headers=self.headers(sid, protocol=other)).status_code, 400)
+                self.assertEqual(self.rpc("tools/list", sid=sid, protocol=version,
+                                          token=self.token("client-b")).status_code, 404)
+                self.app.credit = g.ADMISSION_BURST
+                self.assertEqual(self.http.delete("/mcp", headers=self.headers(sid, protocol=version)).status_code, 200)
+        with self.running():
+            for version in ("2026-07-28", "unknown", None, [g.PROTOCOL]):
+                self.assertEqual(self.rpc("initialize", {"protocolVersion": version}).status_code, 400)
+            self.assertFalse(self.app.sessions)
+
+    def test_complete_discovery_burst_without_reset_and_bounded_refill(self):
+        # Freeze only the gateway's admission clock, leaving SDK/asyncio timers
+        # real. No request resets credit; assertions cannot depend on child speed.
+        clock = [time.monotonic()]
+        gateway_clock = SimpleNamespace(time=time.time, monotonic=lambda: clock[0])
+        with patch.object(g, "time", gateway_clock), self.running(allow_writes=True):
+            token = self.token(writes=True)
+            sid = None
+            methods = ("initialize", "notifications/initialized", "tools/list", "resources/list",
+                       "resources/templates/list", "prompts/list", "ping")
+            for index, method in enumerate(methods):
+                payload = {"jsonrpc": "2.0", "method": method}
+                if method != "notifications/initialized":
+                    payload["id"] = index
+                if method == "initialize":
+                    payload["params"] = {"protocolVersion": "2025-06-18", "capabilities": {},
+                                         "clientInfo": {"name": "discovery-fixture", "version": "1"}}
+                response = self.http.post("/mcp", headers=self.headers(sid, token, "2025-06-18"), json=payload)
+                self.assertEqual(response.status_code, 202 if method == "notifications/initialized" else 200,
+                                 (method, response.text))
+                if method == "initialize":
+                    sid = response.headers["mcp-session-id"]
+                elif method == "tools/list":
+                    names = {tool["name"] for tool in response.json()["result"]["tools"]}
+                    self.assertIn("create_payee", names)
+                    self.assertLessEqual(names, g.READ_TOOLS | g.WRITE_TOOLS)
+                elif method != "notifications/initialized":
+                    self.assertNotIn("error", response.json())
+            # Anonymous attempts still consume the same finite pre-RSA bucket.
+            for _ in range(g.ADMISSION_BURST - len(methods)):
+                self.assertEqual(self.http.post("/mcp", json={}).status_code, 401)
+            blocked = self.http.post("/mcp", headers=self.headers(sid, token, "2025-06-18"),
+                                     json={"jsonrpc": "2.0", "id": 99, "method": "ping"})
+            self.assertEqual(blocked.status_code, 429)
+            self.assertEqual(blocked.headers["retry-after"], "2")
+            clock[0] += 2
+            self.assertEqual(self.http.post("/mcp", json={}).status_code, 401)
+            self.assertEqual(self.http.post("/mcp", json={}).status_code, 429)
 
     def call(self, sid, name, args=None, token=None):
         return self.rpc("tools/call", {"name": name, "arguments": args or {}}, sid=sid, token=token)
@@ -188,13 +253,15 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(self.rpc("tools/list", sid=first).status_code, 404)
 
     def test_public_admission_limit_precedes_signature_verification(self):
-        with self.running(), patch.object(self.app.verifier, "verify_token", new_callable=AsyncMock) as verify:
+        now = time.monotonic()
+        with (patch.object(g, "time", SimpleNamespace(time=time.time, monotonic=lambda: now)),
+              self.running(), patch.object(self.app.verifier, "verify_token", new_callable=AsyncMock) as verify):
             verify.return_value = None
-            for _ in range(5):
+            for _ in range(g.ADMISSION_BURST):
                 response = self.http.post("/mcp", headers=self.headers(), content="{broken")
                 self.assertEqual(response.status_code, 401)
             self.assertEqual(self.http.post("/mcp", headers=self.headers(), content="{broken").status_code, 429)
-            self.assertEqual(verify.await_count, 5)
+            self.assertEqual(verify.await_count, g.ADMISSION_BURST)
 
     def test_malformed_rpc_fields_reject_without_killing_the_owned_session(self):
         with self.running():

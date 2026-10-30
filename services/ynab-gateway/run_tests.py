@@ -59,17 +59,12 @@ print(json.dumps({name:jwt.encode({'alg':'RS256','typ':'at+jwt'},{**claims,'scop
 
 PROBE = """
 import json, sys, time, urllib.request, urllib.error
-tokens=json.loads(sys.stdin.read());token=tokens['read'];writes=sys.argv[1]=='1'
+tokens=json.loads(sys.stdin.read());token=tokens['read'];writes=sys.argv[1]=='1';protocol=sys.argv[2]
 base='http://127.0.0.1:8000'
-calls=0
 def request(path,body=None,authorized=False,sid=None):
- global calls
- if path=='/mcp':
-  calls+=1
-  if calls>4:time.sleep(2.1)
  headers={'Host':'ynab.judeandrewalaba.com','Accept':'application/json, text/event-stream'}
  if authorized: headers['Authorization']='Bearer '+token
- if sid: headers.update({'MCP-Session-ID':sid,'MCP-Protocol-Version':'2025-11-25'})
+ if sid: headers.update({'MCP-Session-ID':sid,'MCP-Protocol-Version':protocol})
  if body is not None: headers['Content-Type']='application/json'
  req=urllib.request.Request(base+path,data=None if body is None else json.dumps(body).encode(),headers=headers)
  try: response=urllib.request.urlopen(req,timeout=10)
@@ -83,8 +78,8 @@ for attempt in range(30):
  time.sleep(0.2)
 else: raise SystemExit('Production entrypoint readiness failed')
 assert request('/mcp',{})[0]==401
-status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'entrypoint-fixture','version':'1'}}},True)
-assert status==200 and payload['result']['protocolVersion']=='2025-11-25'
+status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':protocol,'capabilities':{},'clientInfo':{'name':'entrypoint-fixture','version':'1'}}},True)
+assert status==200 and payload['result']['protocolVersion']==protocol
 sid=headers['MCP-Session-ID']
 assert request('/mcp',{'jsonrpc':'2.0','method':'notifications/initialized'},True,sid)[0]==202
 status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':2,'method':'tools/list'},True,sid)
@@ -94,7 +89,7 @@ assert request('/mcp',{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'n
 if writes:
  token=tokens['write']
  assert request('/mcp',{'jsonrpc':'2.0','id':4,'method':'tools/list'},True,sid)[0]==404
- status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'write-entrypoint-fixture','version':'1'}}},True)
+ status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':protocol,'capabilities':{},'clientInfo':{'name':'write-entrypoint-fixture','version':'1'}}},True)
  assert status==200
  sid=headers['MCP-Session-ID']
  assert request('/mcp',{'jsonrpc':'2.0','method':'notifications/initialized'},True,sid)[0]==202
@@ -104,7 +99,7 @@ if writes:
  assert status==200
  history=payload['result'].get('structuredContent',{}).get('result') or json.loads(payload['result']['content'][0]['text'])
  assert history['entries'][0]['id']=='synthetic-retained'
-print('Production ENTRYPOINT: private readiness, actual Node policy/discovery, scoped denial and persistent history passed without financial/network requests')
+print('Production ENTRYPOINT '+protocol+': private readiness, actual Node policy/discovery, scoped denial and persistent history passed without financial/network requests')
 """
 
 
@@ -117,7 +112,8 @@ def production_entrypoint(identity, image):
                  "--read-only", "--user", "0", "--mount", "type=volume,source=" + volume + ",target=/run/secrets",
                  "--mount", "type=volume,source=" + journal + ",target=/data",
                  "--entrypoint", "/usr/local/bin/python", image, "-c", PREPARE], capture_output=True, text=True).stdout.strip()
-    for attempt, writes in enumerate((False, True, True)):
+    for attempt, (writes, protocol) in enumerate(((False, "2024-11-05"), (True, "2025-03-26"),
+                                                 (True, "2025-06-18"), (True, "2025-11-25"))):
         name = identity + "-production-" + str(attempt)
         extra = ["-e", "YNAB_ALLOW_WRITES=1", "--mount", "type=volume,source=" + journal + ",target=/data"] if writes else []
         run(["docker", "run", "-d", "--name", name, "--label", LABEL + "=" + identity,
@@ -125,7 +121,7 @@ def production_entrypoint(identity, image):
              "--pids-limit", "64", "--memory", "512m", "--cpus", "0.5", "--tmpfs",
              "/tmp:rw,noexec,nosuid,size=32m,uid=65532,gid=65532,mode=0700", "--mount",
              "type=volume,source=" + volume + ",target=/run/secrets,readonly", *extra, image], capture_output=True)
-        run(["docker", "exec", "-i", name, "/usr/local/bin/python", "-c", PROBE, "1" if writes else "0"], input=token, text=True)
+        run(["docker", "exec", "-i", name, "/usr/local/bin/python", "-c", PROBE, "1" if writes else "0", protocol], input=token, text=True)
         run(["docker", "rm", "-f", name], capture_output=True)
 
 

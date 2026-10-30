@@ -24,11 +24,14 @@ from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.providers.proxy import FastMCPProxy, StatefulProxyClient
 from fastmcp.server.transforms import Visibility
 from fastmcp.utilities.auth import decode_jwt_header
+from mcp_types.version import HANDSHAKE_PROTOCOL_VERSIONS
 
 ORIGIN = "https://ynab.judeandrewalaba.com"
 RESOURCE = ORIGIN + "/mcp"
 METADATA = "/.well-known/oauth-protected-resource/mcp"
 PROTOCOL = "2025-11-25"
+PROTOCOLS = frozenset(HANDSHAKE_PROTOCOL_VERSIONS)
+ADMISSION_BURST = 12
 READ_TOOLS = frozenset("""
 get_user list_budgets get_budget get_budget_settings list_accounts get_account
 list_categories get_category get_month_category list_payees get_payee
@@ -108,6 +111,7 @@ class OwnerVerifier(JWTVerifier):
 class Session:
     principal: tuple
     touched: float
+    protocol: str = PROTOCOL
     writes: bool = False
     client: object = None
     backend: object = None
@@ -140,7 +144,7 @@ class Gateway:
         self.sessions = {}
         self.pending = 0
         self.inflight = 0
-        self.credit = 5.0
+        self.credit = float(ADMISSION_BURST)
         self.rate_updated = time.monotonic()
         self.transport_factory = transport or (lambda writes=False: child_transport(writes, persistent=allow_writes))
         auth = RemoteAuthProvider(self.verifier, authorization_servers=[identity.issuer],
@@ -231,7 +235,7 @@ class Gateway:
             return await self.app(scope, receive, send)
         # Bound public admission before RSA verification, not only valid owners.
         now = time.monotonic()
-        self.credit = min(5.0, self.credit + (now - self.rate_updated) / 2)
+        self.credit = min(float(ADMISSION_BURST), self.credit + (now - self.rate_updated) / 2)
         self.rate_updated = now
         if self.credit < 1 or self.inflight >= 4:
             return await self.respond(send, 429, extra=[(b"retry-after", b"2")])
@@ -251,8 +255,6 @@ class Gateway:
         # POST JSON and DELETE are sufficient for Streamable HTTP; no unsolicited SSE channel.
         if method not in {"POST", "DELETE"}:
             return await self.respond(send, 405, extra=[(b"allow", b"POST, DELETE")])
-        if method == "DELETE" and headers.get(b"mcp-protocol-version") != PROTOCOL.encode():
-            return await self.respond(send, 400)
         now = time.monotonic()
         for key, old in list(self.sessions.items()):
             if now - old.touched > 600 or old.dead:
@@ -269,6 +271,8 @@ class Gateway:
         session = self.sessions.get(sid) if sid else None
         if sid and (session is None or session.principal != principal):
             return await self.respond(send, 404)
+        if method == "DELETE" and session and headers.get(b"mcp-protocol-version") != session.protocol.encode():
+            return await self.respond(send, 400)
         if session and session.connected and not session.client.is_connected():
             session.dead = True
             return await self.respond(send, 404)
@@ -319,16 +323,17 @@ class Gateway:
                                          "resources/read", "prompts/list", "prompts/get", "ping"}:
                         return await self.respond(send, 403)
                     if operation == "initialize":
-                        if session or params.get("protocolVersion") != PROTOCOL:
+                        version = params.get("protocolVersion")
+                        if session or not isinstance(version, str) or version not in PROTOCOLS:
                             return await self.respond(send, 400)
                         if len(self.sessions) + self.pending >= 2:
                             return await self.respond(send, 429)
                         self.pending += 1
                         fresh = True
-                        session = Session(principal, now, writes=self.allow_writes and write_scope)
+                        session = Session(principal, now, protocol=version, writes=self.allow_writes and write_scope)
                     elif session is None:
                         return await self.respond(send, 404)
-                    elif headers.get(b"mcp-protocol-version") != PROTOCOL.encode():
+                    elif headers.get(b"mcp-protocol-version") != session.protocol.encode():
                         return await self.respond(send, 400)
                     if operation == "tools/call":
                         if not isinstance(params.get("name"), str):
@@ -394,6 +399,13 @@ class Gateway:
                                      if message["type"] == "http.response.body")
             if response_body:
                 payload = json.loads(response_body)
+                if fresh and "error" not in payload:
+                    # The SDK negotiates the handshake; bind subsequent requests
+                    # to its result without enabling the modern stateless mode.
+                    negotiated = payload.get("result", {}).get("protocolVersion")
+                    if not isinstance(negotiated, str) or negotiated not in PROTOCOLS:
+                        raise ValueError("Unsupported negotiated protocol")
+                    session.protocol = negotiated
                 if "error" in payload or payload.get("result", {}).get("isError"):
                     response_body = json.dumps({"jsonrpc": "2.0", "id": payload.get("id"),
                         "error": {"code": -32603, "message": "Request failed"}}).encode()
