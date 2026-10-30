@@ -32,7 +32,8 @@ does not authorize merging or production operations.
 
 ## 🚀 Gateway promotion authorization
 
-Ordinary changes must merge through reviewed `main` before `env-prod` promotion.
+Ordinary changes must merge through reviewed `main`, with explicit owner approval
+for the merge, before separately authorized `env-prod` promotion.
 An explicitly owner-authorized quick deployment experiment must be reconciled
 back into `main` through review promptly. Preserve both histories and newer main
 work; never force-push for parity. Intentional unreleased main changes may remain

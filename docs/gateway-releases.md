@@ -22,7 +22,9 @@ they are not an approval to deploy an image with unresolved advisories.
 
 ## 🔒 Approval and prerequisites
 
-Source changes land through reviewed `main` first. If the owner explicitly
+Source changes land through reviewed `main` first, with explicit owner approval
+for each merge; review alone does not authorize merging or the later production
+promotion. If the owner explicitly
 authorizes a narrow deployment experiment outside that path, return its changes
 and history to `main` promptly through a reviewed PR before ordinary promotion
 resumes. Compare both ancestry and file contents: promotion merge commits can
