@@ -16,9 +16,10 @@ from test_production import ROOT, builder, environment, release
 
 
 class ContractTests(unittest.TestCase):
-    def assert_reviewed_gateway_profile(self, networks, addresses):
+    def assert_reviewed_gateway_profile(self, networks, addresses, *, central=False):
         legacy = {"macromapper-ingress", "notoli_default", "notoli_backend_private"}
-        if set(networks) == legacy:
+        if not central:
+            self.assertEqual(set(networks), legacy)
             expected = {"notoli_backend_private": "172.30.88.2"}
         else:
             self.assertEqual(
@@ -55,6 +56,7 @@ class ContractTests(unittest.TestCase):
                 "ynab_mcp_private": "172.30.89.2",
                 "mcp_auth_private": "172.30.92.2",
             },
+            central=True,
         )
 
     def test_gateway_profiles_reject_partial_unknown_or_wrong_trust(self):
@@ -83,11 +85,26 @@ class ContractTests(unittest.TestCase):
             (central, complete | {network: "172.30.99.2"}) for network in complete
         ]
         for networks, addresses in invalid:
-            with (
-                self.subTest(networks=networks, addresses=addresses),
-                self.assertRaises(AssertionError),
-            ):
-                self.assert_reviewed_gateway_profile(networks, addresses)
+            with self.subTest(networks=networks, addresses=addresses):
+                for central_mode in (False, True):
+                    with self.assertRaises(AssertionError):
+                        self.assert_reviewed_gateway_profile(
+                            networks, addresses, central=central_mode
+                        )
+
+    def test_gateway_profile_cannot_be_selected_by_changing_topology(self):
+        legacy = {"macromapper-ingress", "notoli_default", "notoli_backend_private"}
+        addresses = {"notoli_backend_private": "172.30.88.2"}
+        central = legacy | {"ynab_mcp_private", "mcp_auth_private"}
+        complete = addresses | {
+            "macromapper-ingress": "172.20.0.3",
+            "ynab_mcp_private": "172.30.89.2",
+            "mcp_auth_private": "172.30.92.2",
+        }
+        with self.assertRaises(AssertionError):
+            self.assert_reviewed_gateway_profile(central, complete)
+        with self.assertRaises(AssertionError):
+            self.assert_reviewed_gateway_profile(legacy, addresses, central=True)
 
     def test_bundle_remains_executable_offline_with_its_exact_app_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -125,8 +142,19 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
         if release.APP in {"notoli", "macromapper"}:
+            # Select the expected topology from the independent app mode, never
+            # from the network/address policy being checked. Canonical fixtures
+            # stay legacy; central app adoption must be an explicit config change.
+            if release.APP == "notoli":
+                mode = builder.FIXED.get("DJANGO_MCP_AUTH_MODE", "local")
+                self.assertIn(mode, {"local", "central"})
+                central = mode == "central"
+            else:
+                enabled = builder.FIXED.get("DJANGO_MCP_ENABLED", "0")
+                self.assertIn(enabled, {"0", "1"})
+                central = enabled == "1"
             self.assert_reviewed_gateway_profile(
-                policy["networks"], policy["addresses"]
+                policy["networks"], policy["addresses"], central=central
             )
         if release.APP == "notoli":
             self.assertEqual(

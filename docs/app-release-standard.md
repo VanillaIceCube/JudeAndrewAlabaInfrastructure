@@ -120,3 +120,8 @@ Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, sh
 Shared release test fixtures derive synthetic extra required settings from the
 selected app policy. This supplies no production default or credential: production
 bundles still reject missing, empty and multiline required values.
+The contract tests select the exact legacy or central gateway topology from the
+app's explicit MCP mode, independently of the network map under test. The canonical
+legacy fixtures retain their original three networks and one pinned address;
+central Notoli or enabled MacroMapper requires the reviewed five-network,
+four-address map. Changing topology alone cannot switch the expected profile.
