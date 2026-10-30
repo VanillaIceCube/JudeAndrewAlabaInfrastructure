@@ -226,6 +226,11 @@ class Flows(TestCase):
         self.assertEqual(response.status_code, 200)
         fields = Inputs(response.content).values
         fields["allow"] = "Authorize"
+        self.assertEqual(browser.post(
+            "/o/authorize/", fields, secure=True,
+            HTTP_ORIGIN="https://untrusted.example",
+            HTTP_REFERER="https://untrusted.example/consent",
+        ).status_code, 403)
         granted = browser.post("/o/authorize/", fields, secure=True, HTTP_REFERER=settings.ISSUER + "/o/authorize/")
         self.assertEqual(granted.status_code, 302)
         self.assertIn("code=", granted["Location"])
@@ -290,6 +295,17 @@ class Flows(TestCase):
             response = self.client.get("/health/ready")
             self.assertEqual(response.status_code, 503)
             self.assertEqual(response.json(), {"status": "unavailable"})
+
+
+class InitialReadiness(TestCase):
+    def test_migrated_empty_issuer_is_ready_before_closed_owner_bootstrap(self):
+        self.assertFalse(User.objects.exists())
+        self.assertFalse(Application.objects.exists())
+        response = self.client.get("/health/ready")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ready"})
+        with patch("auth_service.views.signing_key", side_effect=ValueError("synthetic")):
+            self.assertEqual(self.client.get("/health/ready").status_code, 503)
 
 
 class RestartPersistence(TransactionTestCase):
