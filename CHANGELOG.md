@@ -18,6 +18,8 @@
 - Validate enabled MacroMapper MCP origin, exact gateway trust and readiness in
   canonical release contract tests while retaining disabled generic app coverage;
   synchronize consumers through the regenerated shared-source manifest.
+- Use GPT-6 Luna for all OpenAI PR reviewers and security-alert grouping while
+  preserving existing review gates, isolated credentials and token budgets.
 
 - Retire external MCP application build/runtime source, disposable experiments
   and their CI first; retain existing deployment controllers and inputs for the

@@ -84,3 +84,7 @@ manual owner merge. A human PR smoke test does not prove Dependabot access.
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli and MacroMapper route MCP/discovery to their own backends; advertise each service only after its app registry and OAuth readiness pass. Preserve independent releases and exact app proxy trust.
+
+## 🤖 Reviewer model policy
+
+Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
