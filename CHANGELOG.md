@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Supply synthetic app-specific required secrets only in disposable shared release
+  fixtures; retain production missing/empty/malformed input rejection.
 - Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
   test actual canonical staging with synthetic protected files in Linux CI.
 - Separate YNAB stop-only containment from freshly scanned active-image rollback;
