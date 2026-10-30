@@ -2,6 +2,10 @@
 
 This is the ordered operator procedure for #56/#62/#71. It composes the existing
 gateway, issuer and YNAB controllers; it is not a new deployment framework.
+The [owner's revised window](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/56#issuecomment-6515846399)
+requires full YNAB capabilities, including explicitly consented writes, and ends
+after YNAB acceptance plus regression checks of Notoli, MacroMapper and existing
+Notoli MCP. The later application migrations below remain deferred.
 Before each production mutation, record the exact operation (or precisely
 enumerated coordinated operation set), source, registry digests, designated
 operator and owner authorization in [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4),
@@ -115,7 +119,10 @@ tokens issued here. See [YNAB's official token instructions](https://api.ynab.co
 
 1. Follow [YNAB releases](ynab-releases.md) to stage and promote the paired
    gateway/egress artifacts with fresh scans, matched private files and unchanged
-   companion identities. Confirm `YNAB_ALLOW_WRITES=0` in effective runtime.
+   companion identities. Provision the protected persistent upstream journal and
+   confirm the reviewed `YNAB_ALLOW_WRITES=1` capability in effective runtime.
+   Client grants still require explicit `ynab:read ynab:write` consent for writes;
+   read-only grants must retain read-only children and deny all write dispatch.
 2. Promote `MCP_AUTH_ROUTE_PROFILE=enabled` with `YNAB_ROUTE_PROFILE=disabled`;
    verify issuer discovery and login over public and origin TLS. Then promote
    `YNAB_ROUTE_PROFILE=enabled` while keeping `MCP_AUTH_ROUTE_PROFILE=enabled`
@@ -124,8 +131,12 @@ tokens issued here. See [YNAB's official token instructions](https://api.ynab.co
    resource metadata and private no-store policy. Keep ordinary app checks green.
 3. In **both ChatGPT and Codex**, configure the remote YNAB endpoint with its
    registered client, complete owner login/consent and initialize a fresh MCP
-   session. List tools, prove write/admin tools absent, and perform a minimal
-   read such as budget-list counts. Select the intended budget in the client;
+   session. Verify the full pinned tool/resource/prompt surface, explicit write
+   consent, and a minimal read such as budget-list counts. Check a read-only grant
+   cannot write or reuse a write-authorized session. Preserve upstream preview,
+   exact-value confirmation, single-use/expiry and recovery safeguards. Synthetic
+   tests cover writes and journal survival; any live financial test requires the
+   owner's specific intended change, preview and confirmation. Select the intended budget in the client;
    do not invent an unsupported upstream budget environment variable.
 4. Verify client/resource separation and revocation using the maintained OAuth
    flow. Record only statuses, counts and timing in acceptance evidence. Never
@@ -140,7 +151,7 @@ Use the current CLI's explicit client/resource options:
 codex mcp add ynab --url https://ynab.judeandrewalaba.com/mcp \
   --oauth-client-id ynab-codex \
   --oauth-resource https://ynab.judeandrewalaba.com/mcp
-codex mcp login ynab --scopes ynab:read
+codex mcp login ynab --scopes ynab:read,ynab:write
 ```
 
 Register the exact callback shown by the installed client; callback paths may be
@@ -152,12 +163,20 @@ OAuth and the distinct `ynab-chatgpt` public client. Copy the actual callback fr
 that client's setup screen. If the account's client does not expose the necessary
 custom MCP/OAuth controls, record that capability blocker; do not substitute an
 API token or claim the Codex result proves ChatGPT support.
+Request both `ynab:read` and `ynab:write` in ChatGPT's scope field; reconnect and
+consent again when upgrading an existing read-only grant. Enabling capability
+does not constitute consent to any particular financial change.
 
 Owner interaction is required for actual client login/consent. A synthetic token
 exchange, direct stdio test or private health probe cannot substitute for either
 client's real acceptance. Keep #62 open until both clients are proven.
 
 ## 🧩 Independent application follow-through
+
+**Deferred in the current owner-authorized window.** After YNAB, verify ordinary
+Notoli/MacroMapper health and the existing Notoli MCP connection, record capacity
+and recovery status, and stop. Do not promote either application's migration as
+part of the revised YNAB-only finish. The following is retained for a later window.
 
 After YNAB acceptance, follow Notoli #973's MCP-only migration and its app-owned
 runbook. Register the dedicated introspector/client resources, explicitly link
