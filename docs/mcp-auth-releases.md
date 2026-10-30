@@ -60,6 +60,14 @@ snapshot. Management containers are recorded before start and restricted to the
 matched image/files. Migrations, deployment checks and migration-drift checks
 precede starting only `authorization` with no dependencies or pulls.
 
+Runtime verification follows Compose's image-default semantics: omitted or null
+`entrypoint`/`command` inherit the image process; an explicit entrypoint clears
+the image's default command unless a command is supplied. Compare the resulting
+process exactly. A null serialization is not permission to accept an arbitrary
+entrypoint or command. If an older controller rejected this representation after
+startup, retain the pending barrier and use the reviewed controller's explicit
+contained recovery; do not hand-edit records or rerun initial deployment.
+
 Django deployment checks use its `ERROR` threshold. Expected warnings remain
 visible in private management evidence: DOTW008 concerns the permitted literal
 RFC8252 loopback callbacks (the registration validator rejects other HTTP hosts),

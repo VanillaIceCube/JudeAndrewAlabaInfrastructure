@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Honor Compose null image-default entrypoint/command inheritance in issuer
+  runtime verification, preserving exact process checks and pending recovery.
 - Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
   package assessment and TLS, gzip, streaming, DNS and recovery validation.
 - Require strict issuer readiness for active central MCP consumers, preserve
