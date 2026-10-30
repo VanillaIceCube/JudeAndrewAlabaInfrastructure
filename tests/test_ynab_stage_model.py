@@ -1,4 +1,4 @@
-"""Real canonical Compose staging and secret preflight; no daemon mutations."""
+"""Canonical Compose staging and isolated service-user file-read proof."""
 import copy
 import json
 import os
@@ -25,6 +25,8 @@ class CanonicalStageModel(unittest.TestCase):
         self.root.chmod(0o700)
         for name in ("releases", "records", "attempts", "inputs"):
             (self.root / name).mkdir(mode=0o700)
+        (self.root / "data").mkdir(mode=0o700)
+        os.chown(self.root / "data", 65532, 65532)
         self.addCleanup(setattr, release.common, "DIAGNOSTICS", release.common.DIAGNOSTICS)
         self.app = release.Release(self.root)
         self.source = "a" * 40
@@ -78,7 +80,7 @@ class CanonicalStageModel(unittest.TestCase):
                 "PidsLimit": expected["pids_limit"], "NanoCpus": round(float(expected["cpus"]) * 1e9),
                 "RestartPolicy": {"Name": "no"}},
                 "Config": {"User": expected["user"], "Env":
-                    ["YNAB_ALLOW_WRITES=0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"] if role == "gateway" else []},
+                    ["YNAB_ALLOW_WRITES=" + release.write_mode(expected), "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"] if role == "gateway" else []},
                 "Mounts": [{"Type": "bind", "Destination": mount["target"], "Source": mount["source"],
                             "RW": not mount.get("read_only", False)} for mount in expected["volumes"]],
                 "networks": {model["networks"][key]["name"]: value["ipv4_address"] for key, value in expected["networks"].items()},
@@ -104,11 +106,55 @@ class CanonicalStageModel(unittest.TestCase):
         with patch.object(release, "runtime", return_value=live), patch.object(release.common, "inspect",
                 side_effect=lambda kind, image: {"Id": "synthetic-" + next(role for role in self.images if self.images[role] == image)}):
             self.app.ownership([record])
+            self.assertEqual(release.write_mode(model["services"]["gateway"]), "1")
+            self.assertEqual(record["journal"], self.app.journal_identity())
+            self.assertIn({"Type": "bind", "Destination": "/data", "Source": str(self.root / "data"), "RW": True},
+                          live["gateway"]["Mounts"])
+            with patch.dict(live["gateway"]["Config"], {"Env": ["YNAB_ALLOW_WRITES=0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"]}), \
+                    self.assertRaisesRegex(release.common.ReleaseError, "ownership"):
+                self.app.ownership([record])
             for role in release.NAMES:
                 live[role]["HostConfig"]["Memory"] += 1
                 with self.assertRaisesRegex(release.common.ReleaseError, "ownership"):
                     self.app.ownership([record])
                 live[role]["HostConfig"]["Memory"] -= 1
+
+    def test_journal_directory_must_be_provisioned_and_retains_identity(self):
+        journal = self.root / "data"
+        journal.chmod(0o755)
+        with self.assertRaisesRegex(release.common.ReleaseError, "journal directory"):
+            self.stage()
+        journal.chmod(0o700)
+        record = self.stage()
+        journal.rename(self.root / "retained-journal")
+        journal.mkdir(mode=0o700)
+        os.chown(journal, 65532, 65532)
+        with self.assertRaisesRegex(release.common.ReleaseError, "directory changed"):
+            self.app.directory(record)
+        journal.rmdir()
+        journal.symlink_to(self.root / "retained-journal", target_is_directory=True)
+        with self.assertRaisesRegex(release.common.ReleaseError, "journal directory"):
+            self.app.directory(record)
+
+    def test_staged_proxy_policy_is_readable_only_by_its_service_user(self):
+        record = self.stage()
+        policy = Path(record["directory"]) / "squid.conf"
+        info = policy.stat()
+        self.assertEqual((info.st_uid, info.st_gid, info.st_mode & 0o777), (13, 13, 0o400))
+        image = "python@sha256:623674a14ef93d052bb9b0de4dbf5f28eb578a35263838941cc8aa43213c1487"
+        command = ["docker", "run", "--rm", "--pull", "never", "--network", "none",
+            "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+            "--user", "13:13", "--memory", "32m", "--memory-swap", "32m", "--pids-limit", "16",
+            "--mount", f"type=bind,source={policy},target=/policy.conf,readonly", image,
+            "python", "-c", "from pathlib import Path; assert 'http_access deny all' in Path('/policy.conf').read_text()"]
+        result = self.real_run(command, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Reproduce the old root-only staging defect with the same mounted file.
+        os.chown(policy, 0, 0)
+        policy.chmod(0o600)
+        result = self.real_run(command, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PermissionError", result.stderr)
 
     def test_invalid_secret_metadata_fails_before_compose(self):
         self.secrets["ynab_api_token"].chmod(0o600)

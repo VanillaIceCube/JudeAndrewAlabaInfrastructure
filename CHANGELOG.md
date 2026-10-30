@@ -4,6 +4,13 @@
 
 ### Changed
 
+- Give the staged YNAB egress policy its service-owned read-only permissions,
+  preserving private release parents and exact matched-file recovery checks.
+- Enable explicitly consented full YNAB MCP access with separate read/write scopes,
+  preserved upstream previews and a persistent operation journal that code/image
+  rollback never rewinds. End the current rollout after YNAB and existing-app checks.
+- Honor Compose null image-default entrypoint/command inheritance in issuer
+  runtime verification, preserving exact process checks and pending recovery.
 - Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
   package assessment and TLS, gzip, streaming, DNS and recovery validation.
 - Require strict issuer readiness for active central MCP consumers, preserve

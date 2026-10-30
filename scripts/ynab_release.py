@@ -1,4 +1,4 @@
-"""Owner-operated, stateless YNAB-only Linux release/recovery transaction.
+"""Owner-operated YNAB-only Linux release/recovery transaction.
 
 Uses existing durable/private/lock/Docker primitives. No database, ingress,
 network lifecycle, automatic deployment trigger or financial request is owned here.
@@ -60,6 +60,12 @@ def files_identity(directory):
                 info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode),
                 hashlib.sha256(path.read_bytes()).hexdigest()]
     return result
+
+
+def write_mode(service):
+    value = service.get("environment", {}).get("YNAB_ALLOW_WRITES", "0")
+    require(value in {"0", "1"}, "Invalid financial write capability")
+    return value
 
 
 def source_files(source):
@@ -153,6 +159,25 @@ class Release:
         common.DIAGNOSTICS.mkdir(mode=0o700, exist_ok=True)
         common.private(common.DIAGNOSTICS)
 
+    def journal_identity(self):
+        # Existing upstream journal storage is provisioned by the operator, never
+        # created, rewound, erased or copied by a code/image release or rollback.
+        path = self.root / "data"
+        info = path.lstat()
+        require(stat.S_ISDIR(info.st_mode) and path.resolve() == path
+                and info.st_uid == 65532 and info.st_gid == 65532
+                and stat.S_IMODE(info.st_mode) == 0o700, "Unsafe persistent YNAB journal directory")
+        return {"path": str(path), "device": info.st_dev, "inode": info.st_ino}
+
+    def journal_binding(self, service):
+        mounts = [v for v in service.get("volumes", []) if v.get("target") == "/data"]
+        require(len(mounts) == 1 and mounts[0].get("type") == "bind"
+                and mounts[0].get("source") == str(self.root / "data")
+                and mounts[0].get("read_only", False) is False
+                and mounts[0].get("bind", {}).get("create_host_path", False) is False,
+                "Matched persistent YNAB journal bind required")
+        return self.journal_identity()
+
     def directory(self, record):
         path = Path(record["directory"])
         require(path.parent == self.root / "releases" and common.SHA.fullmatch(record["source"]), "Invalid release record")
@@ -162,6 +187,9 @@ class Release:
         require(set(services) == set(NAMES) and record.get("images") == {
             role: service.get("image") for role, service in services.items()},
             "Artifact references differ from matched Compose model")
+        if write_mode(services["gateway"]) == "1":
+            require(record.get("journal") == self.journal_binding(services["gateway"]),
+                    "Persistent YNAB journal directory changed")
         return path
 
     def current(self):
@@ -194,15 +222,15 @@ class Release:
                     and set(host.get("CapDrop") or []) == {"ALL"} and not host.get("CapAdd") and
                     host.get("SecurityOpt") in (["no-new-privileges"], ["no-new-privileges:true"]),
                     "Unsafe app container drift")
-            if service == "gateway":
-                ynab = [value for value in live["Config"].get("Env", []) if value.startswith("YNAB_")]
-                require(sorted(ynab) == ["YNAB_ALLOW_WRITES=0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"], "Unsafe financial environment")
             binds = {(mount["Destination"], mount["Source"], not mount["RW"])
                      for mount in live["Mounts"] if mount["Type"] == "bind"}
             require(all(mount["Type"] in {"bind", "tmpfs"} for mount in live["Mounts"]), "Unexpected persistent volume")
             matched = False
             for record, model in choices:
                 expected = model["services"][service]
+                environment_match = service != "gateway" or sorted(
+                    value for value in live["Config"].get("Env", []) if value.startswith("YNAB_")) == [
+                        "YNAB_ALLOW_WRITES=" + write_mode(expected), "YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1"]
                 network_key, alias = ("route", "ynab-mcp-gateway") if service == "gateway" else ("egress_private", "ynab-egress")
                 require(alias in expected["networks"][network_key].get("aliases", []), "Missing required app DNS alias")
                 image_id = common.inspect("image", record["images"][service])["Id"]
@@ -218,7 +246,7 @@ class Release:
                     host.get("NanoCpus", 0) == round(float(expected.get("cpus", 0)) * 1_000_000_000) and
                     host.get("RestartPolicy", {}).get("Name") == expected["restart"])
                 if (live["Image"] == image_id and binds == mounts and live["Config"]["User"] == expected["user"]
-                        and network_match and aliases_match and (not strict_limits or limits_match)):
+                        and environment_match and network_match and aliases_match and (not strict_limits or limits_match)):
                     matched = True
             require(matched, "Container differs from old/candidate release ownership")
 
@@ -247,6 +275,10 @@ class Release:
         for name, content in recipe.items():
             (directory / name).write_text(content)
             (directory / name).chmod(0o600)
+        # Docker resolves the private host parent; the non-root Squid process
+        # still needs permission to read the individual read-only bind mount.
+        os.chown(directory / "squid.conf", 13, 13)
+        (directory / "squid.conf").chmod(0o400)
         secret_root = directory / "secrets"
         secret_root.mkdir(mode=0o700)
         for name, path in secrets.items():
@@ -260,7 +292,8 @@ class Release:
             environment["YNAB_" + role.upper() + "_REPOSITORY"] = repository
             environment["YNAB_" + role.upper() + "_SHA256"] = digest
         environment.update(YNAB_TOKEN_FILE=str(secret_root / SECRET_NAMES[0]),
-            YNAB_GATEWAY_IDENTITY_FILE=str(secret_root / SECRET_NAMES[1]), YNAB_OAUTH_PUBLIC_KEY_FILE=str(secret_root / SECRET_NAMES[2]))
+            YNAB_GATEWAY_IDENTITY_FILE=str(secret_root / SECRET_NAMES[1]), YNAB_OAUTH_PUBLIC_KEY_FILE=str(secret_root / SECRET_NAMES[2]),
+            YNAB_JOURNAL_DIR=str(self.root / "data"))
         result = subprocess.run(["docker", "compose", "--env-file", "/dev/null", "-p", PROJECT,
             "-f", str(directory / "compose.yml"), "-f", str(directory / "network.compose.yml"),
             "--profile", "manual-gateway", "config", "--format", "json"], env=environment, capture_output=True, text=True, timeout=30)
@@ -278,10 +311,11 @@ class Release:
                     "Invalid parsed app memory limit")
             service["mem_limit"] = int(memory)
             require(service["mem_limit"] > 0, "Invalid parsed app memory limit")
+        journal = self.journal_binding(model["services"]["gateway"]) if write_mode(model["services"]["gateway"]) == "1" else None
         common.atomic(directory / "model.json", model)
         common.durable_tree(directory)
         return {"id": directory.name, "source": source, "directory": str(directory), "images": images,
-                "files": files_identity(directory)}
+                "files": files_identity(directory), **({"journal": journal} if journal is not None else {})}
 
     def deploy(self, source, images, secrets, *, initial=False):
         require(not (self.root / "pending.json").exists(), "Pending release blocks retry; recover explicitly")

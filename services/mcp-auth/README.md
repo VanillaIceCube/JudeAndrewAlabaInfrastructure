@@ -10,7 +10,7 @@ Normal Notoli and MacroMapper login remains application-owned.
 
 | Resource | Public clients | Allowed scopes | Introspection client |
 | --- | --- | --- | --- |
-| `https://ynab.judeandrewalaba.com/mcp` | `ynab-chatgpt`, `ynab-codex` | `ynab:read` | None; offline pinned RSA key |
+| `https://ynab.judeandrewalaba.com/mcp` | `ynab-chatgpt`, `ynab-codex` | `ynab:read`, `ynab:write` | None; offline pinned RSA key |
 | `https://notoli.judeandrewalaba.com/mcp` | `notoli-chatgpt`, `notoli-codex` | `notoli:read`, `notoli:write`, `notoli:organize`, `notoli:notifications`, `notoli:delete`, `notoli:share` | `notoli-introspection` |
 | `https://macromapper.judeandrewalaba.com/mcp` | `macromapper-chatgpt`, `macromapper-codex` | `macromapper:read`, `macromapper:write` | `macromapper-introspection` |
 
@@ -18,6 +18,13 @@ YNAB clients share one explicitly registered owner UUID. Application consumers
 must separately map the immutable issuer UUID to an active local account and
 enforce their existing permissions. A central account creates no application
 membership. Cross-resource scopes, grants and introspection are rejected.
+
+YNAB grants default to `ynab:read`. Write access requires an explicit request for
+both `ynab:read ynab:write` and owner consent; refreshing a read-only grant cannot
+add write permission. The gateway separately requires its reviewed deployment
+write capability and preserves upstream exact-preview/human-confirmation checks.
+Existing client registrations remain valid; no account or callback replacement
+is needed when introducing the additional scope.
 
 There is no signup, dynamic registration, client metadata URL fetching, general
 identity platform, password grant, implicit grant or machine token issuance.
