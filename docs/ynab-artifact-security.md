@@ -61,6 +61,9 @@ packages instead of copying untracked libraries. APK and dpkg databases cannot
 be mixed; the scanner family must match the native database. Alpine support is
 limited to the gateway role, requires musl/libgcc/libstdc++ and complete native
 coverage, and retains the existing inventory floor and all vulnerability gates.
+Alpine coverage compares `Name` and complete installed `Version` (including APK
+revision); Debian/Ubuntu retain full package-ID epoch/revision comparison. Scanner
+bookkeeping IDs are not a substitute for matching every native package version.
 
 Repository CI tests the fail-closed policy without metadata requests. This
 prerequisite does not silently label the currently vulnerable candidate clean or

@@ -23,6 +23,8 @@ services:
     restart: "no"
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=8m,uid=13,gid=13,mode=0700
+      - /var/log/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
+      - /var/spool/squid:rw,noexec,nosuid,size=1m,uid=13,gid=13,mode=0700
     volumes:
       - ./squid.conf:/etc/squid/squid.conf:ro
     networks:
