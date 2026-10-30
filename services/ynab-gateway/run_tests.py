@@ -32,13 +32,14 @@ def cleanup(identity):
     if containers:
         subprocess.run(["docker", "rm", "-f", *containers], check=False, timeout=30)
     subprocess.run(["docker", "volume", "rm", identity + "-secret"], check=False, timeout=30)
+    subprocess.run(["docker", "volume", "rm", identity + "-journal"], check=False, timeout=30)
     subprocess.run(["docker", "image", "rm", identity + ":fixture"], check=False, timeout=30)
     subprocess.run(["docker", "image", "rm", identity + ":egress-fixture"], check=False, timeout=30)
 
 
 PREPARE = """
 from pathlib import Path
-import json, os
+import json, os, hashlib
 from fastmcp.server.auth.providers.jwt import RSAKeyPair
 from joserfc import jwk, jwt
 import time
@@ -47,15 +48,25 @@ root=Path('/run/secrets')
 config={'issuer':'https://issuer.fixture.example','owner':'owner-fixture','clients':['client-fixture']}
 for name,value in [('gateway_identity.json',json.dumps(config)),('oauth_public_key.pem',pair.public_key),('ynab_api_token','synthetic-fixture-only')]:
  p=root/name; p.write_text(value); p.chmod(0o400); os.chown(p,65532,65532)
-claims={'iss':config['issuer'],'sub':config['owner'],'client_id':'client-fixture','aud':'https://ynab.judeandrewalaba.com/mcp','iat':int(time.time()),'exp':int(time.time())+300,'scope':'ynab:read'}
-print(jwt.encode({'alg':'RS256','typ':'at+jwt'},claims,jwk.import_key(pair.private_key.get_secret_value(),'RSA'),algorithms=['RS256']))
+data=Path('/data');data.chmod(0o700);os.chown(data,65532,65532)
+journal=data/'.ynab-mcp-undo.json'
+journal.write_text(json.dumps([{'id':'synthetic-retained','tenant_id':hashlib.sha256(b'synthetic-fixture-only').hexdigest(),'tool':'create_transaction','undoable':False}]))
+journal.chmod(0o600);os.chown(journal,65532,65532)
+claims={'iss':config['issuer'],'sub':config['owner'],'client_id':'client-fixture','aud':'https://ynab.judeandrewalaba.com/mcp','iat':int(time.time()),'exp':int(time.time())+300}
+key=jwk.import_key(pair.private_key.get_secret_value(),'RSA')
+print(json.dumps({name:jwt.encode({'alg':'RS256','typ':'at+jwt'},{**claims,'scope':scope},key,algorithms=['RS256']) for name,scope in [('read','ynab:read'),('write','ynab:read ynab:write')]}))
 """
 
 PROBE = """
 import json, sys, time, urllib.request, urllib.error
-token=sys.stdin.read().strip()
+tokens=json.loads(sys.stdin.read());token=tokens['read'];writes=sys.argv[1]=='1'
 base='http://127.0.0.1:8000'
+calls=0
 def request(path,body=None,authorized=False,sid=None):
+ global calls
+ if path=='/mcp':
+  calls+=1
+  if calls>4:time.sleep(2.1)
  headers={'Host':'ynab.judeandrewalaba.com','Accept':'application/json, text/event-stream'}
  if authorized: headers['Authorization']='Bearer '+token
  if sid: headers.update({'MCP-Session-ID':sid,'MCP-Protocol-Version':'2025-11-25'})
@@ -80,23 +91,42 @@ status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':2,'method':'tools/li
 names={tool['name'] for tool in payload['result']['tools']}
 assert status==200 and 'list_budgets' in names and 'create_payee' not in names
 assert request('/mcp',{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'create_payee','arguments':{}}},True,sid)[0]==403
-print('Production ENTRYPOINT: private readiness, real Node policy/upstream initialize/list, anonymous rejection and write denial passed without network')
+if writes:
+ token=tokens['write']
+ assert request('/mcp',{'jsonrpc':'2.0','id':4,'method':'tools/list'},True,sid)[0]==404
+ status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'write-entrypoint-fixture','version':'1'}}},True)
+ assert status==200
+ sid=headers['MCP-Session-ID']
+ assert request('/mcp',{'jsonrpc':'2.0','method':'notifications/initialized'},True,sid)[0]==202
+ status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':2,'method':'tools/list'},True,sid)
+ assert status==200 and {'create_payee','preview_write_tool','undo_operation','resume_operation'} <= {tool['name'] for tool in payload['result']['tools']}
+ status,headers,payload=request('/mcp',{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'list_undo_history','arguments':{}}},True,sid)
+ assert status==200
+ history=payload['result'].get('structuredContent',{}).get('result') or json.loads(payload['result']['content'][0]['text'])
+ assert history['entries'][0]['id']=='synthetic-retained'
+print('Production ENTRYPOINT: private readiness, actual Node policy/discovery, scoped denial and persistent history passed without financial/network requests')
 """
 
 
 def production_entrypoint(identity, image):
     volume = identity + "-secret"
+    journal = identity + "-journal"
     run(["docker", "volume", "create", "--label", LABEL + "=" + identity, volume], capture_output=True)
+    run(["docker", "volume", "create", "--label", LABEL + "=" + identity, journal], capture_output=True)
     token = run(["docker", "run", "--rm", "--label", LABEL + "=" + identity, "--network", "none",
                  "--read-only", "--user", "0", "--mount", "type=volume,source=" + volume + ",target=/run/secrets",
+                 "--mount", "type=volume,source=" + journal + ",target=/data",
                  "--entrypoint", "/usr/local/bin/python", image, "-c", PREPARE], capture_output=True, text=True).stdout.strip()
-    name = identity + "-production"
-    run(["docker", "run", "-d", "--name", name, "--label", LABEL + "=" + identity,
-         "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-         "--pids-limit", "64", "--memory", "512m", "--cpus", "0.5", "--tmpfs",
-         "/tmp:rw,noexec,nosuid,size=32m,uid=65532,gid=65532,mode=0700", "--mount",
-         "type=volume,source=" + volume + ",target=/run/secrets,readonly", image], capture_output=True)
-    run(["docker", "exec", "-i", name, "/usr/local/bin/python", "-c", PROBE], input=token, text=True)
+    for attempt, writes in enumerate((False, True, True)):
+        name = identity + "-production-" + str(attempt)
+        extra = ["-e", "YNAB_ALLOW_WRITES=1", "--mount", "type=volume,source=" + journal + ",target=/data"] if writes else []
+        run(["docker", "run", "-d", "--name", name, "--label", LABEL + "=" + identity,
+             "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+             "--pids-limit", "64", "--memory", "512m", "--cpus", "0.5", "--tmpfs",
+             "/tmp:rw,noexec,nosuid,size=32m,uid=65532,gid=65532,mode=0700", "--mount",
+             "type=volume,source=" + volume + ",target=/run/secrets,readonly", *extra, image], capture_output=True)
+        run(["docker", "exec", "-i", name, "/usr/local/bin/python", "-c", PROBE, "1" if writes else "0"], input=token, text=True)
+        run(["docker", "rm", "-f", name], capture_output=True)
 
 
 def main(identity):
@@ -114,7 +144,7 @@ def main(identity):
             fixture_env = dict(os.environ, YNAB_GATEWAY_REPOSITORY="ghcr.io/fixture/gateway", YNAB_GATEWAY_SHA256="a" * 64,
                 YNAB_EGRESS_REPOSITORY="ghcr.io/fixture/egress", YNAB_EGRESS_SHA256="b" * 64,
                 YNAB_TOKEN_FILE="/synthetic/token", YNAB_GATEWAY_IDENTITY_FILE="/synthetic/identity",
-                YNAB_OAUTH_PUBLIC_KEY_FILE="/synthetic/public-key")
+                YNAB_OAUTH_PUBLIC_KEY_FILE="/synthetic/public-key", YNAB_JOURNAL_DIR="/synthetic/journal")
             model = json.loads(run(["docker", "compose", "-f", str(ROOT / "services/ynab-gateway/compose.yml"),
                 "-f", str(ROOT / "services/ynab-gateway/network.compose.yml"), "--profile", "manual-gateway",
                 "config", "--format", "json"], env=fixture_env, capture_output=True, text=True).stdout)

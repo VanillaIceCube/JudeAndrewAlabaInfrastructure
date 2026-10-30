@@ -165,6 +165,31 @@ class Flows(TestCase):
                                     content_type="application/x-www-form-urlencoded", HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, 400)
 
+    def test_ynab_writes_require_explicit_consent_and_cannot_escalate_refresh(self):
+        readonly = self.issue("ynab-chatgpt")
+        claims = jwt.decode(readonly["access_token"], signing_key().public_key(), algorithms=["RS256"],
+                            audience=settings.YNAB_RESOURCE, issuer=settings.ISSUER)
+        self.assertEqual(claims["scope"], "ynab:read")
+        escalated = self.post_token(grant_type="refresh_token", client_id="ynab-chatgpt",
+            refresh_token=readonly["refresh_token"], scope="ynab:read ynab:write")
+        self.assertEqual(escalated.status_code, 400)
+        for client in ("ynab-chatgpt", "ynab-codex"):
+            requested = self.authorization(client, scope="ynab:read ynab:write")
+            consent = self.browser.get("/o/authorize/", requested, secure=True)
+            self.assertContains(consent, "explicit confirmation")
+            code, callback = self.code(client, scope="ynab:read ynab:write")
+            issued = self.post_token(grant_type="authorization_code", client_id=client,
+                code=code, redirect_uri=callback, code_verifier=self.verifier)
+            self.assertEqual(issued.status_code, 200, issued.content)
+            claims = jwt.decode(issued.json()["access_token"], signing_key().public_key(), algorithms=["RS256"],
+                                audience=settings.YNAB_RESOURCE, issuer=settings.ISSUER)
+            self.assertEqual(set(claims["scope"].split()), {"ynab:read", "ynab:write"})
+            self.assertEqual(claims["client_id"], client)
+            self.assertEqual(claims["sub"], str(self.owner.pk))
+        for client, scope in (("ynab-chatgpt", "ynab:write"), ("notoli-chatgpt", "notoli:read ynab:write")):
+            rejected = self.browser.get("/o/authorize/", self.authorization(client, scope=scope), secure=True)
+            self.assertNotEqual(rejected.status_code, 200)
+
     def test_three_resource_introspection_and_refresh_isolation(self):
         all_tokens = {name: self.issue(name + "-chatgpt") for name in ("ynab", "notoli", "macromapper")}
         for caller, secret in (("notoli", self.secret), ("macromapper", self.macro_secret)):

@@ -53,8 +53,9 @@ Docker network. The tests remove only their uniquely named image/secret volume.
 The existing validation job runs this suite under a five-minute bound. Real
 upstream stdio initialization/discovery runs with a fixed synthetic token,
 network disabled, root filesystem read-only, no published ports, uid 65532,
-dropped capabilities and bounded CPU/RAM/PIDs. Tests check financial-write tools
-are hidden, missing secrets/unsafe overrides fail closed, errors contain no
+dropped capabilities and bounded CPU/RAM/PIDs. Tests check default financial-write
+denial, explicit write-mode discovery, persistent journal retention across recreated
+containers, and corrupt/unsafe journal rejection. Missing secrets/unsafe overrides fail closed, errors contain no
 secret values, and app-only Compose has no shared mounts/networks/ports. No real
 API request or financial mutation occurs.
 
@@ -67,9 +68,12 @@ privileged. Compose file-backed secrets preserve the host file's ownership and
 mode: `uid`/`mode` declarations are not a substitute for operator verification.
 Never use an actual token in a build, CI, GitHub setting, issue, artifact or image.
 
-The entrypoint refuses inline `YNAB_API_TOKEN`, 1Password lookup, autostart bypass,
-write-enable or agent-config fallback overrides, fixes `YNAB_ALLOW_WRITES=0` and
-`YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1`, and removes `SENTRY_DSN`. Errors are generic;
+The entrypoint refuses inline `YNAB_API_TOKEN`, 1Password lookup, autostart bypass
+and agent-config fallback overrides. `YNAB_ALLOW_WRITES` accepts only explicit
+`0` or `1` and defaults to `0`; write mode additionally requires `HOME=/data` and
+the protected persistent journal directory. The gateway derives each child's mode
+from its authorized session, never caller tool arguments. The entrypoint fixes
+`YNAB_DISABLE_AGENT_CONFIG_FALLBACK=1` and removes `SENTRY_DSN`. Errors are generic;
 Docker log storage is disabled. The future gateway must not log child stderr,
 tool arguments/results, session/preview tokens or budget records.
 
@@ -100,11 +104,17 @@ Notoli/MacroMapper networks or publishing a host port. Limits are 256 MiB,
 
 ## 💾 State, rotation and recovery
 
-Read-only mode requires no financial write/undo volume. HOME is temporary;
-no agent HOME, real journal, database or host data directory is mounted. Future
-write support requires separate approval, an owner-private persistent undo/
-operation journal, encryption/retention and matched recovery testing; an empty
-ephemeral journal cannot stand in for recovery evidence.
+The inactive standalone profile stays read-only with temporary HOME and no journal
+mount. The owner-approved write-capable gateway profile uses unchanged upstream
+file storage under `/data/.ynab-mcp-undo.json`. `/data` must be a regular directory
+owned by uid/gid65532, mode0700; an existing journal must be a regular non-symlink
+uid65532 file, mode0600, containing a JSON array. Corrupt/unreadable evidence is
+never replaced with an empty journal. Upstream supplies atomic replacement, fsync,
+cross-process locking, exact previews and durable multi-step recovery; no fork or
+replacement protocol/journal engine is introduced. Treat journal contents and
+unfinished operation records as private financial data under existing backup and
+retention procedures. Keep the persistent namespace across code/image rollback;
+restoring stale local history cannot undo external financial changes.
 
 Rotation/revocation is private operator work: revoke the old YNAB credential,
 prepare/validate the replacement outside CI, and recreate the affected runtime/
@@ -120,4 +130,6 @@ the separately approved production operator plan.
 Upgrades require a reviewed upstream tag/commit/package/lock and base-image pin
 change, byte-parity/audit/container tests, the #57 session/preview proof, and
 fresh image evidence. Never modify the upstream lock or silently override a
-dependency to get a green scan. Read-only configuration remains mandatory.
+dependency to get a green scan. Image/standalone defaults remain read-only; public
+write enablement additionally requires the gateway's explicit OAuth write grant
+and existing preview/confirmation controls.

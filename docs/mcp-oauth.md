@@ -15,7 +15,7 @@ REST JWT authentication remain application-owned.
 
 | Application | Exact resource | Token validation | Scopes |
 | --- | --- | --- | --- |
-| YNAB | `https://ynab.judeandrewalaba.com/mcp` | Offline pinned RS256 public key, fixed owner and clients | `ynab:read` |
+| YNAB | `https://ynab.judeandrewalaba.com/mcp` | Offline pinned RS256 public key, fixed owner and clients | `ynab:read`, explicit `ynab:write` |
 | Notoli | `https://notoli.judeandrewalaba.com/mcp` | Authenticated, uncached issuer introspection plus explicit local user link | Existing six `notoli:*` scopes |
 | MacroMapper | `https://macromapper.judeandrewalaba.com/mcp` | Authenticated, uncached issuer introspection plus explicit local user link | `macromapper:read`, `macromapper:write` |
 
@@ -25,6 +25,9 @@ these cannot obtain access tokens. A central account grants no app membership.
 Applications explicitly link the immutable issuer/UUID subject to an existing
 user and recheck local active status and object permissions on every operation.
 Never infer a link from an email address or silently create/merge users.
+YNAB's default grant remains read-only. Write permission needs explicit consent
+and is bound to the gateway session/child; refresh cannot escalate a read grant.
+Oliver's existing exact previews and human confirmation remain required.
 
 One issuer shares an administrative and availability boundary. Compromise of its
 signing key or privileged operator affects all MCP resources. Separate audiences,

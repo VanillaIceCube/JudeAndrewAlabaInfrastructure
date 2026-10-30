@@ -1,5 +1,6 @@
 """Disposable daemon acceptance for #58. Only synthetic secrets; zero API access."""
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -35,6 +36,7 @@ def cleanup(identity):
     if containers:
         docker('rm', '-f', *containers, check=False)
     docker('volume', 'rm', identity + '-secret', check=False)
+    docker('volume', 'rm', identity + '-journal', check=False)
     docker('image', 'rm', identity + ':fixture', check=False)
 
 
@@ -47,18 +49,28 @@ class RuntimeTests(unittest.TestCase):
             raise ValueError('Invalid fixture identity')
         cls.image = cls.identity + ':fixture'
         cls.volume = cls.identity + '-secret'
+        cls.journal = cls.identity + '-journal'
         cls.temp = tempfile.TemporaryDirectory(prefix='ynab-runtime-test-')
         cls.addClassCleanup(cls.temp.cleanup)
         cls.addClassCleanup(lambda: docker('image', 'rm', cls.image, check=False))
         builder.build(cls.image, Path(cls.temp.name) / 'record.json')
         docker('volume', 'create', cls.volume)
         cls.addClassCleanup(lambda: docker('volume', 'rm', cls.volume, check=False))
+        docker('volume', 'create', cls.journal)
+        cls.addClassCleanup(lambda: docker('volume', 'rm', cls.journal, check=False))
         # The volume contains a fixed synthetic token only; no host secret mount.
         docker('run', '--rm', '--network', 'none', '--user', '0', '--entrypoint', 'node',
                '--volume', cls.volume + ':/fixture', builder.PIN['build_image'], '-e',
                "const f=require('node:fs'); f.writeFileSync('/fixture/ynab_api_token','synthetic-fixture-only'); f.chmodSync('/fixture/ynab_api_token',0o400); f.chownSync('/fixture/ynab_api_token',65532,65532)")
+        cls.change_journal("f.chownSync('/fixture',65532,65532);f.chmodSync('/fixture',0o700)")
 
-    def run_runtime(self, extra=(), protocol=False, secret=True):
+    @classmethod
+    def change_journal(cls, program):
+        return docker('run', '--rm', '--network', 'none', '--user', '0', '--entrypoint', 'node',
+                      '--volume', cls.journal + ':/fixture', builder.PIN['build_image'], '-e',
+                      "const f=require('node:fs'),p='/fixture/.ynab-mcp-undo.json';" + program)
+
+    def run_runtime(self, extra=(), protocol=False, secret=True, additional_messages=()):
         args = ['run', '--rm', '--read-only', '--network', 'none', '--cap-drop', 'ALL',
                 '--security-opt', 'no-new-privileges', '--pids-limit', '32', '--memory', '256m',
                 '--cpus', '0.5', '--tmpfs', '/tmp:rw,noexec,nosuid,size=16m,uid=65532,gid=65532,mode=0700']
@@ -75,7 +87,48 @@ class RuntimeTests(unittest.TestCase):
             {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call',
              'params': {'name': 'ynab_auth_status', 'arguments': {}}},
         ]
-        return docker(*args, check=False, input=''.join(json.dumps(m) + '\n' for m in messages) if protocol else '')
+        return docker(*args, check=False, input=''.join(json.dumps(m) + '\n' for m in [*messages, *additional_messages]) if protocol else '')
+
+    def test_explicit_write_runtime_retains_existing_journal_across_recreation(self):
+        entry = {'id': 'synthetic-retained', 'tenant_id': hashlib.sha256(b'synthetic-fixture-only').hexdigest(),
+                 'tool': 'create_transaction', 'description': 'Synthetic retained evidence', 'undoable': False}
+        contents = json.dumps([entry])
+        self.change_journal("f.writeFileSync(p," + json.dumps(contents) + ");f.chmodSync(p,0o600);f.chownSync(p,65532,65532)")
+        extra = ('--mount', f'type=volume,source={self.journal},target=/data', '-e', 'HOME=/data', '-e', 'YNAB_ALLOW_WRITES=1')
+        try:
+            # Two independent actual stdio containers, same protected persistent volume.
+            for _ in range(2):
+                result = self.run_runtime(extra, protocol=True, additional_messages=[
+                    {'jsonrpc': '2.0', 'id': 4, 'method': 'tools/call', 'params': {'name': 'list_undo_history', 'arguments': {}}}])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                replies = {m['id']: m for line in result.stdout.splitlines() if (m := json.loads(line)).get('id')}
+                self.assertLessEqual({'create_payee', 'preview_write_tool', 'undo_operation', 'resume_operation'},
+                                {tool['name'] for tool in replies[2]['result']['tools']})
+                status = replies[3]['result'].get('structuredContent', {}).get('result') or json.loads(replies[3]['result']['content'][0]['text'])
+                self.assertTrue(status['writes_enabled'])
+                history = replies[4]['result'].get('structuredContent', {}).get('result') or json.loads(replies[4]['result']['content'][0]['text'])
+                self.assertEqual(history['entries'][0]['id'], entry['id'])
+                self.assertEqual(result.stderr, '')
+            retained = self.change_journal("process.stdout.write(f.readFileSync(p,'utf8'))").stdout
+            self.assertEqual(retained, contents)
+        finally:
+            self.change_journal("f.unlinkSync(p)")
+
+    def test_write_journal_metadata_and_corruption_fail_closed(self):
+        extra = ('--mount', f'type=volume,source={self.journal},target=/data', '-e', 'HOME=/data', '-e', 'YNAB_ALLOW_WRITES=1')
+        for mutation in ["f.chmodSync('/fixture',0o755)", "f.chownSync('/fixture',0,0)",
+                         "f.writeFileSync(p,'corrupt',{mode:0o600});f.chownSync(p,65532,65532)",
+                         "f.writeFileSync(p,'[]',{mode:0o644});f.chownSync(p,65532,65532)",
+                         "f.writeFileSync(p,'[]',{mode:0o600})", "f.symlinkSync('/run/secrets/ynab_api_token',p)"]:
+            with self.subTest(mutation=mutation):
+                self.change_journal(mutation)
+                try:
+                    result = self.run_runtime(extra, protocol=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(result.stderr.strip(), 'YNAB runtime prerequisite failed')
+                    self.assertNotIn('synthetic', result.stdout + result.stderr)
+                finally:
+                    self.change_journal("try{f.unlinkSync(p)}catch(e){if(e.code!=='ENOENT')throw e};f.chownSync('/fixture',65532,65532);f.chmodSync('/fixture',0o700)")
 
     def test_actual_upstream_stdio_is_read_only_without_network_or_writable_root(self):
         result = self.run_runtime(protocol=True)
@@ -94,6 +147,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_missing_secret_and_unsafe_overrides_fail_without_leaking_values(self):
         for extra, secret in [((), False), (('-e', 'YNAB_ALLOW_WRITES=1'), True),
+                              (('-e', 'YNAB_ALLOW_WRITES=invalid'), True),
                               (('-e', 'YNAB_DISABLE_AGENT_CONFIG_FALLBACK=0'), True),
                               (('-e', 'YNAB_API_TOKEN=synthetic-do-not-print'), True)]:
             with self.subTest(extra=extra):

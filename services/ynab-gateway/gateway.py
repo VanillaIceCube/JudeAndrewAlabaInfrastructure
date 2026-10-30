@@ -1,4 +1,4 @@
-"""Owner-only read-only policy around the pinned, maintained MCP proxy.
+"""Owner-only, scope-bound policy around the pinned, maintained MCP proxy.
 
 No OAuth authorization server, protocol engine, Docker socket or caller-selected
 upstream. The inner SDK owns MCP negotiation, sessions, stdio and cancellation.
@@ -39,7 +39,23 @@ list_scheduled_transactions get_scheduled_transaction search_categories search_p
 review_unapproved get_overspent_categories audit_credit_card_payments
 audit_account_reconciliation get_income_expense_summary detect_recurring_charges
 get_budget_health get_spending_trends forecast_scheduled_balances
+resolve_matched_transactions export_transactions suggest_transaction_categories
+ynab_auth_status ynab_tool_index ynab_tool_execute list_undo_history list_operations
 """.split())
+# Exact pinned upstream catalog. Generic dispatch never bypasses this boundary.
+WRITE_TOOLS = frozenset("""
+preview_write_tool create_account update_month_category update_category create_category
+create_category_group update_category_group update_payee create_payee create_transaction
+create_transactions update_transaction delete_transaction update_transactions
+approve_transactions reassign_payee_transactions ynab_write_tool_execute import_transactions
+create_scheduled_transaction update_scheduled_transaction delete_scheduled_transaction
+move_category_budget resume_operation merge_category retire_category
+prepare_split_for_matching undo_operation
+""".split())
+RESOURCES = frozenset("ynab://guide/" + name for name in
+                      ("methodology", "write-safety", "audit-patterns", "flags-reference"))
+PROMPTS = frozenset(("monthly-review", "weekly-triage", "categorize-and-approve",
+                     "subscription-audit", "reconcile-account", "credit-card-audit"))
 CURRENT_SESSION = ContextVar("ynab_session", default=None)
 
 
@@ -92,6 +108,7 @@ class OwnerVerifier(JWTVerifier):
 class Session:
     principal: tuple
     touched: float
+    writes: bool = False
     client: object = None
     backend: object = None
     connected: bool = False
@@ -99,37 +116,42 @@ class Session:
     ids: set = field(default_factory=set)
 
 
-def child_transport():
+def child_transport(writes=False, *, persistent=False):
     """Fixed app command and minimal environment; no HOME/config/token inheritance."""
     return StdioTransport(command="/usr/local/bin/node", args=["--use-env-proxy", "/policy/entrypoint.mjs"],
                           cwd="/app", env={"PATH": "/usr/local/bin:/usr/bin:/bin",
-                          "HOME": "/tmp", "YNAB_API_TOKEN_FILE": "/run/secrets/ynab_api_token",
-                          "YNAB_ALLOW_WRITES": "0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1",
+                          "HOME": "/data" if persistent else "/tmp", "YNAB_API_TOKEN_FILE": "/run/secrets/ynab_api_token",
+                          "YNAB_ALLOW_WRITES": "1" if writes else "0", "YNAB_DISABLE_AGENT_CONFIG_FALLBACK": "1",
                           "HTTPS_PROXY": "http://ynab-egress:3128", "HTTP_PROXY": "http://ynab-egress:3128",
                           "NO_PROXY": ""},
                           log_file=Path(os.devnull), keep_alive=False)
 
 
 class Gateway:
-    def __init__(self, identity, transport=None):
+    def __init__(self, identity, transport=None, *, allow_writes=False):
         # Upstream auth/transport logs can include client/claim or child details.
         # All production diagnostics are status categories only, via health.
         logging.disable(logging.CRITICAL)
+        if type(allow_writes) is not bool:
+            raise ValueError("Invalid gateway write policy")
         self.identity = identity
+        self.allow_writes = allow_writes
         self.verifier = OwnerVerifier(identity)
         self.sessions = {}
         self.pending = 0
         self.inflight = 0
         self.credit = 5.0
         self.rate_updated = time.monotonic()
-        self.transport_factory = transport or child_transport
+        self.transport_factory = transport or (lambda writes=False: child_transport(writes, persistent=allow_writes))
         auth = RemoteAuthProvider(self.verifier, authorization_servers=[identity.issuer],
-                                  base_url=ORIGIN, scopes_supported=["ynab:read"],
+                                  base_url=ORIGIN, scopes_supported=["ynab:read", *(["ynab:write"] if allow_writes else [])],
                                   challenge_scopes=["ynab:read"])
-        self.proxy = FastMCPProxy(client_factory=self.client_factory, name="YNAB read-only",
+        self.proxy = FastMCPProxy(client_factory=self.client_factory, name="YNAB",
                                   auth=auth, provider_error_strategy="raise")
         self.proxy.add_transform(Visibility(False, match_all=True))
-        self.proxy.add_transform(Visibility(True, names=READ_TOOLS, components={"tool"}))
+        self.proxy.add_transform(Visibility(True, names=READ_TOOLS | (WRITE_TOOLS if allow_writes else set()), components={"tool"}))
+        self.proxy.add_transform(Visibility(True, names=RESOURCES, components={"resource"}))
+        self.proxy.add_transform(Visibility(True, names=PROMPTS, components={"prompt"}))
         self.app = self.proxy.http_app(path="/mcp", json_response=True, stateless_http=False,
                                        session_idle_timeout=600, allowed_hosts=[urlsplit(ORIGIN).netloc],
                                        allowed_origins=[ORIGIN])
@@ -142,7 +164,7 @@ class Gateway:
         # Client.new() shares its transport. Create a distinct transport factory
         # per remote session so even maintained client clones cannot share stdio.
         if session.backend is None:
-            session.backend = StatefulProxyClient(self.transport_factory(), mode="legacy", timeout=25,
+            session.backend = StatefulProxyClient(self.transport_factory(session.writes), mode="legacy", timeout=25,
                                                   forward_incoming_headers=False)
         client = session.backend.new_stateful()
         if session.client is not None and (client is not session.client
@@ -165,14 +187,15 @@ class Gateway:
         if time.monotonic() - self.ready_at > 10:
             self.ready_at, self.ready = time.monotonic(), False
             try:
-                async with asyncio.timeout(5), Client(self.transport_factory(), mode="legacy", timeout=4) as client:
+                async with asyncio.timeout(5), Client(self.transport_factory(self.allow_writes), mode="legacy", timeout=4) as client:
                     tools = await client.list_tools()
                     result = await client.call_tool("ynab_auth_status", {})
                     structured = result.structured_content or {}
                     status = structured.get("result") or json.loads(result.content[0].text)
                     self.ready = ("list_budgets" in {tool.name for tool in tools}
                                   and status.get("authenticated") is True
-                                  and status.get("writes_enabled") is False)
+                                  and status.get("writes_enabled") is self.allow_writes
+                                  and (not self.allow_writes or WRITE_TOOLS <= {tool.name for tool in tools}))
             except Exception:
                 # Keep readiness false; raw child/configuration errors are private.
                 pass
@@ -239,7 +262,10 @@ class Gateway:
                 del self.sessions[key]
         sid_bytes = headers.get(b"mcp-session-id")
         sid = sid_bytes.decode("ascii", errors="replace") if sid_bytes else None
-        principal = (self.identity.issuer, access.subject, access.client_id)
+        write_scope = "ynab:write" in access.scopes
+        # A refreshed token may retain a session only with identical privileges.
+        # A downgraded token can never reuse a child that was started with writes.
+        principal = (self.identity.issuer, access.subject, access.client_id, write_scope)
         session = self.sessions.get(sid) if sid else None
         if sid and (session is None or session.principal != principal):
             return await self.respond(send, 404)
@@ -290,7 +316,7 @@ class Gateway:
                         return await self.respond(send, 400)
                     if operation not in {"initialize", "notifications/initialized", "notifications/cancelled",
                                          "tools/list", "tools/call", "resources/list", "resources/templates/list",
-                                         "prompts/list", "ping"}:
+                                         "resources/read", "prompts/list", "prompts/get", "ping"}:
                         return await self.respond(send, 403)
                     if operation == "initialize":
                         if session or params.get("protocolVersion") != PROTOCOL:
@@ -299,7 +325,7 @@ class Gateway:
                             return await self.respond(send, 429)
                         self.pending += 1
                         fresh = True
-                        session = Session(principal, now)
+                        session = Session(principal, now, writes=self.allow_writes and write_scope)
                     elif session is None:
                         return await self.respond(send, 404)
                     elif headers.get(b"mcp-protocol-version") != PROTOCOL.encode():
@@ -307,7 +333,23 @@ class Gateway:
                     if operation == "tools/call":
                         if not isinstance(params.get("name"), str):
                             return await self.respond(send, 400)
-                        if params["name"] not in READ_TOOLS:
+                        name = params["name"]
+                        allowed = READ_TOOLS | (WRITE_TOOLS if session.writes else set())
+                        if name not in allowed:
+                            return await self.respond(send, 403)
+                        if name in {"ynab_tool_execute", "ynab_write_tool_execute", "preview_write_tool"}:
+                            arguments = params.get("arguments", {})
+                            if not isinstance(arguments, dict) or not isinstance(arguments.get("tool_name"), str):
+                                return await self.respond(send, 400)
+                            target = arguments["tool_name"]
+                            targets = READ_TOOLS if name == "ynab_tool_execute" else WRITE_TOOLS - {"preview_write_tool", "ynab_write_tool_execute"}
+                            if target not in targets or target.startswith("ynab_"):
+                                return await self.respond(send, 403)
+                    if operation in {"resources/read", "prompts/get"}:
+                        value = params.get("uri" if operation == "resources/read" else "name")
+                        if not isinstance(value, str):
+                            return await self.respond(send, 400)
+                        if value not in (RESOURCES if operation == "resources/read" else PROMPTS):
                             return await self.respond(send, 403)
                     rpc_id = rpc.get("id")
                     if rpc_id is not None:
@@ -355,6 +397,12 @@ class Gateway:
                 if "error" in payload or payload.get("result", {}).get("isError"):
                     response_body = json.dumps({"jsonrpc": "2.0", "id": payload.get("id"),
                         "error": {"code": -32603, "message": "Request failed"}}).encode()
+                elif method == "POST" and operation == "tools/list":
+                    # Upstream normally hides write tools on read-only children;
+                    # keep public discovery scoped even if that contract drifts.
+                    allowed = READ_TOOLS | (WRITE_TOOLS if session.writes else set())
+                    payload["result"]["tools"] = [tool for tool in payload["result"]["tools"] if tool.get("name") in allowed]
+                    response_body = json.dumps(payload).encode()
             start["headers"] = [(k, v) for k, v in start["headers"]
                                 if k.lower() not in {b"cache-control", b"content-length"}]
             start["headers"] += [(b"cache-control", b"no-store")]
@@ -386,7 +434,7 @@ class Gateway:
 
 def from_config(secret_root=Path("/run/secrets")):
     logging.disable(logging.CRITICAL)
-    if (os.environ.get("YNAB_ALLOW_WRITES", "0") != "0"
+    if (os.environ.get("YNAB_ALLOW_WRITES", "0") not in {"0", "1"}
             or os.environ.get("YNAB_DISABLE_AGENT_CONFIG_FALLBACK", "1") != "1"
             or os.environ.get("YNAB_API_TOKEN") or os.environ.get("SENTRY_DSN")):
         raise ValueError("Unsafe gateway environment")
@@ -402,7 +450,13 @@ def from_config(secret_root=Path("/run/secrets")):
     if not isinstance(config["clients"], list):
         raise ValueError("Invalid gateway clients")
     identity = Identity(config["issuer"], config["owner"], frozenset(config["clients"]), files[1].read_text())
-    return Gateway(identity)
+    allow_writes = os.environ.get("YNAB_ALLOW_WRITES", "0") == "1"
+    if allow_writes:
+        data = Path("/data").lstat()
+        if (not stat.S_ISDIR(data.st_mode) or data.st_uid != 65532 or data.st_gid != 65532
+                or stat.S_IMODE(data.st_mode) != 0o700):
+            raise ValueError("Protected persistent journal directory required")
+    return Gateway(identity, allow_writes=allow_writes)
 
 
 if __name__ == "__main__":

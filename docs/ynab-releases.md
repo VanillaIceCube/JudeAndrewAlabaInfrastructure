@@ -16,8 +16,8 @@ exclusive for gateway releases; YNAB takes it shared plus its own exclusive
 and `app-release/v1` consumers remain unchanged.
 
 The v1 application transaction requires Django backend/frontend management and
-an existing SQLite database at import. YNAB owns two stateless process services
-and no database/migration. Its app policy uses the existing host primitives with
+an existing SQLite database at import. YNAB owns two process services and Oliver's
+existing durable file journal, with no database/migration. Its app policy uses the existing host primitives with
 its own small journal, rather than supplying a fake Django/SQLite application or
 copying the v1 engine. It never executes database recovery, another application's
 Compose file, Nginx reload/recreation, `down`, orphan removal, pruning or network
@@ -41,6 +41,14 @@ inside private directories. Secrets never enter Compose environment values,
 arguments, public diagnostics or Git. Staging/provisioning credentials still
 needs the separate owner authorization required by #62.
 
+The staged nonsecret `squid.conf` is owned13:13 mode0400 so the unprivileged
+egress service can read its read-only bind mount. Its parent remains root0700;
+Compose/model files remain root0600 and credential files retain their separate
+65532 ownership. The matched release record includes the policy's ownership,
+mode and hash. Never repair an already recorded generation by changing its files:
+contain a failed first activation with explicit stop-only recovery, then stage a
+new generation from reviewed corrected source with fresh paired scans.
+
 `records/<source>-<uuid>.json` tracks exact images, configuration/secret hashes and
 runtime identity. `current.json` identifies accepted state. `pending.json` is the
 durable mutation barrier; `attempts/<uuid>.json` retains success/recovery evidence.
@@ -52,6 +60,33 @@ Keep all these records private. Retain previous images and matched files for
 rollback. Review disk usage and archive completed diagnostics/old generations
 under the existing operator retention/backup process; never delete a pending,
 current or referenced recovery generation. No cleanup daemon or timer is added.
+
+## 🧾 Persistent financial operation history
+
+For the owner-approved full-capability rollout, provision only
+`/opt/ynab-mcp-deploy/data`, owned65532:65532 mode0700, before staging. The reviewed
+network overlay explicitly sets `YNAB_ALLOW_WRITES=1` and binds this directory to
+`/data`; the inactive base image/profile still defaults to disabled writes. The
+controller supplies `YNAB_JOURNAL_DIR`, requires the exact protected directory and
+bind, records its device/inode, and rejects replacement or symlink drift. Runtime
+write capability must match the accepted model exactly. An environment override
+cannot turn a reviewed read-only generation into a writable one.
+
+Oliver's unchanged stdio runtime owns `.ynab-mcp-undo.json` and its lock/temporary
+files here. Its existing atomic writes, file locks, tenant binding and explicit
+preview/confirmation provide operation/undo history across sessions and container
+restarts. The directory contains private financial information: include it in the
+existing protected backup scope, preserve unfinished operations and investigate
+corrupt journals or ambiguous writes instead of clearing them. No new storage
+service or financial retry mechanism is introduced.
+
+Code/image rollback **never restores, rewinds, deletes or replaces this journal**:
+it cannot undo changes already made at YNAB. Retain the same directory even when
+the service is disabled or rolled back to a read-only image. Restore any off-host
+journal backup only through a separately reviewed financial-state reconciliation;
+never replay stale operation evidence automatically. A token replacement changes
+upstream's tenant identity, so retaining old bytes alone does not promise that a
+new token can read or resume old operations.
 
 ## 🚦 Stage, promote and recover
 
