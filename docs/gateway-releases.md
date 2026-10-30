@@ -22,6 +22,19 @@ they are not an approval to deploy an image with unresolved advisories.
 
 ## 🔒 Approval and prerequisites
 
+Source changes land through reviewed `main` first, with explicit owner approval
+for each merge; review alone does not authorize merging or the later production
+promotion. If the owner explicitly
+authorizes a narrow deployment experiment outside that path, return its changes
+and history to `main` promptly through a reviewed PR before ordinary promotion
+resumes. Compare both ancestry and file contents: promotion merge commits can
+differ without introducing production-only code. Reconcile history without
+discarding newer main changes or rewriting either protected branch. Intentionally
+unreleased main work is permitted; hold `env-prod` until its prerequisites are
+met rather than deploying unrelated features to obtain equal trees. See the
+[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases)
+and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
+
 Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
 and adoption are ready. Initial setup remains an explicit owner operation. Configure:
 

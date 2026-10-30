@@ -32,6 +32,14 @@ does not authorize merging or production operations.
 
 ## 🚀 Gateway promotion authorization
 
+Ordinary changes must merge through reviewed `main`, with explicit owner approval
+for the merge, before separately authorized `env-prod` promotion.
+An explicitly owner-authorized quick deployment experiment must be reconciled
+back into `main` through review promptly. Preserve both histories and newer main
+work; never force-push for parity. Intentional unreleased main changes may remain
+ahead of production until their deployment prerequisites are met. Follow the
+[main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases).
+
 The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
 authorizes automatic gateway deployment when the owner promotes reviewed main
 source to `env-prod`. The owner-triggered promotion is production authorization;
@@ -78,6 +86,10 @@ manual owner merge. A human PR smoke test does not prove Dependabot access.
 Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
 
 ## 🧾 YNAB MCP investigation
+
+For actual client acceptance, follow `docs/ynab-operations.md`: verify callbacks
+after discovery and keep exactly one OAuth resource parameter. Correct client
+configuration rather than weakening issuer resource or redirect validation.
 
 Follow [the gateway decision](docs/ynab-mcp.md) and #56/#57–#62 dependency order.
 The disposable `experiments/ynab-mcp` harness is not deployable application code.
