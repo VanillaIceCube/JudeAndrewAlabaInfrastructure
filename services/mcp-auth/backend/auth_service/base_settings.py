@@ -10,7 +10,10 @@ YNAB_RESOURCE = "https://ynab.judeandrewalaba.com/mcp"
 NOTOLI_RESOURCE = "https://notoli.judeandrewalaba.com/mcp"
 MACROMAPPER_RESOURCE = "https://macromapper.judeandrewalaba.com/mcp"
 RESOURCE_SCOPES = {
-    YNAB_RESOURCE: {"ynab:read": "Read your YNAB budget; financial writes are disabled"},
+    YNAB_RESOURCE: {
+        "ynab:read": "Read your YNAB budget and operation history",
+        "ynab:write": "Change your YNAB budget after an exact preview and your explicit confirmation",
+    },
     NOTOLI_RESOURCE: {
         "notoli:read": "Read boards, lists and items you can access",
         "notoli:write": "Add and update accessible items",

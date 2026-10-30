@@ -2,6 +2,16 @@
 services:
   gateway:
     network_mode: !reset null
+    environment:
+      YNAB_ALLOW_WRITES: "1"
+      YNAB_DISABLE_AGENT_CONFIG_FALLBACK: "1"
+    volumes:
+      - type: bind
+        source: ${YNAB_JOURNAL_DIR:?protected persistent journal directory required}
+        target: /data
+        read_only: false
+        bind:
+          create_host_path: false
     networks:
       route:
         ipv4_address: 172.30.89.3

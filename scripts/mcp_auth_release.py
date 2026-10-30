@@ -231,8 +231,15 @@ class Release:
             expected_env = dict(value.split('=', 1) for value in image.get('Config', {}).get('Env', []))
             expected_env.update({key: str(value) for key, value in expected.get('environment', {}).items()})
             env_ok = live_env == expected_env
-            command_ok = (live['Config'].get('Cmd') == expected.get('command', image.get('Config', {}).get('Cmd'))
-                and live['Config'].get('Entrypoint') == expected.get('entrypoint', image.get('Config', {}).get('Entrypoint')))
+            entrypoint, command = expected.get('entrypoint'), expected.get('command')
+            # Compose serializes inherited image defaults as explicit nulls.
+            # A non-null entrypoint overrides the image and clears its default CMD.
+            if entrypoint is None:
+                entrypoint = image.get('Config', {}).get('Entrypoint')
+                if command is None:
+                    command = image.get('Config', {}).get('Cmd')
+            command_ok = (live['Config'].get('Cmd') == command
+                and live['Config'].get('Entrypoint') == entrypoint)
             if (live['Image'] == image['Id'] and actual == mounts and network_ok and env_ok and command_ok
                     and all(item['Type'] in {'bind', 'tmpfs'} for item in live['Mounts'])
                     and host.get('Memory') == expected['mem_limit'] and host.get('PidsLimit') == expected['pids_limit']

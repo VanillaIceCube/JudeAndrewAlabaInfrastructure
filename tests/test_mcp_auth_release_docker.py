@@ -5,6 +5,7 @@ providers. Compose switching, writer identity, ownership, journal recovery,
 management resources, grant invalidation and process/lock failure are real.
 """
 from contextlib import closing
+import copy
 import hashlib
 import json
 import os
@@ -106,8 +107,13 @@ class AuthDockerReleaseTests(unittest.TestCase):
             (root / 'companion.sqlite3').write_bytes(b'synthetic-other-app-db-unchanged')
             (root / 'origin.pem').write_bytes(b'synthetic-certificate-unchanged')
             (root / 'origin.key').write_bytes(b'synthetic-key-unchanged')
+            fixture_image = None
             try:
                 docker('image', 'inspect', IMAGE)
+                (root / 'Dockerfile').write_text('FROM ' + IMAGE + '\n'
+                    'ENTRYPOINT ["/usr/local/bin/python", "/app/manage.py"]\nCMD ["serve"]\n')
+                fixture_image = docker('build', '--quiet', '--network', 'none', '--label', label,
+                                       str(root)).strip()
                 docker('network', 'create', '--internal', '--subnet', subnet, '--gateway', gateway, '--label', label, network)
                 docker('run', '-d', '--name', prefix + '-companion', '--label', label, '--network', 'none',
                        '--read-only', '--cap-drop', 'ALL', IMAGE, 'python', '-c', 'import time;time.sleep(300)')
@@ -130,8 +136,8 @@ class AuthDockerReleaseTests(unittest.TestCase):
                         target.write_bytes(b'synthetic-fixture-only-key')
                         os.chown(target, 65532, 65532)
                         target.chmod(0o400)
-                    service = {'image': IMAGE, 'container_name': name, 'user': '65532:65532',
-                        'entrypoint': ['/usr/local/bin/python'], 'command': ['/app/manage.py', 'serve'],
+                    service = {'image': fixture_image, 'container_name': name, 'user': '65532:65532',
+                        'entrypoint': None, 'command': None,
                         'environment': {'FIXTURE_VERSION': source, 'PYTHONDONTWRITEBYTECODE': '1'},
                         'read_only': True, 'cap_drop': ['ALL'], 'security_opt': ['no-new-privileges:true'],
                         'mem_limit': 192 * 1024**2, 'cpus': '0.5', 'pids_limit': 64, 'restart': 'no',
@@ -141,15 +147,17 @@ class AuthDockerReleaseTests(unittest.TestCase):
                             {'type': 'bind', 'source': str(program), 'target': '/app/manage.py', 'read_only': True},
                             *[{'type': 'bind', 'source': str(secret_dir / filename),
                                'target': '/run/secrets/' + filename, 'read_only': True} for filename in release.KEYS]]}
+                    if source == 'b' * 40:
+                        service.update(entrypoint=['/usr/local/bin/python'], command=['/app/manage.py', 'serve'])
                     release.common.atomic(directory / 'model.json', {'name': prefix,
                         'services': {'authorization': service}, 'networks': {'private': {'name': network, 'external': True}}})
                     release.common.durable_tree(directory)
-                    return {'id': directory.name, 'source': source, 'directory': str(directory), 'image': IMAGE,
+                    return {'id': directory.name, 'source': source, 'directory': str(directory), 'image': fixture_image,
                             'key_id': key_id, 'files': release.identity(directory)}
                 with patch.object(release, 'PROJECT', prefix), patch.object(release, 'NAME', name), \
                      patch.object(release, 'NETWORK', network), patch.object(release, 'SUBNET', subnet), \
                      patch.object(release, 'GATEWAY', gateway), patch.object(release, 'ADDRESS', address), \
-                     patch.object(release, 'IMAGE', re.compile(re.escape(IMAGE))), \
+                     patch.object(release, 'IMAGE', re.compile(re.escape(fixture_image))), \
                      patch.object(release, 'baseline', side_effect=companions), \
                      patch.object(release, 'require_contained', return_value=None), \
                      patch.object(release, 'preflight', return_value={'fixture-only': True}) as scanner, \
@@ -161,6 +169,14 @@ class AuthDockerReleaseTests(unittest.TestCase):
                     with release.locks(root / 'locks'):
                         app.deploy('a' * 40, IMAGE, {}, 'synthetic-key', initial=True)
                         first = release.common.read(root / 'current.json')
+                        # Null defaults must inherit the exact image process;
+                        # accepting inheritance must not accept a different process.
+                        for field in ('Cmd', 'Entrypoint'):
+                            changed = copy.deepcopy(release.runtime())
+                            changed['Config'][field] = ['/unexpected-process']
+                            with patch.object(release, 'runtime', return_value=changed), \
+                                 self.assertRaises(release.common.ReleaseError):
+                                app.ownership([first])
                         app.deploy('b' * 40, IMAGE, {}, 'synthetic-key')
                         app.rollback(strategy='restore', outcome_confirmed=True)
                     restored = release.common.read(root / 'current.json')
@@ -212,6 +228,8 @@ class AuthDockerReleaseTests(unittest.TestCase):
                     ids = docker(kind, 'ls', '-aq' if kind == 'container' else '-q', '--filter', 'label=' + label).split()
                     if ids:
                         docker(kind, 'rm', *(['-f', '-v'] if kind == 'container' else []), *ids)
+                if fixture_image:
+                    docker('image', 'rm', fixture_image)
 
 
 if __name__ == '__main__':
