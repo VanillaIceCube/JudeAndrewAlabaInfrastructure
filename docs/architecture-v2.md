@@ -90,7 +90,7 @@ Shared application release code, network ownership and Notoli policy are unchang
 | App | Direct backend routes | Frontend routes |
 | --- | --- | --- |
 | Notoli | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
-| MacroMapper | `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links |
+| MacroMapper | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
 
 Use Docker DNS `127.0.0.11`, a short cache (`valid=10s`, `ipv6=off`), variable
 upstreams, and original `$request_uri`. A missing app must not prevent Nginx
@@ -104,7 +104,9 @@ chains. Notoli retains `DJANGO_TRUSTED_PROXY_IPS=172.30.88.2`, Uvicorn
 `--no-proxy-headers`, ASGI exact-peer validation and forwarded-header stripping,
 and Django's existing rejection of forwarded host/proto trust. MacroMapper
 retains its production Host/origin/cookie settings and restricted backend
-reachability. Its current appended X-Forwarded-For becomes an overwritten
+reachability. Its app-owned MCP ASGI server must validate the exact gateway peer
+`172.20.0.3` and strip untrusted forwarded headers before Django/MCP handles them;
+this does not add a network or publish a backend port. Its current appended X-Forwarded-For becomes an overwritten
 peer address; prior source review found no authorization dependency on it.
 Cloudflare visitor-IP restoration is outside this change.
 
@@ -113,7 +115,10 @@ timeout. Preserve existing frontend upgrade behavior separately. Explicitly
 test Nginx header inheritance in every location, especially MCP/upgrade
 locations with local `proxy_set_header` directives. Disable backend proxy
 caching and return `no-store` for authenticated auth/API/admin/MCP responses;
-discovery remains public. Do not log OAuth codes/tokens or sensitive query
+discovery remains publicly readable with `no-store`. Both vhosts use the same
+`mcp-locations.conf` include; app registries and OAuth readiness determine whether
+a service is advertised. Follow the [ordered MCP activation](optional-mcp.md#-macromapper-activation-order)
+before the first MacroMapper MCP app release. Do not log OAuth codes/tokens or sensitive query
 strings in new ingress logs. Verify the logging policy in the config tests.
 
 ## TLS and secrets
