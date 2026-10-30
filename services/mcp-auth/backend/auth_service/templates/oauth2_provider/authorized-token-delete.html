@@ -1,2 +1,0 @@
-{% extends "oauth2_provider/base.html" %}
-{% block content %}<h2>Revoke {{ object.application.name }}?</h2><p>The connection and its refresh token will stop working.</p><form method="post">{% csrf_token %}<button type="submit">Revoke connection</button></form>{% endblock %}

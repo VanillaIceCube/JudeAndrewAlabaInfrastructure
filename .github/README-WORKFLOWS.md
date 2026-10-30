@@ -15,7 +15,7 @@ prompts, evidence, input validation, permissions and Project metadata.
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
 | CodeQL | All present Python, automation JavaScript and Actions sources on every PR, main push and weekly/manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
-| Package malware | Exact YNAB gateway and MCP issuer hashed Python locks: OSV known advisories/catalogued malware plus PyPI hash/yank verification; all other manifests block pending reviewed scanner support |
+| Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
@@ -24,32 +24,6 @@ CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
 logging and reversal. Image updates require separate operator-reviewed
 image/advisory assessment and production authorization.
-
-The [YNAB gateway dependency gate](../services/ynab-gateway/README.md) executes no
-packages and fails closed on metadata errors. Its known-malware coverage does not
-establish absence of unknown malware, container vulnerabilities or license/provenance
-approval. The reusable scope job has a five-minute bound and remains a Required CI gate.
-
-The validation workflow separately builds/tests the inactive authenticated YNAB
-gateway against synthetic stdio/HTTP fixtures with network disabled. Its job has
-a ten-minute bound, a seven-minute process limit and exact-run cleanup on EXIT.
-Its result/log joins the existing automation evidence for Lint Eastwood; failure
-blocks the overall Tests/Required CI result. It publishes no image and loads no
-real credentials. See the [gateway contract](../services/ynab-gateway/README.md).
-
-The inactive MCP issuer has an independent bounded Docker job using only
-synthetic keys/accounts and exact-run cleanup. It tests real authorization,
-refresh/revocation and the production entrypoint under file/identity restrictions.
-Its outcome and sanitized report also join Tests/Required CI. The existing
-automation suite checks its release preflight, contained recovery and SQLite
-journal behavior. Neither job publishes images or authorizes activation. Both
-supported hashed Python locks receive the same fail-closed OSV/PyPI gate.
-
-Ingress validation includes both the base and inactive YNAB overlay fixtures.
-The separate gateway image job also tests its actual stdio app against a
-synthetic TLS API through the pinned CONNECT proxy, on an internal-only Docker
-network pair with no direct client/API path. Exact-run cleanup removes its labeled egress fixtures as well. The
-private-IP ACL exception/CA are test-only; no provider changes or live API calls.
 
 ## 🔒 Required checks and permissions
 
@@ -112,16 +86,6 @@ PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash scripts/lint_infrast
 Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
 actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
 while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
-
-The existing validation job also runs the pinned [YNAB gateway experiment](../docs/ynab-mcp.md)
-with a four-minute limit, no application credentials and synthetic API fixtures.
-Its output feeds the existing automation result and Required CI. This is protocol
-evidence, not production dependency certification or service activation; the
-evaluated gateway's high/critical advisories and public OAuth gates remain blocking.
-The same job runs the [isolated stdio runtime](../services/ynab-mcp/README.md)
-container suite under a five-minute limit. Its source/package parity, fresh
-high/critical npm audit and synthetic-secret hardening tests do not publish an
-image or grant production approval.
 
 See [setup](GITHUB_SETUP.md). Default-branch Dependabot/schedules activate after
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
@@ -266,13 +230,3 @@ Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
-
-## 🚦 Optional YNAB gateway profile
-
-The permanent repository variable `YNAB_ROUTE_PROFILE` defaults to `base` and
-accepts only `base`, `disabled` or `enabled`. See the
-[profile contract](../docs/gateway-profiles.md) for ordered tombstone/activation
-and recovery checks. It selects reviewed source packaging; it is not an approval
-variable and adds no Environment/Deployment API boundary. The existing owner,
-env-prod, reviewed-main/workflow and fingerprint checks still run before key
-loading. No variable, credential or provider change is part of the source PR.
