@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
+  preserving exact topology guards and rejecting unsupported modes.
 - Supply synthetic app-specific required secrets only in disposable shared release
   fixtures; retain production missing/empty/malformed input rejection.
 - Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
