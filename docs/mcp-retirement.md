@@ -6,6 +6,13 @@ application owns its MCP implementation, OAuth, accounts and release. Existing
 Notoli MCP stays enabled. MacroMapper MCP may remain unimplemented. A future
 first-party YNAB application is a separate task, not part of this retirement.
 
+The preparatory source change in #100 removed application build/runtime source,
+the disposable experiment and their CI jobs. It temporarily retained six
+deployment inputs/preflight helpers and the existing controllers. The final
+cleanup in #99 removes the retired-service inputs/controllers and route
+definitions while preserving ordinary ingress and app release support.
+Promote the reviewed final cleanup source through the authorization below.
+
 ## 🚦 Ordered retirement
 
 Each source merge, promotion and provider/host operation requires explicit owner
