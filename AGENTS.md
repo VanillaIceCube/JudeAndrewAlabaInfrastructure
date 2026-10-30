@@ -176,6 +176,9 @@ never edit vendored framework files independently. Run
 audit its exact hashed dependency lock through the existing dependency gate.
 Require native OS and complete Python inventory for authorization image scans;
 supporting that role must not weaken the paired YNAB image gate.
+Consent-page form redirects must allow only the DOT-validated callback origin,
+including its actual loopback port; retain same-origin-only policy elsewhere.
+Verify browser redirect behavior as well as server-side OAuth tests.
 
 Use the [issuer release/recovery contract](docs/mcp-auth-releases.md) for its
 single-container controller. Keep both auth/YNAB routes contained during database

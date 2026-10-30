@@ -2,6 +2,11 @@
 
 ## 2026-10-30
 
+### Fixed
+
+- Allow the validated MCP client's callback origin on its consent page so Chromium
+  can complete authorization, preserving exact callback and OAuth checks.
+
 ### Changed
 
 - Reconcile existing production promotion history into main and document
