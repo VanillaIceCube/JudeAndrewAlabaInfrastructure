@@ -32,6 +32,14 @@ does not authorize merging or production operations.
 
 ## 🚀 Gateway promotion authorization
 
+Ordinary changes must merge through reviewed `main`, with explicit owner approval
+for the merge, before separately authorized `env-prod` promotion.
+An explicitly owner-authorized quick deployment experiment must be reconciled
+back into `main` through review promptly. Preserve both histories and newer main
+work; never force-push for parity. Intentional unreleased main changes may remain
+ahead of production until their deployment prerequisites are met. Follow the
+[main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases).
+
 The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
 authorizes automatic gateway deployment when the owner promotes reviewed main
 source to `env-prod`. The owner-triggered promotion is production authorization;
