@@ -164,6 +164,8 @@ invalidate restored grants/sessions before acceptance. The durable905second
 quarantine must survive rollback; ingress cannot re-expose offline YNAB JWTs early.
 Run all `test_mcp_auth*.py` suites on Linux/disposable Docker and preserve the
 existing apps and their exact peer addresses throughout.
+Interpret Compose null process fields as image defaults while checking the
+effective entrypoint/command exactly; explicit empty overrides are not inheritance.
 
 ## 🚀 Coordinated MCP activation
 
