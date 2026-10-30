@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Keep disabled MacroMapper MCP/discovery paths behind uncached 404 responses
+  instead of falling through to the frontend during external MCP retirement.
+
 - Allow the validated MCP client's callback origin on its consent page so Chromium
   can complete authorization, preserving exact callback and OAuth checks.
 

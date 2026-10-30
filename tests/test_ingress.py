@@ -286,7 +286,20 @@ class IngressTests(unittest.TestCase):
 
                 start_stub("macromapper", "backend")
                 start_stub("macromapper", "frontend")
-                for path in ("/mcp", "/.well-known/oauth-protected-resource/mcp"):
+                for path in (
+                    "/mcp", "/mcp?code=NEVER_LOG_THIS", "/mcp/",
+                    "/mcp/?state=NEVER_LOG_THIS", "/mcp/unknown?code=NEVER_LOG_THIS",
+                    "/.well-known/", "/.well-known/oauth-protected-resource/mcp",
+                    "/.well-known/oauth-protected-resource/mcp?resource=NEVER_LOG_THIS",
+                    "/.well-known/oauth-authorization-server",
+                    "/.well-known/unknown?code=NEVER_LOG_THIS",
+                ):
+                    with self.subTest(disabled_macromapper_path=path):
+                        response, body = request("legacy", "macromapper", path, 404)
+                        self.assertEqual(response.headers["Cache-Control"], "no-store")
+                        self.assertIsNone(response.headers.get("WWW-Authenticate"))
+                        self.assertNotIn(b"macromapper-frontend", body)
+                for path in ("/connections/authorize", "/mcp-settings"):
                     self.assertEqual(request("legacy", "macromapper", path)[1]["service"], "macromapper-frontend")
                 self.assertEqual(
                     request("legacy", "macromapper", "/api/notifications/")[1][
