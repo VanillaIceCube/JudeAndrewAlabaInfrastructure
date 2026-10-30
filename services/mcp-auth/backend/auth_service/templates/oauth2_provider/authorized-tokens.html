@@ -1,2 +1,0 @@
-{% extends "oauth2_provider/base.html" %}
-{% block content %}<h2>Your MCP connections</h2><ul>{% for token in authorized_tokens %}<li>{{ token.application.name }} — {{ token.scope }} — expires {{ token.expires }} <a href="{% url 'oauth2_provider:authorized-token-delete' token.pk %}">Revoke</a></li>{% empty %}<li>No current connections.</li>{% endfor %}</ul><a href="/accounts/password_change/">Change issuer password</a>{% endblock %}
