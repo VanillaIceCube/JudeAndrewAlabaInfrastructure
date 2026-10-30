@@ -62,7 +62,7 @@ class YNABIngressTests(unittest.TestCase):
                 if volume["target"] == "/etc/nginx/conf.d":
                     volume["source"] = str(optional)
             suffix = random.randrange(1, 250)
-            addresses = {"notoli_backend": f"10.233.{suffix}", "ynab_route": f"10.234.{suffix}"}
+            addresses = {"notoli_backend": f"10.233.{suffix}", "ynab_route": f"10.234.{suffix}", "macromapper": f"10.239.{suffix}"}
             project = identity
             proxy_name = identity + "-proxy"
             proxy["container_name"] = proxy_name
@@ -78,14 +78,15 @@ class YNABIngressTests(unittest.TestCase):
                     networks.append(name)
                     config["networks"][key]["name"] = name
                     if key in addresses:
-                        proxy["networks"][key]["ipv4_address"] = addresses[key] + ".2"
+                        proxy["networks"][key]["ipv4_address"] = addresses[key] + (".3" if key == "macromapper" else ".2")
                 before_networks = {name: json.loads(docker("network", "inspect", name).stdout)[0]["Id"] for name in networks}
                 companion_ids = {}
                 for app in ("notoli", "macromapper"):
                     for service in ("backend", "frontend"):
                         name = identity + "-" + app + "-" + service
                         key = ("notoli_backend" if service == "backend" else "notoli_frontend") if app == "notoli" else "macromapper"
-                        extra = ["--ip", addresses[key] + ".3"] if key == "notoli_backend" else []
+                        extra = (["--ip", addresses[key] + ".3"] if key == "notoli_backend" else
+                                 ["--ip", addresses[key] + (".2" if service == "backend" else ".4")] if key == "macromapper" else [])
                         containers.append(name)
                         docker("run", "-d", "--name", name, "--network", identity + "-" + key, *extra,
                                "--network-alias", app + "-" + service, "-e", "SERVICE=" + app + "-" + service,

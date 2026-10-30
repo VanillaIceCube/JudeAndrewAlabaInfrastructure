@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
+- Supply synthetic app-specific required secrets only in disposable shared release
+  fixtures; retain production missing/empty/malformed input rejection.
 - Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
   test actual canonical staging with synthetic protected files in Linux CI.
 - Separate YNAB stop-only containment from freshly scanned active-image rollback;
@@ -18,6 +24,12 @@
 
 ### Added
 
+- Add fixed inactive auth ingress, contained single-container issuer releases and
+  journal-preserving SQLite recovery with grant invalidation and offline JWT
+  quarantine; retain independent app releases and explicit recovery barriers.
+- Route MacroMapper MCP/discovery exactly to its app backend, preserve its existing
+  gateway peer172.20.0.3, and validate legacy/central app readiness without changing
+  ordinary login, frontend or estimation routes.
 - Add an inactive, independently packaged MCP authorization service with isolated
   app resources, maintained-library PKCE/consent/refresh/revocation, protected
   state/keys and pinned canonical framework policy; preserve ordinary app login.

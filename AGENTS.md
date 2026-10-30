@@ -12,6 +12,10 @@ and the [release standard](docs/app-release-standard.md) before related changes.
 - Change common release code under `app-release/v1`, regenerate its manifest,
   then synchronize both app PRs to the same commit. Do not edit vendored copies
   independently. App configuration and Compose remain app-specific.
+- For the owner-approved central MCP adoption in #56/#71, follow the explicit
+  legacy/central policy table in `docs/app-release-standard.md`. Both exact
+  topologies are intentional supported source configurations; preserve the
+  independent legacy-fixture anchor and exact existing peers in either mode.
 - Validate Compose and run `python -m unittest discover -s tests -v` against a
   disposable local/CI Docker daemon. Also run
   `python scripts/update_release_manifest.py --check`; shared behavior changes
@@ -152,3 +156,11 @@ never edit vendored framework files independently. Run
 audit its exact hashed dependency lock through the existing dependency gate.
 Require native OS and complete Python inventory for authorization image scans;
 supporting that role must not weaken the paired YNAB image gate.
+
+Use the [issuer release/recovery contract](docs/mcp-auth-releases.md) for its
+single-container controller. Keep both auth/YNAB routes contained during database
+operations, preserve full journal namespaces and durable rename recovery, and
+invalidate restored grants/sessions before acceptance. The durable905second
+quarantine must survive rollback; ingress cannot re-expose offline YNAB JWTs early.
+Run all `test_mcp_auth*.py` suites on Linux/disposable Docker and preserve the
+existing apps and their exact peer addresses throughout.

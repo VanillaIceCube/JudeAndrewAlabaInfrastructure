@@ -1,4 +1,4 @@
-# 🚦 Optional YNAB gateway profiles
+# 🚦 Optional MCP gateway profiles
 
 This is a source-only extension of the existing gateway release path. It neither
 sets a repository variable nor authorizes activation. The current YNAB artifact,
@@ -80,3 +80,33 @@ validator, marker corruption, explicit network/trust policy and safe health
 responses. Existing real Nginx ingress/DNS/disable tests exercise the same vhost
 bytes; existing gateway transaction/recovery tests retain default behavior. Run
 the full root suite, release-manifest check, actionlint and ShellCheck before PR.
+
+## 🔐 Independent authorization hostname
+
+`MCP_AUTH_ROUTE_PROFILE` selects the same three fixed states for
+`auth.judeandrewalaba.com`, independently of `YNAB_ROUTE_PROFILE`. The separate
+`mcp-auth-profile.json` marker preserves the existing YNAB v1 marker and accepted
+base bundles. It binds `zz-mcp-auth.conf` into the existing vhost mount; an enabled
+profile alone adds external `mcp_auth_private` and proxy address `172.30.92.2`.
+The service endpoint is `mcp-auth:8000` at `.3`. This does not create a network.
+
+The authorization route retains browser cookies for Django login/CSRF and Basic
+credentials for resource-bound introspection, while overwriting forwarded trust
+and clearing app-key/user spoofing headers. Exact reviewed endpoint paths are
+allowed; admin, DCR, OIDC, health and encoded/prefix alternatives remain hidden.
+Access/error request logging is disabled and responses are uncached. See the
+[authorization ingress contract](mcp-auth-ingress.md) for the fixed allowlist.
+
+Both hostnames require their own accepted disabled baseline before exposure and
+retain their tombstones through recovery. Introduce initial tombstones separately
+from first exposure of either route, so protected recovery cannot publish an
+unaccepted endpoint. Existing auth-disabled/Y-enabled and auth-enabled/Y-disabled
+combinations are supported, subject to the actual operation's containment gates.
+
+Authorization database operations require **both** accepted disabled profiles and
+verified origin 410 checks. After database restore, YNAB re-exposure additionally
+requires the durable 905-second offline-JWT quarantine to expire and no pending
+authorization recovery barrier. The gateway never deletes/resets that quarantine.
+Malformed, symlinked, unowned or non-private quarantine evidence blocks exposure;
+stopping/disabling routes stays available. Authentication source approval and
+profile configuration never replace the exact production authorization.
