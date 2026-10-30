@@ -79,6 +79,10 @@ Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAut
 
 ## 🧾 YNAB MCP investigation
 
+For actual client acceptance, follow `docs/ynab-operations.md`: verify callbacks
+after discovery and keep exactly one OAuth resource parameter. Correct client
+configuration rather than weakening issuer resource or redirect validation.
+
 Follow [the gateway decision](docs/ynab-mcp.md) and #56/#57–#62 dependency order.
 The disposable `experiments/ynab-mcp` harness is not deployable application code.
 Run it with Node 24 for harness/pin changes; existing validation CI enforces the

@@ -1,5 +1,12 @@
 # 📝 Changelog
 
+## 2026-10-30
+
+### Changed
+
+- Clarify final ChatGPT callback verification after discovery and Codex's
+  metadata-derived resource setup, preserving strict issuer validation.
+
 ## 2026-10-29
 
 ### Changed
