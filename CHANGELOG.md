@@ -26,6 +26,9 @@
 
 ### Added
 
+- Document the ordered YNAB/shared-issuer first activation, exact artifact/network
+  prerequisites, both-client acceptance and contained recovery before app adoption.
+
 - Add fixed inactive auth ingress, contained single-container issuer releases and
   journal-preserving SQLite recovery with grant invalidation and offline JWT
   quarantine; retain independent app releases and explicit recovery barriers.

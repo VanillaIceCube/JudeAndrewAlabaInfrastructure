@@ -262,3 +262,11 @@ patched upstream dependency evidence. Only after those gates should the owner
 approve an exact read-only activation and private credential-provisioning plan.
 No credentials are needed for #57. Sanitized progress belongs in #56; private
 host/account/capacity and provider-request details belong in KnowledgeVault.
+
+## 🚀 First activation
+
+The [ordered operator procedure](ynab-operations.md) combines the reviewed issuer,
+YNAB and gateway release guides without a new deployment framework. Use actual
+ChatGPT and Codex callback registration, consent and read-only tool acceptance.
+Budget selection is client/tool input; the upstream does not provide a supported
+`YNAB_BUDGET_ID` environment selector. Keep #62 open for observed live evidence.
