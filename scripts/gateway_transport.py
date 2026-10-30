@@ -41,6 +41,7 @@ def authorization():
             "Only the promoted gateway workflow may deploy")
     require(os.environ.get("DEPLOY_ENABLED") == "true", "Gateway deployment is disabled")
     profiles.selected(os.environ)  # Fail before any SSH credential is loaded.
+    profiles.selected(os.environ, auth=True)
     require(run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch")
     require(api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
             "Promotion advanced; approve a fresh run")
@@ -104,20 +105,24 @@ def evidence(message):
         summary.write(message + "\n\n")
 
 
-def source_archive(source, archive, profile=None):
+def source_archive(source, archive, profile=None, auth_profile=None):
     profile = profile or profiles.selected(os.environ)
-    require(profile in profiles.PROFILES, "Invalid route profile")
+    auth_profile = auth_profile or profiles.selected(os.environ, auth=True)
+    require(profile in profiles.PROFILES and auth_profile in profiles.PROFILES, "Invalid route profile")
     run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
          "compose.yml", "nginx/nginx.conf", "nginx/vhosts", "nginx/snippets",
          "scripts/gateway_release.py", "scripts/check_host.py", "scripts/gateway_profile.py"])
-    vhost = None
-    if profile != "base":
-        path = "nginx/optional/" + ("ynab" if profile == "enabled" else "ynab-disabled") + "/zz-ynab.conf"
-        vhost = run(["git", "show", source + ":" + path]).encode()
+    additions = {}
+    for selected, stem, marker, destination in (
+            (profile, "ynab", profiles.MARKER, profiles.VHOST),
+            (auth_profile, "mcp-auth", profiles.AUTH_MARKER, profiles.AUTH_VHOST)):
+        vhost = None
+        if selected != "base":
+            path = "nginx/optional/" + stem + ("" if selected == "enabled" else "-disabled") + "/" + Path(destination).name
+            vhost = run(["git", "show", source + ":" + path]).encode()
+            additions[destination] = vhost
+        additions[marker] = json.dumps(profiles.descriptor(selected, vhost)).encode()
     with tarfile.open(archive, "a") as payload:
-        additions = {profiles.MARKER: json.dumps(profiles.descriptor(profile, vhost)).encode()}
-        if vhost is not None:
-            additions[profiles.VHOST] = vhost
         for name, data in additions.items():
             item = tarfile.TarInfo(name)
             item.size, item.mode = len(data), 0o600
@@ -168,7 +173,9 @@ def execute(source, operation, recovery, directory):
     require(result["status"] in {"success", "unchanged", "rolled_back", "protected"} and SHA.fullmatch(result["running_source"]),
             "Missing host acceptance record")
     require(result.get("profile", "base") in profiles.PROFILES, "Invalid accepted route profile")
-    return {"status": result["status"], "running_source": result["running_source"], "profile": result.get("profile", "base")}
+    require(result.get("auth_profile", "base") in profiles.PROFILES, "Invalid accepted authorization route profile")
+    return {"status": result["status"], "running_source": result["running_source"],
+            "profile": result.get("profile", "base"), "auth_profile": result.get("auth_profile", "base")}
 
 
 def main():
@@ -189,8 +196,10 @@ def main():
     # Report the host's actual running identity, including unchanged promotions
     # and explicit rollback. Never claim the promoted helper source is running.
     profile = result.get("profile", "base")
-    require(profile in profiles.PROFILES, "Invalid accepted route profile")
-    evidence(f"Verified host result: **{result['status']}**; running source `{result['running_source']}`; route profile `{profile}`.")
+    auth_profile = result.get("auth_profile", "base")
+    require(profile in profiles.PROFILES and auth_profile in profiles.PROFILES, "Invalid accepted route profile")
+    evidence(f"Verified host result: **{result['status']}**; running source `{result['running_source']}`; "
+             f"YNAB route profile `{profile}`; authorization route profile `{auth_profile}`.")
 
 
 if __name__ == "__main__":

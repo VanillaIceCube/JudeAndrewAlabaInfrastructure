@@ -7,10 +7,12 @@ import re
 PROFILES = {"base", "disabled", "enabled"}
 MARKER = "gateway-profile.json"
 VHOST = "nginx/vhosts/zz-ynab.conf"
+AUTH_MARKER = "mcp-auth-profile.json"
+AUTH_VHOST = "nginx/vhosts/zz-mcp-auth.conf"
 
 
-def selected(environment):
-    profile = environment.get("YNAB_ROUTE_PROFILE") or "base"
+def selected(environment, *, auth=False):
+    profile = environment.get("MCP_AUTH_ROUTE_PROFILE" if auth else "YNAB_ROUTE_PROFILE") or "base"
     if profile not in PROFILES:
         raise ValueError("Invalid permanent YNAB route profile")
     return profile
@@ -23,8 +25,8 @@ def descriptor(profile, vhost=None):
             "vhost_sha256": hashlib.sha256(vhost).hexdigest() if vhost is not None else None}
 
 
-def read(directory):
-    marker, vhost = directory / MARKER, directory / VHOST
+def read(directory, *, auth=False):
+    marker, vhost = directory / (AUTH_MARKER if auth else MARKER), directory / (AUTH_VHOST if auth else VHOST)
     if not marker.exists():
         if vhost.exists():
             raise ValueError("Optional vhost requires an explicit route profile")
@@ -46,20 +48,22 @@ def read(directory):
     return record["profile"]
 
 
-def apply(model, profile):
+def apply(model, profile, *, auth=False):
     if profile not in PROFILES:
         raise ValueError("Invalid route profile")
     if profile == "enabled":
-        model["networks"]["ynab_route"] = {"name": "ynab_mcp_private", "external": True}
-        model["services"]["proxy"]["networks"]["ynab_route"] = {"ipv4_address": "172.30.89.2"}
+        key, name, address = ("mcp_auth_route", "mcp_auth_private", "172.30.92.2") if auth else (
+            "ynab_route", "ynab_mcp_private", "172.30.89.2")
+        model["networks"][key] = {"name": name, "external": True}
+        model["services"]["proxy"]["networks"][key] = {"ipv4_address": address}
     return model
 
 
-def model_profile(model):
-    if "ynab_route" in model.get("networks", {}):
+def model_profile(model, *, auth=False):
+    if ("mcp_auth_route" if auth else "ynab_route") in model.get("networks", {}):
         return "enabled"
     for volume in model["services"]["proxy"].get("volumes", []):
-        if volume["target"] == "/etc/nginx/conf.d" and (Path(volume["source"]) / "zz-ynab.conf").exists():
+        if volume["target"] == "/etc/nginx/conf.d" and (Path(volume["source"]) / Path(AUTH_VHOST if auth else VHOST).name).exists():
             return "disabled"
     return "base"
 
@@ -71,3 +75,14 @@ def transition(previous, candidate):
         raise ValueError("Accept a disabled tombstone baseline before route activation")
     if previous != "base" and candidate == "base":
         raise ValueError("Retain the YNAB tombstone; implicit base removal is prohibited")
+
+
+def transition_pair(previous, candidate, previous_auth, candidate_auth):
+    transition(previous, candidate)
+    transition(previous_auth, candidate_auth)
+    first_tombstone = (previous == "base" and candidate == "disabled" or
+                       previous_auth == "base" and candidate_auth == "disabled")
+    first_exposure = (candidate == "enabled" and previous != "enabled" or
+                      candidate_auth == "enabled" and previous_auth != "enabled")
+    if first_tombstone and first_exposure:
+        raise ValueError("Accept initial tombstones separately from first route exposure")

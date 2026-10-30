@@ -18,6 +18,12 @@
 
 ### Added
 
+- Add fixed inactive auth ingress, contained single-container issuer releases and
+  journal-preserving SQLite recovery with grant invalidation and offline JWT
+  quarantine; retain independent app releases and explicit recovery barriers.
+- Route MacroMapper MCP/discovery exactly to its app backend, preserve its existing
+  gateway peer172.20.0.3, and validate legacy/central app readiness without changing
+  ordinary login, frontend or estimation routes.
 - Add an inactive, independently packaged MCP authorization service with isolated
   app resources, maintained-library PKCE/consent/refresh/revocation, protected
   state/keys and pinned canonical framework policy; preserve ordinary app login.
