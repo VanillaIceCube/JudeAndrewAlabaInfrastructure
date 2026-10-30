@@ -18,6 +18,12 @@
 
 ### Added
 
+- Add an inactive, independently packaged MCP authorization service with isolated
+  app resources, maintained-library PKCE/consent/refresh/revocation, protected
+  state/keys and pinned canonical framework policy; preserve ordinary app login.
+- Extend existing dependency and full-image audit gates for its exact hashed
+  Python lock and native/runtime inventory; run credential-free issuer container
+  acceptance in Required CI without publishing or activating the service.
 - Extend the existing gateway transaction with explicit YNAB profile packaging,
   protected tombstone transitions, route identity and independent health checks.
 - Add an owner-operated YNAB-only stage/promotion/rollback controller using shared

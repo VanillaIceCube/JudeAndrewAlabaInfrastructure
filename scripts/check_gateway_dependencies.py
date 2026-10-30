@@ -12,6 +12,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = "services/ynab-gateway/requirements.txt"
+AUTH_LOCK = "services/mcp-auth/requirements.txt"
 PIN = re.compile(r"([a-z0-9]+(?:[._-][a-z0-9]+)*)==([0-9][a-zA-Z0-9.!+_-]*)")
 HASH = re.compile(r"--hash=sha256:([a-f0-9]{64})")
 

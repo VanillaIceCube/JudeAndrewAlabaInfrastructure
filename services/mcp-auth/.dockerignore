@@ -1,0 +1,13 @@
+**/__pycache__
+**/*.pyc
+issuer_tests
+scripts
+run_tests.py
+run_source_tests.py
+run_container_tests.py
+build.py
+manifest.json
+dependency-wheels.json
+README.md
+compose.yml
+mcp-framework-source.json

@@ -16,18 +16,48 @@ on:
         value: ${{ jobs.validate.outputs.recovery_log }}
       automation_status:
         description: Automation regression status.
-        value: ${{ jobs.validate.outputs.automation_status == 'success' && jobs.ynab-gateway.outputs.status == 'success' && 'success' || 'failure' }}
+        value: ${{ jobs.validate.outputs.automation_status == 'success' && jobs.ynab-gateway.outputs.status == 'success' && jobs.mcp-auth.outputs.status == 'success' && 'success' || 'failure' }}
       automation_log:
         description: Automation diagnostics.
         value: |
           ${{ jobs.validate.outputs.automation_log }}
           YNAB gateway (${{ jobs.ynab-gateway.outputs.status }}):
           ${{ jobs.ynab-gateway.outputs.log }}
+          MCP authorization service (${{ jobs.mcp-auth.outputs.status }}):
+          ${{ jobs.mcp-auth.outputs.log }}
   push:
     branches: [main]
 permissions:
   contents: read
 jobs:
+  mcp-auth:
+    name: Isolated MCP authorization service
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      log: ${{ steps.report.outputs.log }}
+      status: ${{ steps.authorization.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build and test the inactive synthetic issuer
+        id: authorization
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          identity="mcp-auth-test-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+          trap 'python3 services/mcp-auth/run_tests.py --cleanup "$identity"' EXIT
+          MCP_AUTH_TEST_ID="$identity" timeout --kill-after=15s 7m python3 services/mcp-auth/run_tests.py 2>&1 | tee "$RUNNER_TEMP/mcp-auth.log"
+      - name: Report authorization acceptance
+        id: report
+        if: always()
+        env:
+          OUTCOME: ${{ steps.authorization.outcome }}
+        run: python3 scripts/ci_report.py log "$RUNNER_TEMP/mcp-auth.log" "$OUTCOME"
+      - name: Require authorization acceptance
+        if: always() && steps.authorization.outcome != 'success'
+        run: exit 1
   ynab-gateway:
     name: Isolated authenticated YNAB gateway
     runs-on: ubuntu-latest
@@ -106,6 +136,7 @@ jobs:
             python3 -m unittest discover -s tests -p test_ynab_release.py -v || exit 1
             sudo -E python3 -m unittest discover -s tests -p test_ynab_stage_model.py -v || exit 1
             python3 -m unittest discover -s tests -p test_ynab_release_docker.py -v || exit 1
+            sudo -E python3 -m unittest discover -s tests -p 'test_mcp_auth*.py' -v || exit 1
             timeout --kill-after=15s 4m python3 experiments/ynab-mcp/run.py || exit 1
             ynab_test_id="ynab-runtime-test-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
             trap 'python3 services/ynab-mcp/test_runtime.py --cleanup "$ynab_test_id"' EXIT

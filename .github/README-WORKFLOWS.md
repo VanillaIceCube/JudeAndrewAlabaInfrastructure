@@ -15,7 +15,7 @@ prompts, evidence, input validation, permissions and Project metadata.
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
 | CodeQL | All present Python, automation JavaScript and Actions sources on every PR, main push and weekly/manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
-| Package malware | Exact YNAB gateway hashed Python lock: OSV known advisories/catalogued malware plus PyPI hash/yank verification; all other manifests block pending reviewed scanner support |
+| Package malware | Exact YNAB gateway and MCP issuer hashed Python locks: OSV known advisories/catalogued malware plus PyPI hash/yank verification; all other manifests block pending reviewed scanner support |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
@@ -36,6 +36,14 @@ a ten-minute bound, a seven-minute process limit and exact-run cleanup on EXIT.
 Its result/log joins the existing automation evidence for Lint Eastwood; failure
 blocks the overall Tests/Required CI result. It publishes no image and loads no
 real credentials. See the [gateway contract](../services/ynab-gateway/README.md).
+
+The inactive MCP issuer has an independent bounded Docker job using only
+synthetic keys/accounts and exact-run cleanup. It tests real authorization,
+refresh/revocation and the production entrypoint under file/identity restrictions.
+Its outcome and sanitized report also join Tests/Required CI. The existing
+automation suite checks its release preflight, contained recovery and SQLite
+journal behavior. Neither job publishes images or authorizes activation. Both
+supported hashed Python locks receive the same fail-closed OSV/PyPI gate.
 
 Ingress validation includes both the base and inactive YNAB overlay fixtures.
 The separate gateway image job also tests its actual stdio app against a

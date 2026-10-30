@@ -17,6 +17,7 @@ import uuid
 from check_ynab_image_audit import AuditError, DIGEST, audit, require
 
 PREFIX = "ghcr.io/vanillaicecube/judeandrewalabainfrastructure-ynab-"
+AUTH_REPOSITORY = "ghcr.io/vanillaicecube/judeandrewalabainfrastructure-mcp-auth"
 
 
 def docker(*arguments):
@@ -29,8 +30,9 @@ def docker(*arguments):
 
 
 def inspect(reference, role):
-    require(role in {"gateway", "egress"} and re.fullmatch(
-        re.escape(PREFIX + role + "@") + r"sha256:[a-f0-9]{64}", reference),
+    repository = AUTH_REPOSITORY if role == "authorization" else PREFIX + role
+    require(role in {"gateway", "egress", "authorization"} and re.fullmatch(
+        re.escape(repository + "@") + r"sha256:[a-f0-9]{64}", reference),
         "Expected role-specific immutable registry reference")
     images = json.loads(docker("image", "inspect", reference))
     require(isinstance(images, list) and len(images) == 1, "Missing exact local image")
@@ -38,6 +40,28 @@ def inspect(reference, role):
     require(reference in image.get("RepoDigests", []) and DIGEST.fullmatch(image.get("Id", "")) and
             image.get("Os") == "linux" and image.get("Architecture") == "amd64", "Local registry identity mismatch")
     return image["Id"]
+
+
+def audit_local(image_id, role, scanner, cache):
+    """Export one already-resolved image without starting it; retain fresh policy."""
+    with tempfile.TemporaryDirectory(prefix="mcp-release-artifact-") as directory:
+        work = Path(directory)
+        archive, filesystem = work / "image.tar", work / "filesystem.tar"
+        name = "mcp-audit-" + uuid.uuid4().hex
+        created = False
+        try:
+            docker("image", "save", "--output", archive, image_id)
+            docker("create", "--pull", "never", "--name", name, "--network", "none",
+                   "--entrypoint", "/bin/false", image_id)
+            created = True
+            container = json.loads(docker("container", "inspect", name))[0]
+            require(container.get("Image") == image_id and
+                    container.get("State", {}).get("Status") == "created", "Filesystem image binding mismatch")
+            docker("container", "export", "--output", filesystem, name)
+            audit(archive, filesystem, image_id, role, scanner, cache)
+        finally:
+            if created:
+                docker("container", "rm", "-v", name)
 
 
 def preflight(images, scanner, cache):
@@ -48,25 +72,8 @@ def preflight(images, scanner, cache):
     identities = {role: inspect(reference, role) for role, reference in images.items()}
     checked = {}
     for role in ("gateway", "egress"):
-        with tempfile.TemporaryDirectory(prefix="ynab-release-artifact-") as directory:
-            work = Path(directory)
-            archive, filesystem = work / "image.tar", work / "filesystem.tar"
-            name = "ynab-audit-" + uuid.uuid4().hex
-            created = False
-            try:
-                docker("image", "save", "--output", archive, identities[role])
-                docker("create", "--pull", "never", "--name", name, "--network", "none",
-                       "--entrypoint", "/bin/false", identities[role])
-                created = True
-                container = json.loads(docker("container", "inspect", name))[0]
-                require(container.get("Image") == identities[role] and
-                        container.get("State", {}).get("Status") == "created", "Filesystem image binding mismatch")
-                docker("container", "export", "--output", filesystem, name)
-                audit(archive, filesystem, identities[role], role, scanner, cache)
-                checked[role] = {"reference": images[role], "image_id": identities[role]}
-            finally:
-                if created:
-                    docker("container", "rm", "-v", name)
+        audit_local(identities[role], role, scanner, cache)
+        checked[role] = {"reference": images[role], "image_id": identities[role]}
     # Returned only after two fresh scans in this invocation. Never load this
     # result from an operator-edited file as an alternative to running the gate.
     return checked
