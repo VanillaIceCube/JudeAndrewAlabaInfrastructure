@@ -1,6 +1,0 @@
-# Explicit route-disable profile; never run automatically or delete any network.
-services:
-  proxy:
-    volumes:
-      - ./nginx/optional/ynab-disabled:/etc/nginx/conf.d:ro
-      - ./nginx/vhosts:/etc/nginx/existing-vhosts:ro
