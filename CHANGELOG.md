@@ -9,6 +9,10 @@
 
 ### Changed
 
+- Retire external MCP application build/runtime source, disposable experiments
+  and their CI first; retain existing deployment controllers and inputs for the
+  separately coordinated final cleanup (#96, #99).
+
 - Retire the external YNAB integration and shared MCP issuer in favor of nginx
   routing to app-owned MCP/OAuth; document the ordered, main-first cleanup (#56).
 - Reconcile existing production promotion history into main and document
