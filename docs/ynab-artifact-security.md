@@ -87,12 +87,14 @@ python3 scripts/preflight_ynab_release.py \
   --scanner /tools/trivy --cache /private/trivy-cache
 ```
 
-This is the mandatory artifact preflight interface for #61's subsequent release
-transaction: invoke it under release locks immediately before mutation, never
-accept a saved approval JSON in its place. Production deployment is currently
-unsupported and remains blocked; the inactive Compose files are source contracts,
-not an alternative deployment path. The remaining transaction and its enforcement
-of this call require a separate reviewed #61 PR before activation.
+The [YNAB release transaction](ynab-releases.md) invokes this mandatory preflight
+under its release locks for staging and active-image promotion/recovery; it never
+accepts a saved approval JSON. Stop-only disable/recovery remains available when
+scanning fails because it cannot start an image. The transaction is implemented,
+but source approval does not prove
+production acceptance. Follow the [ordered activation procedure](ynab-operations.md)
+for publication, capacity, private setup, containment and real client checks.
+The inactive Compose files are not an alternative deployment path.
 
 ## 🚧 Current blockers and limits
 
