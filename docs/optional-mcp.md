@@ -1,10 +1,12 @@
 # 🔌 Optional application MCP ingress
 
 Enable this profile only when an application's reviewed ASGI server and OAuth
-client policy are ready. Notoli is enabled today; MacroMapper remains ordinary
-REST/frontend with no advertised MCP. FullStackTemplate is an onboarding example,
-not a third production instance. Application tools, users, OAuth grants and domain
-authorization belong to their application repository.
+client policy are ready. Notoli's existing MCP remains enabled; MacroMapper's
+registry stays disabled by default until its reviewed app release activates it.
+Exact MacroMapper ingress routes exist without advertising a disabled registry.
+FullStackTemplate is an onboarding example, not another production instance.
+Applications own tools, users and domain permissions; the shared MCP issuer owns
+central grants, while retained legacy Notoli grants remain app-owned for rollback.
 
 ## 🌐 Routing and security contract
 
@@ -14,12 +16,15 @@ include `nginx/snippets/mcp-locations.conf`. The inactive
 [example vhost](optional-mcp.conf.example) contains no production activation.
 The include preserves exact `/mcp` without a trailing-slash rewrite, HTTP/1.1,
 buffering off, empty Connection and a 120-second upstream **idle** read timeout.
-It forwards `/.well-known/*` to the same backend. The backend OAuth endpoints
+Notoli forwards `/.well-known/*` to the same backend; MacroMapper forwards only
+its two exact metadata paths and rejects unknown discovery paths. Legacy Notoli OAuth endpoints
 `/auth/mcp/authorize/`, `/auth/mcp/token/`, `/auth/mcp/revoke/` and the JWT-only
 connection-management API `/auth/mcp/connections/` use private `/auth/` forwarding.
 The separate browser pages `/connections` and `/connections/authorize` stay on
 the frontend; they call those backend APIs. JSON Streamable HTTP requires no WebSocket
-route. Request bounds and ASGI lifespan/session handling are app responsibilities.
+route. Central consumers instead authorize at the independent
+[MCP issuer](mcp-oauth.md); regular app authentication stays unchanged. Request
+bounds and ASGI lifespan/session handling are app responsibilities.
 
 Private routes and discovery disable proxy caching, hide upstream cache policy
 and emit `Cache-Control: no-store`, including failures. Fixed Host and replaced
@@ -27,6 +32,8 @@ forwarded client/proto headers prevent spoofed metadata. Application ASGI trusts
 only individually reviewed gateway peer addresses on a private backend network;
 never copy Notoli's subnet into a new app or trust a wildcard/CIDR. Keep Notoli's
 existing `.2` gateway/`.3` backend and all current network objects unchanged.
+MacroMapper retains the observed gateway peer172.20.0.3 on its existing ingress
+network; pin that exact peer rather than trusting its frontend, subnet or a wildcard.
 Do not publish backend ports. Docker/root administrators remain privileged.
 
 Preserve query-free access logs and disabled raw-request error logging: OAuth
@@ -40,9 +47,11 @@ challenge. Keep full strict TLS. This extraction adds no DNS/certificate/edge ru
 Use the application release standard's existing app-specific JSON/header
 assertions; there is no new shared engine or cross-app release dependency.
 Keep normal frontend HTML and unauthenticated API JSON checks. For an enabled
-profile add issuer metadata, exact protected resource metadata and `/mcp` 401
+profile add exact protected resource metadata and `/mcp` 401
 with the resource-metadata Bearer challenge. Notoli's current policy already
-does this. An ordinary app retains ordinary readiness and must not advertise
+does this. Central resource metadata advertises only the fixed shared issuer;
+Notoli's retired local issuer returns410, while MacroMapper has no local issuer
+and returns404. The shared issuer has its own metadata/readiness. An ordinary app retains ordinary readiness and must not advertise
 OAuth metadata/MCP challenges; an unknown-path SPA HTML response is not discovery.
 
 Before activation, review the app registry/scopes/consent, independent secrets,
@@ -50,7 +59,8 @@ HTTPS origin/frontend settings, OAuth migrations, ASGI command and exact trust,
 network membership/capacity, vhost and app readiness policy. Register only an
 exact HTTPS public-client callback with S256 PKCE; no password/implicit grants
 or dynamic registration. Apply app-level ownership/current membership on every
-tool operation. Infrastructure never creates accounts, grants or business tools.
+tool operation. The issuer's closed operator bootstrap creates only independent
+MCP accounts/grants; it never creates application users, memberships or business tools.
 
 ## 🧪 Verification and recovery
 

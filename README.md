@@ -16,9 +16,18 @@ preserved through the reviewed migration.
 | --- | --- |
 | Host ingress | [Compose](compose.yml), [Nginx](nginx/nginx.conf) |
 | Application releases | [Shared standard and parity matrix](docs/app-release-standard.md), [versioned source](app-release/v1) |
+| Shared MCP authorization | [Ownership and app isolation](docs/mcp-oauth.md), [inactive issuer candidate](services/mcp-auth/README.md) |
+| MCP issuer operations | [Contained ingress](docs/mcp-auth-ingress.md), [independent release and recovery](docs/mcp-auth-releases.md) |
 | Production operations | [Cutover and reversal](docs/cutover.md) |
 | Subsequent gateway releases | [Promotion, approval and rollback](docs/gateway-releases.md) |
 | Adding an application | [Onboarding](docs/onboarding.md) |
+| YNAB MCP investigation | [Gateway decision and disposable proof](docs/ynab-mcp.md) — production blocked |
+| YNAB stdio runtime | [Pinned, inactive runtime and container tests](services/ynab-mcp/README.md) |
+| YNAB HTTP gateway | [Inactive owner-authenticated proxy and acceptance](services/ynab-gateway/README.md) |
+| YNAB network/ingress | [Inactive route, controlled egress and DNS/TLS plan](docs/ynab-ingress.md) |
+| YNAB artifact security | [Pinned scan coverage and production blockers](docs/ynab-artifact-security.md) |
+| YNAB app releases | [Inactive staging, paired scan gate and exact recovery](docs/ynab-releases.md) |
+| YNAB first activation | [Ordered rollout and both-client acceptance](docs/ynab-operations.md) |
 | Development | [Contributing](CONTRIBUTING.md), [agent guidance](AGENTS.md) |
 | Repository automation | [Checks and reviewers](.github/README-WORKFLOWS.md), [setup](.github/GITHUB_SETUP.md) |
 | Project history | [Changelog](CHANGELOG.md) |
