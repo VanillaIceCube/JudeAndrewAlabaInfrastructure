@@ -44,6 +44,24 @@ class ImageAuditTests(unittest.TestCase):
                                 audit.timestamp(report["CreatedAt"]))
         self.assertEqual(result["os_packages"], 40)
         self.assertFalse(result["production_approved"])
+        for identifier in ("bare", "missing"):
+            variant = copy.deepcopy(report)
+            for row in variant["Results"]:
+                if row.get("Class") == "os-pkgs":
+                    for package in row["Packages"]:
+                        if identifier == "bare":
+                            package["ID"] = package["Name"]
+                        else:
+                            package.pop("ID", None)
+            audit.validate(variant, variant["Metadata"]["ImageID"], "gateway", records,
+                           audit.timestamp(variant["CreatedAt"]))
+        for row in report["Results"]:
+            if row.get("Class") == "os-pkgs":
+                row["Packages"][0]["Version"] += "-different-revision"
+                break
+        with self.assertRaisesRegex(audit.AuditError, "coverage differs"):
+            audit.validate(report, report["Metadata"]["ImageID"], "gateway", records,
+                           audit.timestamp(report["CreatedAt"]))
 
     def test_alpine_native_records_and_complete_report_must_agree(self):
         report = fixture()

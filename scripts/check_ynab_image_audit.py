@@ -149,13 +149,20 @@ def validate(report, image_id, role, expected, now=None):
                     "Incomplete package inventory")
             if row.get("Class") == "os-pkgs":
                 packages.add(package["Name"])
-                # Trivy's Debian ID retains epoch and full revision even when
-                # the Version field is split into optional component fields.
-                prefix = package["Name"] + "@"
-                identifier = package.get("ID")
-                require(isinstance(identifier, str) and identifier.startswith(prefix) and
-                        len(identifier) > len(prefix), "Incomplete OS package identity")
-                version = identifier[len(prefix):]
+                if family == "alpine":
+                    # APK's Version is the complete installed version, including
+                    # its -r revision. Package IDs are scanner bookkeeping;
+                    # compare the native identity without depending on ID shape.
+                    version = package["Version"]
+                    require(isinstance(version, str), "Incomplete APK package version")
+                else:
+                    # Debian IDs retain epoch and full revision when Version is
+                    # split into optional component fields.
+                    prefix = package["Name"] + "@"
+                    identifier = package.get("ID")
+                    require(isinstance(identifier, str) and identifier.startswith(prefix) and
+                            len(identifier) > len(prefix), "Incomplete OS package identity")
+                    version = identifier[len(prefix):]
                 observed["os"].add((package["Name"], version))
             elif row.get("Type") == "python-pkg":
                 observed["python"].add((re.sub(r"[-_.]+", "-", package["Name"]).lower(), package["Version"]))

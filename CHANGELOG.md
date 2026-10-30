@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Compare Alpine image coverage using native package names and complete installed
+  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
 - Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
   hashed C++ packages; verify complete native APK scan coverage.
 
