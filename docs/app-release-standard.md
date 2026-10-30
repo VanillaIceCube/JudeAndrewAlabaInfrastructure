@@ -47,8 +47,8 @@ unreachable code without scattering that state machine across artificial layers.
 | Trust/address | exact proxy `.2`, backend `.3`; Uvicorn peer handling preserved | canonical forwarded HTTPS behind restricted backend reachability |
 | Published frontend port | existing IPv4/IPv6 3000 retained | none |
 | Common readiness | direct API 401, public HTML 200 and JSON API 401 | same |
-| Extra readiness | OAuth issuer/resource metadata and MCP challenge | none; functional AI/mail checks are separately authorized |
-| Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout |
+| Extra readiness | OAuth issuer/resource metadata and MCP challenge | Same for the app-owned MCP release; functional AI/mail checks remain separately authorized |
+| Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout; app-owned MCP origin and exact `172.20.0.3` trust |
 | Frontend build argument | `REACT_APP_API_BASE_URL=` | `VITE_API_BASE_URL=` |
 
 ## 🔒 Automated parity and updates
@@ -105,6 +105,10 @@ contract/preflight regressions derive fixtures from the selected policy; explici
 checks still preserve the two existing applications' trust and secret boundaries.
 `tests/fixtures/release-profiles` runs the same five release suites for Notoli,
 MacroMapper, and the isolated template example in Linux/disposable-Docker CI.
+The MacroMapper fixture enables app-owned MCP with exact `172.20.0.3` trust and
+origin/challenge readiness; the ordinary template fixture retains the disabled
+MCP contract. Consumers adopting the updated canonical tests pin this same
+reviewed Infrastructure commit before synchronizing their vendored copies.
 
 The template profile is an onboarding example, not a third application approved
 for the shared host. It does not add gateway routes, networks, certificates,

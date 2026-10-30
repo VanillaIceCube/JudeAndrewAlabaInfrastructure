@@ -12,6 +12,13 @@
 
 ### Changed
 
+- Route MacroMapper MCP and discovery to its app-owned backend through the same
+  streaming/no-store include as Notoli; document gateway-first activation before
+  the independent MCP app release, preserving existing networks and proxy trust.
+- Validate enabled MacroMapper MCP origin, exact gateway trust and readiness in
+  canonical release contract tests while retaining disabled generic app coverage;
+  synchronize consumers through the regenerated shared-source manifest.
+
 - Retire external MCP application build/runtime source, disposable experiments
   and their CI first; retain existing deployment controllers and inputs for the
   separately coordinated final cleanup (#96, #99).
