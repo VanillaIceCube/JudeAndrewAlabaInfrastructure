@@ -118,6 +118,10 @@ on concrete and generic tool dispatch, upstream preview/confirmation and no retr
 after child failure. Production/provider/client acceptance
 and network activation remain separately gated.
 
+For #62 client discovery, retain the pinned SDK's four stateful handshake versions
+and session-bound protocol headers. Test the complete discovery sequence without
+resetting admission credit; preserve the sustained rate, auth and write guards.
+
 #60's [inactive routing/egress contract](docs/ynab-ingress.md) preserves all existing
 network objects and Notoli trust. Keep the base ingress/profile inactive; use
 exact MCP/metadata routes and the explicit 410 disable profile. Node's fixed

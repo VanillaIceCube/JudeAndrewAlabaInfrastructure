@@ -106,7 +106,7 @@ instant revocation or protection if a valid bearer is stolen.
 
 | Exact path | Contract |
 | --- | --- |
-| `/mcp` POST | Auth before JSON parsing; protocol `2025-11-25`, initialized stateful session, JSON responses for tools/resources/prompts and notifications; writes require both deployment opt-in and granted scope |
+| `/mcp` POST | Auth before JSON parsing; SDK handshake protocols `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`, initialized stateful session, JSON responses for tools/resources/prompts and notifications; writes require both deployment opt-in and granted scope |
 | `/mcp` DELETE | Authenticated, principal-bound session termination; same protocol header required |
 | `/mcp` GET | Authenticated 405; this server does not offer an unsolicited SSE channel or event replay/resumption |
 | `/.well-known/oauth-protected-resource/mcp` GET | Maintained RFC 9728 metadata; resource is `https://ynab.judeandrewalaba.com/mcp`, authorization server comes from the reviewed fixed configuration |
@@ -130,7 +130,8 @@ expiry and process restart discard previews. The gateway never retries a tool
 call or reconnects a failed child automatically.
 
 The maintained SDK handles MCP negotiation/dispatch/cancellation and its native
-principal binding; the policy also enforces owner/client session ownership. Newer
+principal binding; the policy also enforces owner/client session ownership and
+binds subsequent POST/DELETE protocol headers to the negotiated session version. Newer
 stateless protocols remain blocked until equivalent lifecycle/preview proof.
 JSON responses are supported Streamable HTTP; live SSE/event resumption is not
 claimed. Clients that require a different protocol/authorization profile must
@@ -138,12 +139,14 @@ remain blocked pending review.
 
 Limits per owner process: two active sessions, four in-flight requests, 256 KiB
 request bodies, 16 KiB total request headers, 30 MCP admission attempts/minute
-with burst five (including invalid/anonymous attempts, before signature checking),
+with burst twelve (including invalid/anonymous attempts, before signature checking),
 ten-minute idle sessions, 512 unique RPC IDs/session, five-second body read and
 30-second execution bound capped by token expiry. Duplicate RPC IDs receive 409;
 this prevents repeated logical calls, **not stolen-bearer replay**. Output is
 bounded to 2 MiB. Pending initializations count toward the session quota. The
-inactive profile uses 512 MiB, half a CPU and 64 PIDs; live host capacity remains
+burst admits complete client discovery without resetting admission credit or
+delaying each listing. The sustained rate and concurrency/session limits remain
+unchanged. The inactive profile uses 512 MiB, half a CPU and 64 PIDs; live host capacity remains
 a separate acceptance check. It has a 32 MiB temporary filesystem. The write-enabled
 network profile additionally binds the protected, persistent YNAB journal directory
 at `/data`; it is not ephemeral temporary storage.
