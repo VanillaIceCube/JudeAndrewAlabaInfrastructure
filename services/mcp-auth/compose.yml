@@ -1,0 +1,48 @@
+name: mcp-auth
+services:
+  authorization:
+    profiles: [manual-auth]
+    container_name: mcp-auth-server
+    image: ${MCP_AUTH_REPOSITORY:?Set reviewed registry repository}@sha256:${MCP_AUTH_SHA256:?Set reviewed 64-character manifest digest}
+    user: "65532:65532"
+    init: true
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: 0.25
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,uid=65532,gid=65532,mode=0700
+    volumes:
+      - type: bind
+        source: ${MCP_AUTH_DATA_DIRECTORY:?Set reviewed private SQLite directory}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MCP_AUTH_DJANGO_SECRET_FILE:?Set private service-owned Django secret file}
+        target: /run/secrets/django_secret_key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MCP_AUTH_SIGNING_KEY_FILE:?Set private service-owned signing key file}
+        target: /run/secrets/signing_key.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      MCP_AUTH_SIGNING_KEY_ID: ${MCP_AUTH_SIGNING_KEY_ID:?Set reviewed public key identifier}
+      DJANGO_TRUSTED_PROXY_IPS: "172.30.92.2"
+    networks:
+      private:
+        ipv4_address: 172.30.92.3
+        aliases: [mcp-auth, mcp-auth-server]
+    logging:
+      driver: none
+networks:
+  private:
+    external: true
+    name: mcp_auth_private

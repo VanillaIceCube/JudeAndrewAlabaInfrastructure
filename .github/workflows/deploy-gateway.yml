@@ -37,12 +37,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          YNAB_ROUTE_PROFILE: ${{ vars.YNAB_ROUTE_PROFILE }}
+          MCP_AUTH_ROUTE_PROFILE: ${{ vars.MCP_AUTH_ROUTE_PROFILE }}
         run: python3 scripts/gateway_transport.py authorize
       - name: Execute gateway transaction
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          YNAB_ROUTE_PROFILE: ${{ vars.YNAB_ROUTE_PROFILE }}
+          MCP_AUTH_ROUTE_PROFILE: ${{ vars.MCP_AUTH_ROUTE_PROFILE }}
           GATEWAY_OPERATION: ${{ inputs.operation || 'deploy' }}
           GATEWAY_RECOVERY: ${{ inputs.recovery }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}

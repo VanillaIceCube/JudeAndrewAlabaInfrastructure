@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/oliverames/ynab-mcp-server.git",
+  "version": "6.1.0",
+  "recipe_sha256": "e324b1fb508bda06ce9f0372436e396876e496fab4e2b9e0e00ff53a602a3165",
+  "entrypoint_sha256": "8be7444934960293ddb86a8fbc47150a4accaceeaf6a150b0cd6b83662e53891",
+  "tag": "v6.1.0",
+  "tag_object": "f8af8ba430793ed1fea2b87c136184bdd1b8ecac",
+  "commit": "076aa5836658f8332058fa2bd58500aa14326dc9",
+  "lock_sha256": "2619d837be950b52b4ee2a729c9cefaec504499962283c895f2fb6115f0876a6",
+  "package_url": "https://registry.npmjs.org/@oliverames/mcp-server-for-ynab/-/mcp-server-for-ynab-6.1.0.tgz",
+  "package_sha256": "48918430f127ac1b3d8c1689b482d1969baa80ad45b7e92a7b2b628dba52a7af",
+  "build_image": "node@sha256:a43f7fc3e52e87d12a905f46eea0275def84ca8f2981a5b53fed44d7fb398ee0",
+  "runtime_image": "gcr.io/distroless/nodejs24-debian13@sha256:bff50773e5717024e83e2527a777dc4da8980e08be4ba6641258f5f9fde17e85"
+}
