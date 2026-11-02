@@ -267,3 +267,7 @@ independent Required CI, all three same-repository Dependabot reviewers, no fork
 secrets, and separate production/recovery authorization. Successful Dependabot
 review evidence already exists on #53 and #33; human implementation PRs alone
 do not prove Dependabot secret access. No shared app-release behavior changes.
+
+The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
+including flow mappings, quoted/escaped keys, folded values and aliases. Install
+that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.
