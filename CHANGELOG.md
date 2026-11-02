@@ -2,6 +2,10 @@
 
 ## 2026-11-02
 
+### Fixed
+
+- Enforce aligned immutable CodeQL entry points in the required scope gate, with split-upgrade, cross-workflow drift and mutable-pin regressions; retain owner-only merge policy.
+
 ### Changed
 
 - Group all CodeQL action entry points in coordinated Dependabot version and security updates while preserving existing schedules and review gates ([FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271)).

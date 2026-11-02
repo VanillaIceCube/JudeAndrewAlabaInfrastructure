@@ -251,3 +251,19 @@ separate Compose updates. The template aligns its mutable CodeQL tag with the ot
 immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+
+## 🧪 Atomic CodeQL regression guard
+
+FullStackTemplate is the canonical application Dependabot policy (#240).
+Infrastructure adopts the common CodeQL revision guard and negative tests before
+its required scope detection: every CodeQL entry point in `.github` must use
+the same full immutable SHA. Split init/analyze, cross-workflow drift, mutable
+tags and missing analysis fail visibly. The version/security update groups
+merged in #106 remain unchanged, including weekly cadence and separate Compose
+updates. Run `node --test .github/actions/check-codeql-pins/*.test.js` locally.
+
+Application auto-merge is intentionally inapplicable here: retain owner merge,
+independent Required CI, all three same-repository Dependabot reviewers, no fork
+secrets, and separate production/recovery authorization. Successful Dependabot
+review evidence already exists on #53 and #33; human implementation PRs alone
+do not prove Dependabot secret access. No shared app-release behavior changes.
