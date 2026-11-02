@@ -11,8 +11,15 @@ updates:
     assignees: [VanillaIceCube]
     labels: [dependencies, github_actions]
     groups:
+      codeql:
+        applies-to: version-updates
+        patterns: ["github/codeql-action", "github/codeql-action/*"]
+      codeql-security:
+        applies-to: security-updates
+        patterns: ["github/codeql-action", "github/codeql-action/*"]
       actions:
         patterns: ['*']
+        exclude-patterns: ["github/codeql-action", "github/codeql-action/*"]
   - package-ecosystem: docker-compose
     directory: /
     schedule:
