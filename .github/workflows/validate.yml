@@ -63,6 +63,9 @@ jobs:
             python3 -m unittest discover -s tests -p 'test_gateway*.py' -v || status=1
             exit "$status"
           } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
+      - name: Install the pinned safe YAML parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+
       - name: Validate automation policy and review regressions
         id: automation
         continue-on-error: true
