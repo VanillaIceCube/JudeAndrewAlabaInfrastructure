@@ -1,5 +1,23 @@
 # 📝 Changelog
 
+## 2026-11-03
+
+### Fixed
+
+- Collect usage evidence for every Dependabot dependency and use each major update's own versions and ecosystem for upstream release evidence.
+- Preserve independent AI review findings during duplicate suppression and require valid HTTP(S) sources in major-upgrade briefs.
+- Validate each release's frontend ports against its own policy so Notoli can remove IPv4 and IPv6 port 3000 through a reviewed app release (#23).
+
+## 2026-11-02
+
+### Fixed
+
+- Enforce aligned immutable CodeQL entry points in the required scope gate, with split-upgrade, cross-workflow drift and mutable-pin regressions; retain owner-only merge policy.
+
+### Changed
+
+- Group all CodeQL action entry points in coordinated Dependabot version and security updates while preserving existing schedules and review gates ([FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271)).
+
 ## 2026-10-30
 
 ### Fixed

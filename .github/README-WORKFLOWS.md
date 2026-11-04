@@ -1,5 +1,16 @@
 # 🤖 Infrastructure automation
 
+## Major-upgrade review evidence
+
+Obi-Wan uses Dependabot's per-dependency metadata for grouped upgrades.
+Release lookups use each major update's own ecosystem and target version.
+Repository usage searches cover every listed dependency and retain the
+tracked-file exclusions and 30,000-byte limit. Numeric Actions references
+such as 7 and v7 can match a full release tag such as v7.0.0. Opaque refs
+leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
+source URL. The publisher keeps independent body findings when it suppresses
+duplicate inline comments or sees an unchanged verdict.
+
 ## 🧭 Applicable parity
 
 Audited FullStackTemplate `6ff053460cb6cd5148258c672a2f80b7ca59bc4d` and
@@ -234,3 +245,40 @@ not an image-content scanner and does not assume backend/frontend directories.
 ## 🤖 Reviewer model
 
 Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models and Jules schedules are independent of this setting.
+
+## 📦 Compatible CodeQL updates
+
+Dependabot groups all `github/codeql-action` entry points (including `init`,
+`analyze`, `autobuild` and `upload-sarif`) in `codeql` version-update PRs.
+A separate `codeql-security` group applies the same matching to security updates;
+GitHub does not combine version and security updates in one group. Keep both
+patterns (`github/codeql-action` and `github/codeql-action/*`) so repository and
+entry-point dependency names match. Review every CodeQL entry point together,
+keep their immutable revisions aligned, and preserve normal CI/reviewer gates.
+
+The applications retain daily updates. Infrastructure retains weekly updates,
+its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
+separate Compose updates. The template aligns its mutable CodeQL tag with the other repositories'
+immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
+gates remain unchanged. Canonical rollout:
+[FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+
+## 🧪 Atomic CodeQL regression guard
+
+FullStackTemplate is the canonical application Dependabot policy (#240).
+Infrastructure adopts the common CodeQL revision guard and negative tests before
+its required scope detection: every CodeQL entry point in `.github` must use
+the same full immutable SHA. Split init/analyze, cross-workflow drift, mutable
+tags and missing analysis fail visibly. The version/security update groups
+merged in #106 remain unchanged, including weekly cadence and separate Compose
+updates. Run `node --test .github/actions/check-codeql-pins/*.test.js` locally.
+
+Application auto-merge is intentionally inapplicable here: retain owner merge,
+independent Required CI, all three same-repository Dependabot reviewers, no fork
+secrets, and separate production/recovery authorization. Successful Dependabot
+review evidence already exists on #53 and #33; human implementation PRs alone
+do not prove Dependabot secret access. No shared app-release behavior changes.
+
+The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
+including flow mappings, quoted/escaped keys, folded values and aliases. Install
+that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.

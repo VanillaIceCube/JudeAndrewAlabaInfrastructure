@@ -60,9 +60,11 @@ network membership immediately before cutover. Future app definitions explicitly
 retain unique aliases without recreating apps during the ingress-only step.
 Generic `backend`/`frontend` names are never used by shared ingress.
 
-Port 3000 disposition is a separate operator/owner decision after consumer
-inventory. Do not silently remove it during ingress transfer. The subsequent
-app-only Notoli release should remove it or bind it to loopback once approved.
+The original ingress transfer preserved Notoli's port 3000. The later
+app-only release tracked in [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
+removes both host bindings after the consumer inventory found no direct
+operational dependency. Shared ingress reaches `notoli-frontend:80` over
+`notoli_default`.
 
 ## Routing and proxy trust
 
