@@ -411,8 +411,10 @@ class TransactionTests(unittest.TestCase):
             release.deploy(self.root, self.bundle)
         self.assertFalse((self.root / "current.json").exists())
         self.assertTrue((self.root / "FAILED.json").exists())
+        self.assertEqual(
+            self.events[-2:], [("compose", "stop", release.FRONTEND), ("stop-writers",)]
+        )
         self.assertNotIn(("ready",), self.events)
-        self.assertEqual(self.events[-1], ("stop-writers",))
 
     def test_migration_failure_preserves_old_db_config_and_explicit_rollback(self):
         self.fail_migration = True
