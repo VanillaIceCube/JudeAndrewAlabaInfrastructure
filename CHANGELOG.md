@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-11-03
+
+### Fixed
+
+- Validate each release's frontend ports against its own policy so Notoli can remove IPv4 and IPv6 port 3000 through a reviewed app release (#23).
+
 ## 2026-11-02
 
 ### Fixed
