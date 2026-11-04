@@ -771,12 +771,23 @@ def deploy(root, bundle):
             "--force-recreate",
             *SERVICES,
         )
-        if running_ports(inspect(CONFIG["containers"]["backend"])):
-            raise ReleaseError("Backend unexpectedly publishes a port")
-        require_frontend_ports(
-            running_ports(inspect(CONFIG["containers"]["frontend"])),
-            CONFIG["frontend_port_bindings"],
-        )
+        try:
+            if running_ports(inspect(CONFIG["containers"]["backend"])):
+                raise ReleaseError("Backend unexpectedly publishes a port")
+            require_frontend_ports(
+                running_ports(inspect(CONFIG["containers"]["frontend"])),
+                CONFIG["frontend_port_bindings"],
+            )
+        except ReleaseError:
+            # A failed candidate must not keep an unexpected frontend port live.
+            try:
+                compose(candidate, "stop", FRONTEND)
+            except ReleaseError:
+                print(
+                    "Frontend stop failed; operator must contain the frontend before recovery.",
+                    file=sys.stderr,
+                )
+            raise
         readiness(candidate)
         atomic_json(
             root / "current.json",
