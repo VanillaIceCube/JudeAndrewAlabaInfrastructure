@@ -6,6 +6,7 @@
 
 - Collect usage evidence for every Dependabot dependency and use each major update's own versions and ecosystem for upstream release evidence.
 - Preserve independent AI review findings during duplicate suppression and require valid HTTP(S) sources in major-upgrade briefs.
+- Validate each release's frontend ports against its own policy so Notoli can remove IPv4 and IPv6 port 3000 through a reviewed app release (#23).
 
 ## 2026-11-02
 

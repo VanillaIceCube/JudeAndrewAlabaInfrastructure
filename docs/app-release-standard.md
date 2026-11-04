@@ -32,6 +32,14 @@ fields. Gateway and current-app endpoints are required. Companion absence is
 allowed during app recovery, while unexpected members, address/trust drift and
 published-port drift fail. Both apps must pass gateway cutover acceptance.
 
+Preflight verifies running frontend bindings against the accepted release's
+checksummed app policy. The incoming bundle's own policy is checked against
+rendered Compose before staging images and against Docker after recreation,
+before recording success. This allows a reviewed port change while still
+rejecting drift. Notoli and MacroMapper use shared HTTPS ingress and have no
+host frontend publication. See [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
+for Notoli's consumer inventory and rollout evidence.
+
 The transaction stays in one file because its ordering and crash barriers form
 one recovery state machine. Separating app policy and readiness predicates removes
 unreachable code without scattering that state machine across artificial layers.
@@ -45,7 +53,7 @@ unreachable code without scattering that state machine across artificial layers.
 | Backend networks | private `/29` + separate egress | app ingress + app default/egress |
 | Frontend networks | `notoli_default` | app ingress + app default |
 | Trust/address | exact proxy `.2`, backend `.3`; Uvicorn peer handling preserved | canonical forwarded HTTPS behind restricted backend reachability |
-| Published frontend port | existing IPv4/IPv6 3000 retained | none |
+| Published frontend port | none | none |
 | Common readiness | direct API 401, public HTML 200 and JSON API 401 | same |
 | Extra readiness | OAuth issuer/resource metadata and MCP challenge | Same for the app-owned MCP release; functional AI/mail checks remain separately authorized |
 | Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout; app-owned MCP origin and exact `172.20.0.3` trust |
