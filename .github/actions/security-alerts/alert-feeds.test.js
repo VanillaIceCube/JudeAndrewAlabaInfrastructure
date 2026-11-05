@@ -13,7 +13,7 @@ test("critical and high alerts receive incident priority while medium/low vulner
   assert.equal(alertPriority("malware", [{ severity: "low" }]), "P1");
 });
 
-async function collect(feed, alerts, advisoryLookup = async () => ({ data: { type: "reviewed" } })) {
+async function collect(feed, alerts, advisoryLookup = async (_route, params) => ({ data: { ghsa_id: params.ghsa_id, type: "reviewed" } })) {
   const action = fs.readFileSync(path.join(__dirname, "action.yml"), "utf8").replaceAll("\r\n", "\n");
   const script = action.split("- name: Fetch open structured alerts")[1]
     .split("        script: |\n")[1].split("\n    - name:")[0]
@@ -53,7 +53,7 @@ test("malware classification queries only unique advisories already affecting th
   const result = await collect("malware", [alert(1, "critical", "bad"), alert(2, "high", "bad"), alert(3, "medium", "ordinary")],
     async (_route, params) => {
       lookedUp.push(params.ghsa_id);
-      return { data: { type: params.ghsa_id === "bad" ? "malware" : "reviewed" } };
+      return { data: { ghsa_id: params.ghsa_id, type: params.ghsa_id === "bad" ? "malware" : "reviewed" } };
     });
   assert.deepEqual(lookedUp, ["bad", "ordinary"]);
   assert.deepEqual(result.alerts.map(value => value.ref), ["dependabot:1", "dependabot:2"]);
