@@ -85,3 +85,6 @@ merge approval remains mandatory.
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli and MacroMapper route MCP/discovery to their own backends; advertise each service only after its app registry and OAuth readiness pass. Preserve independent releases and exact app proxy trust.
+
+Security-alert maintenance validates complete source coverage and supports bounded,
+idempotent Project recovery; see [.github/README-WORKFLOWS.md](.github/README-WORKFLOWS.md#security-alert-recovery).
