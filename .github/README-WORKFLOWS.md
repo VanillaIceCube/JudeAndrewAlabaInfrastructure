@@ -302,3 +302,5 @@ recover, and only after readback proves closed/completed with the exact saved bo
 All other errors remain failures. A successful empty feed does not exercise the race.
 
 Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
+
+Malware lookup retains per-source-GHSA requests and rejects mismatched or unknown advisory classifications before writing the source checkpoint or changing issues. Empty feeds make no advisory requests.
