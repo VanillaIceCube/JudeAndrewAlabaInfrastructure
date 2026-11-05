@@ -282,3 +282,23 @@ do not prove Dependabot secret access. No shared app-release behavior changes.
 The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
 including flow mappings, quoted/escaped keys, folded values and aliases. Install
 that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.
+
+
+## Security-alert recovery
+
+Each feed serializes scheduled and manual reconciliation. Before issue writes,
+source coverage must be complete and unique. A valid model draft that omits refs
+gets deterministic source-linked work items and an explicit warning; malformed
+JSON, invalid schemas, unknown refs and duplicate memberships fail before writes.
+Existing managed source refs select the canonical issue even when wording changes.
+
+Project attachment retries transient failures at most three times, reading back
+possibly committed writes before retrying. Unresolved attachments identify the
+saved issue; rerun the same feed to reuse it. Interrupted field initialization fills
+only missing fields, preserving human planning. All active groups synchronize before
+superseded issues can close. Closure saves source history and End date before Done.
+Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 may
+recover, and only after readback proves closed/completed with the exact saved body.
+All other errors remain failures. A successful empty feed does not exercise the race.
+
+Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
