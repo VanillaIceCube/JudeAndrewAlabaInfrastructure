@@ -1,5 +1,12 @@
 # 📝 Changelog
 
+## 2026-11-05
+
+### Fixed
+- Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
+- Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
+
+
 ## 2026-11-03
 
 ### Fixed
