@@ -3,6 +3,7 @@
 ## 2026-11-05
 
 ### Fixed
+- Reject unverifiable malware advisory classifications before changing source checkpoints or issues.
 - Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
 - Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
 
