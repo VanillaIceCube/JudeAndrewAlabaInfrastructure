@@ -304,3 +304,13 @@ All other errors remain failures. A successful empty feed does not exercise the 
 Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
 
 Malware lookup retains per-source-GHSA requests and rejects mismatched or unknown advisory classifications before writing the source checkpoint or changing issues. Empty feeds make no advisory requests.
+
+## 🔒 Batch 2 workflow supply chain
+
+The workflow security checker and mocked regressions reject mutable external
+Action references, missing version comments, broad permission grants and privileged
+PR-target triggers. Run `node .github/actions/check-workflow-security/check-workflow-security.js`
+and its `*.test.js` suite locally. Repository defaults were independently audited
+as read-only with workflow-token PR approvals disabled. GitHub App reviewers keep
+their separate credentials and explicit grants. SHA enforcement is enabled only
+after source compliance and required final-head validation.

@@ -128,3 +128,10 @@ All consumers must pin the same reviewed source commit when adopting this change
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+
+## 🔬 Batch 2 parity acceptance
+
+The shared contract suite models an approved immutable Action upgrade: changing
+only the app workflow fails, synchronizing the approved source template passes,
+and unrelated workflow drift still fails. Version comments are source-owned and
+synchronized with the same manifest and commit pin; no engine or runtime change.
