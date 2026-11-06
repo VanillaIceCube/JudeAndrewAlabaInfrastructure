@@ -88,3 +88,7 @@ Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAut
 
 Security-alert maintenance validates complete source coverage and supports bounded,
 idempotent Project recovery; see [.github/README-WORKFLOWS.md](.github/README-WORKFLOWS.md#security-alert-recovery).
+
+
+Reviewer discussion, feedback ownership, safe usage evidence and recovery are
+documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
