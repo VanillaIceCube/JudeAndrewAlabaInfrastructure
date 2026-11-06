@@ -2,6 +2,13 @@
 
 ## 2026-11-05
 ### Added
+- Mocked composite request/history regressions and bounded early/middle/late failure evidence.
+### Changed
+- Use the platform base commit for workflow grant authority and retain bounded diagnostic artifacts.
+- Preserve the existing reporter interface and independent Infrastructure validation model.
+
+## 2026-11-05
+### Added
 - Shared deployment parity regression for approved Action updates and unauthorized drift.
 - Workflow supply-chain policy regressions.
 ### Fixed
