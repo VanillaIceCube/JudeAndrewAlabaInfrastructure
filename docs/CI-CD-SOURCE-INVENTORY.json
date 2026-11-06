@@ -11,17 +11,14 @@
       ".github/workflows/review-security.yml"
     ],
     "./.github/actions/openai-chat": [
+      ".github/actions/security-alerts/action.yml",
       ".github/workflows/review-build.yml",
       ".github/workflows/review-code.yml",
-      ".github/workflows/review-security.yml",
-      ".github/actions/security-alerts/action.yml"
+      ".github/workflows/review-security.yml"
     ],
     "./.github/actions/publish-ai-review": [
       ".github/workflows/review-build.yml",
-      ".github/workflows/review-build.yml",
       ".github/workflows/review-code.yml",
-      ".github/workflows/review-code.yml",
-      ".github/workflows/review-security.yml",
       ".github/workflows/review-security.yml"
     ],
     "./.github/actions/security-alerts": [
