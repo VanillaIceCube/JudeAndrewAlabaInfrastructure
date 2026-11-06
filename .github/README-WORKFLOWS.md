@@ -314,3 +314,9 @@ and its `*.test.js` suite locally. Repository defaults were independently audite
 as read-only with workflow-token PR approvals disabled. GitHub App reviewers keep
 their separate credentials and explicit grants. SHA enforcement is enabled only
 after source compliance and required final-head validation.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects duplicate and merge keys, and requires pinned PyYAML 6.0.3.

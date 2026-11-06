@@ -1,19 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 function check(text, name) {
-  const errors = [];
-  text.split(/\r?\n/).forEach((line, i) => {
-    const match = line.match(/^\s*(?:-\s*)?uses:\s*["']?([^\s"'#]+)["']?(.*)$/);
-    if (match && !match[1].startsWith('./')) {
-      const valid = match[1].startsWith('docker://')
-        ? /@sha256:[0-9a-f]{64}$/.test(match[1]) : /@[0-9a-f]{40}$/.test(match[1]);
-      if (!valid || !/\s+#\s*\S/.test(match[2])) errors.push(`${name}:${i + 1}: external actions require an immutable SHA and readable version comment`);
-    }
-    if (/^\s*permissions:\s*(?:write-all|read-all)/.test(line)) errors.push(`${name}:${i + 1}: enumerate required permissions`);
-    if (/^\s*pull_request_target\s*:/.test(line)) errors.push(`${name}:${i + 1}: privileged PR-target execution requires a separately reviewed policy`);
-  });
-  return errors;
+  return JSON.parse(execFileSync(process.platform === 'win32' ? 'python' : 'python3', [path.join(__dirname, 'check.py')], {
+    input: JSON.stringify({ text, name }), encoding: 'utf8', timeout: 10000,
+  }));
 }
 
 function audit(root) {
