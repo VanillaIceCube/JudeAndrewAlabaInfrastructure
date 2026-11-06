@@ -42,8 +42,10 @@ jobs:
       OBI_WAN_OPENAI_API_KEY: ${{ secrets.OBI_WAN_OPENAI_API_KEY }}
       OBI_WAN_CODE_NOBI_PRIVATE_KEY: ${{ secrets.OBI_WAN_CODE_NOBI_PRIVATE_KEY }}
     permissions:
+      statuses: read
+      checks: read
       contents: read
-      pull-requests: write
+      pull-requests: read
   build-review:
     name: AI Build Sheriff Review
     needs: [lints, tests]
@@ -53,8 +55,10 @@ jobs:
       LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
       LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
     permissions:
+      statuses: read
+      checks: read
       contents: read
-      pull-requests: write
+      pull-requests: read
     with:
       lint_result: ${{ needs.lints.result }}
       test_result: ${{ needs.tests.result }}
@@ -75,10 +79,11 @@ jobs:
       ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
       ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
     permissions:
+      statuses: read
       actions: read
       checks: read
       contents: read
-      pull-requests: write
+      pull-requests: read
       security-events: read
     with:
       codeql_result: ${{ needs.codeql.result }}
