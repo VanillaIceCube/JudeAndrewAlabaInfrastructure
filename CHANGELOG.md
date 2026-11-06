@@ -1,6 +1,15 @@
 # 📝 Changelog
 
 ## 2026-11-05
+### Added
+- Shared deployment parity regression for approved Action updates and unauthorized drift.
+- Workflow supply-chain policy regressions.
+### Fixed
+- Ingress retry helper now raises explicitly after exhaustion, avoiding mixed return paths.
+### Changed
+- Source-owned deployment Action pins include readable version comments.
+
+## 2026-11-05
 
 ### Fixed
 - Reject unverifiable malware advisory classifications before changing source checkpoints or issues.

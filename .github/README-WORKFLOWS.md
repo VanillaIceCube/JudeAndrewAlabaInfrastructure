@@ -304,3 +304,24 @@ All other errors remain failures. A successful empty feed does not exercise the 
 Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
 
 Malware lookup retains per-source-GHSA requests and rejects mismatched or unknown advisory classifications before writing the source checkpoint or changing issues. Empty feeds make no advisory requests.
+
+## 🔒 Batch 2 workflow supply chain
+
+The workflow security checker and mocked regressions reject mutable external
+Action references, missing version comments, broad permission grants and privileged
+PR-target triggers. Run `node .github/actions/check-workflow-security/check-workflow-security.js`
+and its `*.test.js` suite locally. Repository defaults were independently audited
+as read-only with workflow-token PR approvals disabled. GitHub App reviewers keep
+their separate credentials and explicit grants. SHA enforcement is enabled only
+after source compliance and required final-head validation.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+
+Mapping-form writes are checked against `.github/workflow-write-grants.json`,
+which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
+new writes fail. Changes to that policy require review with the workflow; it does
+not grant GitHub permissions itself or replace branch protection.
