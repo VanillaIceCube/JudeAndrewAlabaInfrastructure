@@ -240,7 +240,7 @@ class IngressTests(unittest.TestCase):
                             ) if expected == 200 else body
                         response.close()
                         time.sleep(0.5)
-                    self.fail(f"{app} {path} did not reach {expected}")
+                    raise AssertionError(f"{app} {path} did not reach {expected}")
 
                 compose("legacy", "up", "-d")
                 docker("exec", prefix + "-legacy", "nginx", "-t")
