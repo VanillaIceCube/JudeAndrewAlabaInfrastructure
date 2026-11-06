@@ -1,0 +1,36 @@
+{
+  ".github/workflows/ci-orchestrator.yml": {
+    "jobs.codeql.permissions": [
+      "security-events"
+    ],
+    "jobs.code-review.permissions": [
+      "pull-requests"
+    ],
+    "jobs.build-review.permissions": [
+      "pull-requests"
+    ],
+    "jobs.security-review.permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/gate-codeql.yml": {
+    "permissions": [
+      "security-events"
+    ]
+  },
+  ".github/workflows/review-build.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/review-code.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/review-security.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  }
+}
