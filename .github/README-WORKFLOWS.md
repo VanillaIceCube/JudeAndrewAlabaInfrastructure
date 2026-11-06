@@ -325,3 +325,22 @@ Mapping-form writes are checked against `.github/workflow-write-grants.json`,
 which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
 new writes fail. Changes to that policy require review with the workflow; it does
 not grant GitHub permissions itself or replace branch protection.
+
+## 🧪 Automation regressions and bounded diagnostics
+
+See [the shared inventory](../docs/AUTOMATION-COVERAGE.md). Actual composite
+request construction and prior-review collection run with mocked curl/GitHub reads,
+not live paid API calls. The new log regression retains failures near the beginning,
+middle and end while bounding context to16000characters and artifacts to about1MiB
+per log for7days. Complete output remains in the job log. Preprocessing feeds the
+existing ci_report.py interface; the overlapping Marty #52 reporter work stays intact.
+
+Workflow grant authority in PR audits now comes from the platform base commit.
+Bootstrap derives that base's existing writes if it lacks a manifest; a proposed
+policy cannot approve simultaneous workflow permission expansion. New grants
+first require a reviewed policy-only merge under the current protected gates.
+The shared alias/flow/mapping/base-policy regression suite matches the applications.
+Repository writers remain privileged; this linter is not a security sandbox.
+Infrastructure retains its existing shellcheck, Compose, secret scan, manifest,
+RequiredCI and independent gateway controls. Application browser tests and npm
+malware gates are not applicable here.
