@@ -32,5 +32,10 @@
     "permissions": [
       "pull-requests"
     ]
+  },
+  ".github/workflows/promotion-summary.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
   }
 }
