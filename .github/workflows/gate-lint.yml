@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Install pinned safe YAML parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
       - name: Install verified actionlint
         run: bash scripts/install_actionlint.sh
       - name: Validate workflow, shell, Python, JavaScript and Compose
