@@ -53,8 +53,11 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "ac2d6e38daea710a1218b6ed60d89df8f5f9ce54fca79feaf28dc1b5450da9d7",
+      "source_sha256": "7775221233e043b02d201df3f6683e901fd12374a9d25dfd4b606ecd7d998af8",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
@@ -81,8 +84,11 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "58f0f2c92628b7df59165cc429682944e5dbabe4303fbd20f552689cc5e333bd",
+      "source_sha256": "386ff5300e11833a687e073729fc3f5e3b4cd3363bad9137723223e27b1355ee",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
@@ -113,8 +119,11 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "f27e4bb3f449bdfa33608863140399216736b9b09ba5dc6b3d9e1faad020367a",
+      "source_sha256": "6f43d14e6854a9a7fd2e96f7cb660842d3aef2f3707beb69dba486b44a4d2c1d",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
