@@ -2,6 +2,13 @@
 
 ## 2026-11-06
 
+### Fixed
+
+- Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
+- Cover default, empty, explicit and invalid configuration plus empty/nonempty mocked alert pipelines and all three caller contracts.
+
+## 2026-11-06
+
 ### Added
 
 - Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.

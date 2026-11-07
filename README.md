@@ -97,3 +97,6 @@ documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
 CI/CD events, reviewer flow, credential boundaries and production-summary behavior
 are mapped in [the architecture reference](docs/CI-CD-ARCHITECTURE.md).
 Shared adoption and justified differences are recorded in [Batch 3 parity](docs/BATCH3-PARITY.md).
+
+Security-alert model overrides are resolved by the three caller workflows and passed
+through validated composite inputs; see the [configuration contract](.github/README-WORKFLOWS.md#security-alert-configuration-contract).
