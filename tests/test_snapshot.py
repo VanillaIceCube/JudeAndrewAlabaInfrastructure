@@ -121,7 +121,7 @@ class SnapshotTests(unittest.TestCase):
                 self.assertEqual(cmd[:5], ["docker", "exec", "fake-container", "python", "-c"])
                 self.assertRegex(cmd[-1], r"^/tmp/ingress-snapshot-[a-f0-9]{32}\.sqlite3$")
                 self.assertNotIn("/backend/db.sqlite3", cmd[-2:])
-                if isinstance(cleanup, Exception):
+                if isinstance(cleanup, BaseException):
                     raise cleanup
                 return subprocess.CompletedProcess(cmd, cleanup, stderr="private-cleanup-output")
             elif primary is not None:
@@ -136,7 +136,12 @@ class SnapshotTests(unittest.TestCase):
             subprocess.CalledProcessError(1, ["docker"], stderr="private-primary-output"),
             KeyboardInterrupt(),
         )
-        cleanup_errors = (1, subprocess.TimeoutExpired(["docker"], 30, stderr="private-timeout-output"))
+        cleanup_errors = (
+            1,
+            subprocess.TimeoutExpired(["docker"], 30, stderr="private-timeout-output"),
+            KeyboardInterrupt(),
+            SystemExit(2),
+        )
         for primary in primary_errors:
             for cleanup in cleanup_errors:
                 with self.subTest(primary=type(primary).__name__, cleanup=type(cleanup).__name__), \
@@ -177,3 +182,12 @@ class SnapshotTests(unittest.TestCase):
             self.assertEqual(commands[2][-1], remote)
             self.assertEqual(len(commands), 3)
             self.assertTrue(result["isolated_restore_verified"])
+
+    def test_cleanup_only_interruption_is_preserved(self):
+        for interruption in (KeyboardInterrupt(), SystemExit(2)):
+            with self.subTest(interruption=type(interruption).__name__), \
+                    tempfile.TemporaryDirectory() as directory:
+                with patch.object(snapshot.subprocess, "run", side_effect=self.container_run(interruption)), \
+                        self.assertRaises(type(interruption)) as raised:
+                    snapshot.capture_container("fake-container", Path(directory) / "recovery")
+                self.assertIs(raised.exception, interruption)
