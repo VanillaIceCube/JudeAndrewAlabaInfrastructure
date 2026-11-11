@@ -10,5 +10,5 @@
     "deploy/tests/test_generation_docker.py": "88611d4f020ed9098d93fe5daf03248153718e8cc3051690823f60abdffdb8fa",
     "deploy/tests/test_contract.py": "77bf72c9cffb8cc0f3bcf8e73c3899b5a7f91cf420824594f85ce467295085bd"
   },
-  "workflow_sha256": "73d7dc3601ddf3b5cd20ce0c63064480a372710113d7c6249cf87858f2b3859b"
+  "workflow_sha256": "6f78ea83e7fc9c5e1fe5155917b2ece78887c2d558fad7da394d27dfc4ef959c"
 }

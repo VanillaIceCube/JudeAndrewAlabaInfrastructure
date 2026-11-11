@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-11-11
+
+### Changed
+
+- Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
+
 ## 2026-11-06
 
 ### Fixed
