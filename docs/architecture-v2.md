@@ -49,6 +49,9 @@ properties separately: an external Compose declaration cannot assert IPAM.
 | `notoli_backend_egress`, `172.19.0.0/16` | Notoli backend only | Existing outbound path retained; app-owned |
 | `macromapper_default`, `172.21.0.0/16` | MacroMapper frontend/backend | Existing egress and frontend's generic `backend` alias retained; app-owned |
 
+Ingress retains its observed MacroMapper peer `172.20.0.3`; Notoli trust remains
+exactly `172.30.88.2`. MCP routing and OAuth remain application-owned.
+
 Ingress joins only the first three networks. MacroMapper never joins Notoli
 networks. The Notoli frontend never joins its private backend network. Both
 app backends remain unpublished. Existing unique container names are the
@@ -57,9 +60,11 @@ network membership immediately before cutover. Future app definitions explicitly
 retain unique aliases without recreating apps during the ingress-only step.
 Generic `backend`/`frontend` names are never used by shared ingress.
 
-Port 3000 disposition is a separate operator/owner decision after consumer
-inventory. Do not silently remove it during ingress transfer. The subsequent
-app-only Notoli release should remove it or bind it to loopback once approved.
+The original ingress transfer preserved Notoli's port 3000. The later
+app-only release tracked in [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
+removes both host bindings after the consumer inventory found no direct
+operational dependency. Shared ingress reaches `notoli-frontend:80` over
+`notoli_default`.
 
 ## Routing and proxy trust
 
@@ -87,7 +92,7 @@ Shared application release code, network ownership and Notoli policy are unchang
 | App | Direct backend routes | Frontend routes |
 | --- | --- | --- |
 | Notoli | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
-| MacroMapper | `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links |
+| MacroMapper | Exact `/mcp`, `/.well-known/*`, `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/` | `/` and SPA deep links, including `/connections*` |
 
 Use Docker DNS `127.0.0.11`, a short cache (`valid=10s`, `ipv6=off`), variable
 upstreams, and original `$request_uri`. A missing app must not prevent Nginx
@@ -101,7 +106,9 @@ chains. Notoli retains `DJANGO_TRUSTED_PROXY_IPS=172.30.88.2`, Uvicorn
 `--no-proxy-headers`, ASGI exact-peer validation and forwarded-header stripping,
 and Django's existing rejection of forwarded host/proto trust. MacroMapper
 retains its production Host/origin/cookie settings and restricted backend
-reachability. Its current appended X-Forwarded-For becomes an overwritten
+reachability. Its app-owned MCP ASGI server must validate the exact gateway peer
+`172.20.0.3` and strip untrusted forwarded headers before Django/MCP handles them;
+this does not add a network or publish a backend port. Its current appended X-Forwarded-For becomes an overwritten
 peer address; prior source review found no authorization dependency on it.
 Cloudflare visitor-IP restoration is outside this change.
 
@@ -110,7 +117,10 @@ timeout. Preserve existing frontend upgrade behavior separately. Explicitly
 test Nginx header inheritance in every location, especially MCP/upgrade
 locations with local `proxy_set_header` directives. Disable backend proxy
 caching and return `no-store` for authenticated auth/API/admin/MCP responses;
-discovery remains public. Do not log OAuth codes/tokens or sensitive query
+discovery remains publicly readable with `no-store`. Both vhosts use the same
+`mcp-locations.conf` include; app registries and OAuth readiness determine whether
+a service is advertised. Follow the [ordered MCP activation](optional-mcp.md#-macromapper-activation-order)
+before the first MacroMapper MCP app release. Do not log OAuth codes/tokens or sensitive query
 strings in new ingress logs. Verify the logging policy in the config tests.
 
 ## TLS and secrets

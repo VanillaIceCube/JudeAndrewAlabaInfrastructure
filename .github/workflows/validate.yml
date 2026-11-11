@@ -39,6 +39,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
@@ -63,6 +64,9 @@ jobs:
             python3 -m unittest discover -s tests -p 'test_gateway*.py' -v || status=1
             exit "$status"
           } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
+      - name: Install the pinned safe YAML parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+
       - name: Validate automation policy and review regressions
         id: automation
         continue-on-error: true
@@ -71,23 +75,37 @@ jobs:
           {
             python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
             mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
-            node --test "${automation_tests[@]}"
+            node --test tests/bounded-log.test.cjs "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"
       - id: ingress-report
         if: always()
         env:
           OUTCOME: ${{ steps.ingress.outcome }}
-        run: python3 scripts/ci_report.py ingress "$RUNNER_TEMP/ingress.log" "$OUTCOME"
+        run: |
+          python3 scripts/bounded_log.py "$RUNNER_TEMP/ingress.log" "$RUNNER_TEMP/ingress.outputs"
+          python3 scripts/ci_report.py ingress "$RUNNER_TEMP/ingress.summary.txt" "$OUTCOME"
       - id: recovery-report
         if: always()
         env:
           OUTCOME: ${{ steps.recovery.outcome }}
-        run: python3 scripts/ci_report.py recovery "$RUNNER_TEMP/recovery.log" "$OUTCOME"
+        run: |
+          python3 scripts/bounded_log.py "$RUNNER_TEMP/recovery.log" "$RUNNER_TEMP/recovery.outputs"
+          python3 scripts/ci_report.py recovery "$RUNNER_TEMP/recovery.summary.txt" "$OUTCOME"
       - id: automation-report
         if: always()
         env:
           OUTCOME: ${{ steps.automation.outcome }}
-        run: python3 scripts/ci_report.py automation "$RUNNER_TEMP/automation.log" "$OUTCOME"
+        run: |
+          python3 scripts/bounded_log.py "$RUNNER_TEMP/automation.log" "$RUNNER_TEMP/automation.outputs"
+          python3 scripts/ci_report.py automation "$RUNNER_TEMP/automation.summary.txt" "$OUTCOME"
       - name: Require every validation suite
         if: always() && (steps.ingress.outcome != 'success' || steps.recovery.outcome != 'success' || steps.automation.outcome != 'success')
         run: exit 1
+      - name: Retain bounded failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: infrastructure-${{ github.job }}-failure-diagnostics
+          path: ${{ runner.temp }}/*.bounded.txt
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,5 +1,219 @@
 # 📝 Changelog
 
+## 2026-11-11
+
+### Changed
+
+- Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
+- Align CodeQL init/analyze at the immutable v4.39.3 revision and refresh the checked workflow architecture inventory.
+
+## 2026-11-06
+
+### Fixed
+
+- Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
+- Cover default, empty, explicit and invalid configuration plus empty/nonempty mocked alert pipelines and all three caller contracts.
+
+## 2026-11-06
+
+### Added
+
+- Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.
+- Source-linked Mermaid CI/CD architecture and checked per-repository workflow/action inventories, preserving application and gateway trust differences.
+
+### Fixed
+
+- Architecture guidance no longer presents completed reviewer credential migration or obsolete test/runtime assumptions as future work.
+
+## 2026-11-06
+
+### Added
+
+- Bounded, attributed human discussion context and conservative App-owned reviewer follow-ups, with adversarial, stale-head, idempotency and permission regressions.
+- Safe Responses token/latency evidence, dated partial cost estimates and validated owner configuration/recovery controls; existing Luna model selection is preserved.
+
+### Fixed
+
+- Reviewer ownership no longer falls back to persona-name matching; old-head verdicts are rejected and writer runs serialize.
+
+## 2026-11-05
+### Added
+- Mocked composite request/history regressions and bounded early/middle/late failure evidence.
+### Changed
+- Use the platform base commit for workflow grant authority and retain bounded diagnostic artifacts.
+- Preserve the existing reporter interface and independent Infrastructure validation model.
+
+## 2026-11-05
+### Added
+- Shared deployment parity regression for approved Action updates and unauthorized drift.
+- Workflow supply-chain policy regressions.
+### Fixed
+- Ingress retry helper now raises explicitly after exhaustion, avoiding mixed return paths.
+### Changed
+- Source-owned deployment Action pins include readable version comments.
+
+## 2026-11-05
+
+### Fixed
+- Reject unverifiable malware advisory classifications before changing source checkpoints or issues.
+- Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
+- Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
+
+
+## 2026-11-03
+
+### Fixed
+
+- Collect usage evidence for every Dependabot dependency and use each major update's own versions and ecosystem for upstream release evidence.
+- Preserve independent AI review findings during duplicate suppression and require valid HTTP(S) sources in major-upgrade briefs.
+- Validate each release's frontend ports against its own policy so Notoli can remove IPv4 and IPv6 port 3000 through a reviewed app release (#23).
+
+## 2026-11-02
+
+### Fixed
+
+- Enforce aligned immutable CodeQL entry points in the required scope gate, with split-upgrade, cross-workflow drift and mutable-pin regressions; retain owner-only merge policy.
+
+### Changed
+
+- Group all CodeQL action entry points in coordinated Dependabot version and security updates while preserving existing schedules and review gates ([FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271)).
+
+## 2026-10-30
+
+### Fixed
+
+- Keep disabled MacroMapper MCP/discovery paths behind uncached 404 responses
+  instead of falling through to the frontend during external MCP retirement.
+
+- Allow the validated MCP client's callback origin on its consent page so Chromium
+  can complete authorization, preserving exact callback and OAuth checks.
+
+### Changed
+
+- Route MacroMapper MCP and discovery to its app-owned backend through the same
+  streaming/no-store include as Notoli; document gateway-first activation before
+  the independent MCP app release, preserving existing networks and proxy trust.
+- Validate enabled MacroMapper MCP origin, exact gateway trust and readiness in
+  canonical release contract tests while retaining disabled generic app coverage;
+  synchronize consumers through the regenerated shared-source manifest.
+- Use GPT-6 Luna for all OpenAI PR reviewers and security-alert grouping while
+  preserving existing review gates, isolated credentials and token budgets.
+
+- Retire external MCP application build/runtime source, disposable experiments
+  and their CI first; retain existing deployment controllers and inputs for the
+  separately coordinated final cleanup (#96, #99).
+
+- Retire the external YNAB integration and shared MCP issuer in favor of nginx
+  routing to app-owned MCP/OAuth; document the ordered, main-first cleanup (#56).
+- Reconcile existing production promotion history into main and document
+  main-first releases, prompt return of exceptional deployment fixes, and
+  intentional release holds for unready source changes.
+- Clarify final ChatGPT callback verification after discovery and Codex's
+  metadata-derived resource setup, preserving strict issuer validation.
+
+### Removed
+
+- Retire the external YNAB runtime, gateway, egress proxy and shared MCP issuer,
+  their rollout controllers, dependency scanners and isolated CI suites (#96).
+  Restore app-owned MCP/OAuth routing and preserve exact disabled gateway
+  recovery compatibility, existing app networks and historical release evidence.
+- Remove central-issuer topology/mode assumptions from canonical release tests;
+  retain the generic required-environment fixture and independent app releases.
+
+## 2026-10-29
+
+### Changed
+
+- Give the staged YNAB egress policy its service-owned read-only permissions,
+  preserving private release parents and exact matched-file recovery checks.
+- Enable explicitly consented full YNAB MCP access with separate read/write scopes,
+  preserved upstream previews and a persistent operation journal that code/image
+  rollback never rewinds. End the current rollout after YNAB and existing-app checks.
+- Honor Compose null image-default entrypoint/command inheritance in issuer
+  runtime verification, preserving exact process checks and pending recovery.
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
+- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
+  preserving exact topology guards and rejecting unsupported modes.
+- Supply synthetic app-specific required secrets only in disposable shared release
+  fixtures; retain production missing/empty/malformed input rejection.
+- Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
+  test actual canonical staging with synthetic protected files in Linux CI.
+- Separate YNAB stop-only containment from freshly scanned active-image rollback;
+  require explicit stop-only recovery after an initial activation failure.
+- Compare Alpine image coverage using native package names and complete installed
+  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
+- Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
+  hashed C++ packages; verify complete native APK scan coverage.
+
+- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
+  stages and native tracked C++ libraries; retain fresh artifact security gates.
+
+### Added
+
+- Document the ordered YNAB/shared-issuer first activation, exact artifact/network
+  prerequisites, both-client acceptance and contained recovery before app adoption.
+
+- Add fixed inactive auth ingress, contained single-container issuer releases and
+  journal-preserving SQLite recovery with grant invalidation and offline JWT
+  quarantine; retain independent app releases and explicit recovery barriers.
+- Route MacroMapper MCP/discovery exactly to its app backend, preserve its existing
+  gateway peer172.20.0.3, and validate legacy/central app readiness without changing
+  ordinary login, frontend or estimation routes.
+- Add an inactive, independently packaged MCP authorization service with isolated
+  app resources, maintained-library PKCE/consent/refresh/revocation, protected
+  state/keys and pinned canonical framework policy; preserve ordinary app login.
+- Extend existing dependency and full-image audit gates for its exact hashed
+  Python lock and native/runtime inventory; run credential-free issuer container
+  acceptance in Required CI without publishing or activating the service.
+- Extend the existing gateway transaction with explicit YNAB profile packaging,
+  protected tombstone transitions, route identity and independent health checks.
+- Add an owner-operated YNAB-only stage/promotion/rollback controller using shared
+  host primitives, fresh paired artifact scans, matched private files and durable
+  recovery barriers; test actual Docker upgrades and SIGKILL without live services.
+- Add a pinned Canonical Squid recipe with hash/version-pinned Ubuntu OpenSSL
+  fixes, native package inventory and existing isolated CONNECT/stdio acceptance;
+  require independent immutable egress and gateway image references.
+- Add a pinned full-image YNAB audit prerequisite that rejects missing package
+  coverage, stale evidence, secrets and high/critical vulnerabilities; retain
+  explicit artifact/license/provenance and production activation gates.
+- Add inactive YNAB ingress/disable profiles and isolated route/CONNECT-egress
+  contracts with disposable DNS/streaming/rollback/TLS API tests; apply no provider changes.
+- Add an inactive owner-authenticated FastMCP gateway with principal-bound isolated
+  stdio children, read-only tool policy, bounded requests, safe readiness/errors
+  and synthetic image acceptance in Required CI; provision no OAuth provider or ingress.
+- Add the pinned FastMCP fallback dependency lock and fail-closed OSV/PyPI metadata
+  checks in existing Required CI; retain unknown-malware, provenance and activation gates.
+- Add a pinned, non-root, read-only YNAB stdio runtime candidate with package/source
+  parity checks, protected token-file policy, no-network Compose profile and bounded
+  disposable CI tests; retain production dependency/security and activation gates.
+
+## 2026-10-28
+
+### Added
+
+- Document the conditional YNAB MCP gateway choice, dependency/security blockers,
+  identity/route contracts and ordered #57–#62 handoff; add a pinned disposable
+  upstream protocol/preview experiment in existing validation CI without production
+  configuration or credentials.
+
+### Fixed
+
+- Record the previously undocumented [PR #25](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/25) fix (merged 2026-10-18): emit bounded CI reports to stdout when `GITHUB_OUTPUT` is absent, avoiding a local-execution `KeyError` while preserving GitHub Actions output formatting.
+
+## 2026-10-27
+
+### Fixed
+
+- Align strict security-alert token-action assertions with the reviewed v3.3.0 immutable pin while preserving credential and permission checks.
+
+### Changed
+
+- Update CodeQL init/analyze together to v4.39.1 and Gitleaks to v3.0.0.
+- Pin Docker login v4.7.0 in the shared release template so application dependency updates retain deployment parity.
+
 ## 2026-10-20
 
 ### Fixed

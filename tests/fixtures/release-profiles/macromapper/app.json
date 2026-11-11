@@ -33,7 +33,8 @@
     "container": "host-ingress-proxy",
     "project": "host-ingress",
     "addresses": {
-      "notoli_backend_private": "172.30.88.2"
+      "notoli_backend_private": "172.30.88.2",
+      "macromapper-ingress": "172.20.0.3"
     },
     "networks": {
       "notoli_backend_private": {
@@ -93,12 +94,15 @@
     },
     "fixed": {
       "DJANGO_DEBUG": "0",
+      "DJANGO_MCP_ENABLED": "1",
       "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
       "DJANGO_ALLOWED_HOSTS": "macromapper.judeandrewalaba.com",
       "DJANGO_CORS_ALLOWED_ORIGINS": "https://macromapper.judeandrewalaba.com",
       "DJANGO_CSRF_TRUSTED_ORIGINS": "https://macromapper.judeandrewalaba.com",
       "DJANGO_FRONTEND_BASE_URL": "https://macromapper.judeandrewalaba.com",
-      "DJANGO_FORCE_SCRIPT_NAME": ""
+      "DJANGO_FORCE_SCRIPT_NAME": "",
+      "DJANGO_MCP_BASE_URL": "https://macromapper.judeandrewalaba.com",
+      "DJANGO_TRUSTED_PROXY_IPS": "172.20.0.3"
     }
   },
   "readiness": {
@@ -116,6 +120,29 @@
         "status": 401,
         "content_type": "application/json",
         "body_contains": "detail"
+      },
+      {
+        "path": "/.well-known/oauth-authorization-server",
+        "status": 200,
+        "content_type": "application/json",
+        "json_equals": {
+          "issuer": "https://macromapper.judeandrewalaba.com"
+        }
+      },
+      {
+        "path": "/.well-known/oauth-protected-resource/mcp",
+        "status": 200,
+        "content_type": "application/json",
+        "json_equals": {
+          "resource": "https://macromapper.judeandrewalaba.com/mcp"
+        }
+      },
+      {
+        "path": "/mcp",
+        "status": 401,
+        "header_contains": {
+          "WWW-Authenticate": "resource_metadata=\"https://macromapper.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp\""
+        }
       }
     ]
   },

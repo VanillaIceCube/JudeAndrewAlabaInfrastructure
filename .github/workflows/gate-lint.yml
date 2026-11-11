@@ -20,9 +20,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Install pinned safe YAML parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
       - name: Install verified actionlint
         run: bash scripts/install_actionlint.sh
       - name: Validate workflow, shell, Python, JavaScript and Compose
@@ -36,7 +39,17 @@ jobs:
         if: always()
         env:
           LINT_OUTCOME: ${{ steps.lint.outcome }}
-        run: python3 scripts/ci_report.py log "$RUNNER_TEMP/lint.log" "$LINT_OUTCOME"
+        run: |
+          python3 scripts/bounded_log.py "$RUNNER_TEMP/lint.log" "$RUNNER_TEMP/lint.outputs"
+          python3 scripts/ci_report.py log "$RUNNER_TEMP/lint.summary.txt" "$LINT_OUTCOME"
       - name: Enforce lint result
         if: steps.lint.outcome != 'success'
         run: exit 1
+      - name: Retain bounded failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: infrastructure-${{ github.job }}-failure-diagnostics
+          path: ${{ runner.temp }}/*.bounded.txt
+          if-no-files-found: warn
+          retention-days: 7

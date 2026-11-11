@@ -1,5 +1,9 @@
 # 🛠️ Working in this repository
 
+The owner retired the external YNAB integration and shared MCP issuer on October 30.
+Follow the [retirement record](docs/mcp-retirement.md) and #96. Preserve existing
+Notoli MCP; future MCP services and OAuth belong to each application.
+
 This repository owns shared ingress and the versioned application release
 standard. Read [README.md](README.md), the [architecture](docs/architecture-v2.md)
 and the [release standard](docs/app-release-standard.md) before related changes.
@@ -27,6 +31,14 @@ production authorization; do not infer either from source approval. Repository a
 does not authorize merging or production operations.
 
 ## 🚀 Gateway promotion authorization
+
+Ordinary changes must merge through reviewed `main`, with explicit owner approval
+for the merge, before separately authorized `env-prod` promotion.
+An explicitly owner-authorized quick deployment experiment must be reconciled
+back into `main` through review promptly. Preserve both histories and newer main
+work; never force-push for parity. Intentional unreleased main changes may remain
+ahead of production until their deployment prerequisites are met. Follow the
+[main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases).
 
 The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
 authorizes automatic gateway deployment when the owner promotes reviewed main
@@ -71,4 +83,8 @@ manual owner merge. A human PR smoke test does not prove Dependabot access.
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli and MacroMapper route MCP/discovery to their own backends; advertise each service only after its app registry and OAuth readiness pass. Preserve independent releases and exact app proxy trust.
+
+## 🤖 Reviewer model policy
+
+Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.

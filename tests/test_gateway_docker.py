@@ -68,6 +68,7 @@ class GatewayDockerTests(unittest.TestCase):
             proxy["ports"] = [{"target": 443, "published": str(port), "host_ip": "127.0.0.1", "protocol": "tcp", "mode": "ingress"}]
             # Dynamic addresses on unique disposable networks avoid all production objects.
             proxy["networks"]["notoli_backend"] = None
+            proxy["networks"]["macromapper"] = None
             for key in config["networks"]:
                 config["networks"][key] = {"external": True, "name": prefix + "-" + key}
             for volume in proxy["volumes"]:
@@ -90,6 +91,7 @@ class GatewayDockerTests(unittest.TestCase):
                 service["container_name"] = "host-ingress-proxy"
                 service["ports"] = [{"target": p, "published": str(p), "protocol": "tcp"} for p in (80, 443)]
                 service["networks"]["notoli_backend"] = {"ipv4_address": "172.30.88.2"}
+                service["networks"]["macromapper"] = {"ipv4_address": "172.20.0.3"}
                 for key, name in (("notoli_backend", "notoli_backend_private"), ("notoli_frontend", "notoli_default"),
                                   ("macromapper", "macromapper-ingress")):
                     normalized["networks"][key] = {"name": name, "external": True}

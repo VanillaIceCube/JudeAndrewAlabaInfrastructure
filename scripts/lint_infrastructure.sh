@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 actionlint
+node .github/actions/check-workflow-security/check-workflow-security.js
 mapfile -t shell_files < <(git ls-files --cached --others --exclude-standard '*.sh')
 if [ "${#shell_files[@]}" -gt 0 ]; then
   shellcheck "${shell_files[@]}"

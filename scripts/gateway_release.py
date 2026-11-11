@@ -34,6 +34,13 @@ TARGETS = {"/etc/nginx/nginx.conf": "nginx/nginx.conf",
            "/etc/nginx/conf.d": "nginx/vhosts", "/etc/nginx/snippets": "nginx/snippets"}
 DOMAINS = ("notoli.judeandrewalaba.com", "macromapper.judeandrewalaba.com")
 DIAGNOSTICS = None
+# Read-only compatibility for the accepted retirement tombstones. New bundles
+# contain neither route; enabled generations must be contained by their matched
+# historical controller before this controller can operate on them.
+RETIRED_ROUTES = (
+    ("profile", "gateway-profile.json", "zz-ynab.conf", "2ed62a90371ca990b5d4ca4149196d7f9609ed3b5a2d0d8a22eb725fdcef227a"),
+    ("auth_profile", "mcp-auth-profile.json", "zz-mcp-auth.conf", "d729d4f889a516cf30ca229c6bf348126b233d37cf33e28363d9068cd456591b"),
+)
 
 
 class ReleaseError(RuntimeError):
@@ -185,7 +192,7 @@ def validate_model(model, certs):
                 == {"name": name, "external": True}
                 for key, name in expected.items()), "Networks must be existing external objects")
     require(proxy["networks"] == {"notoli_backend": {"ipv4_address": "172.30.88.2"},
-                                     "notoli_frontend": None, "macromapper": None}, "Proxy trust/address drift")
+                                     "notoli_frontend": None, "macromapper": {"ipv4_address": "172.20.0.3"}}, "Proxy trust/address drift")
     require(len(proxy["ports"]) == 2 and
             {(p["target"], str(p["published"]), p.get("host_ip", ""), p["protocol"])
              for p in proxy["ports"]} == {(80, "80", "", "tcp"), (443, "443", "", "tcp")}, "Listener drift")
@@ -218,6 +225,29 @@ def config_identity(model):
                 files[key] = hashlib.sha256(regular(entry).read_bytes()).hexdigest()
         volume["source"] = volume["target"]
     return hashlib.sha256(json.dumps([normalized, files], sort_keys=True).encode()).hexdigest()
+
+
+def retired_route_state(directory, model, record=None):
+    """Accept only base or exact historical disabled bytes; never activate a route."""
+    require(set(model["networks"]) == {"notoli_backend", "notoli_frontend", "macromapper"},
+            "Retired route networks must already be detached")
+    conf = next(Path(v["source"]) for v in model["services"]["proxy"]["volumes"]
+                if v["target"] == "/etc/nginx/conf.d")
+    require(conf == directory / "nginx/vhosts", "Accepted vhosts must match their release directory")
+    states = {}
+    for field, marker_name, vhost_name, digest in RETIRED_ROUTES:
+        marker, vhost = directory / marker_name, conf / vhost_name
+        present = marker.exists() or vhost.exists() or marker.is_symlink() or vhost.is_symlink()
+        state = "disabled" if present else "base"
+        require(record is None or record.get(field, "base") == state, "Retired route is not an accepted disabled/base generation")
+        if present:
+            metadata = read(marker)
+            require(isinstance(metadata, dict) and type(metadata.get("version")) is int
+                    and metadata == {"version": 1, "profile": "disabled", "vhost_sha256": digest}
+                    and hashlib.sha256(regular(vhost).read_bytes()).hexdigest() == digest,
+                    "Retired tombstone differs from reviewed disabled configuration")
+        states[field] = state
+    return states
 
 
 def runtime():
@@ -335,12 +365,14 @@ class Gateway:
             volume["source"] = mounts[volume["target"]]
         require(config_identity(live) == record["configuration"], "Live configuration drift")
         require(config_identity(read(directory / "model.json")) == record["configuration"], "Recovery configuration drift")
+        retired_route_state(directory, read(directory / "model.json"), record)
         return record
 
     def save(self, directory, source, run_url, recovery, model, previous=None):
         record = {"source": source, "directory": str(directory), "image": model["services"]["proxy"]["image"],
                   "configuration": config_identity(model), "actions_run": run_url,
                   "recovery": recovery, "runtime": runtime()}
+        record.update(retired_route_state(directory, model))
         if previous:
             record["previous_source"] = previous["source"]
         atomic(self.root / "current.json", record)
@@ -415,6 +447,7 @@ class Gateway:
         require(directory.parent == self.root / "releases", "Unsafe recovery reference")
         model = read(directory / "model.json")
         require(config_identity(model) == previous["configuration"], "Recovery checksum mismatch")
+        retired_route_state(directory, model, previous)
         self.syntax(model)
         self.compose(directory, "up", "-d", "--no-deps", "--pull", "never", "--force-recreate", "proxy")
         require(invariants() == journal["invariants"], "Application/network identity changed")
@@ -465,6 +498,8 @@ class Gateway:
         require(output.returncode == 0, "Candidate Compose expansion failed")
         model = json.loads(output.stdout)
         validate_model(model, certs)
+        require(all(state == "base" for state in retired_route_state(directory, model).values()),
+                "New gateway candidates cannot contain retired routes")
         require(all(volume["source"] == str(directory / TARGETS[volume["target"]])
                     for volume in model["services"]["proxy"]["volumes"] if volume["target"] in TARGETS),
                 "Candidate configuration must be staged inside its release directory")

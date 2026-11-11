@@ -10,7 +10,7 @@ PACKAGE_FILES = {"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.ya
 
 def unsupported_manifests(paths):
     return sorted(path for path in paths if Path(path).name in PACKAGE_FILES
-                  or Path(path).name.startswith("requirements") and Path(path).suffix == ".txt")
+                  or Path(path).name.startswith("requirements") and Path(path).suffix in {".txt", ".in"})
 
 
 def main():

@@ -11,7 +11,29 @@ Record initial setup, the designated operator, rollout/recovery scope and result
 on [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Independent Notoli/MacroMapper workflows and shared release code are unchanged.
 
+The current source candidate pins the official Nginx **1.31.8 Alpine 3.24 slim**
+Linux/amd64 image at
+`nginx@sha256:f9238a4aacf18df0f059cf0389490fc2e876352f75d019f475a48e8765576f24`.
+Its complete native-package assessment and existing TLS, proxy, gzip, DNS, MCP
+streaming and recovery fixtures must pass before source promotion. This replaces
+the blocked Debian candidate without changing the Nginx release version. Historical
+image references in the one-time cutover guide remain matched recovery evidence;
+they are not an approval to deploy an image with unresolved advisories.
+
 ## 🔒 Approval and prerequisites
+
+Source changes land through reviewed `main` first, with explicit owner approval
+for each merge; review alone does not authorize merging or the later production
+promotion. If the owner explicitly
+authorizes a narrow deployment experiment outside that path, return its changes
+and history to `main` promptly through a reviewed PR before ordinary promotion
+resumes. Compare both ancestry and file contents: promotion merge commits can
+differ without introducing production-only code. Reconcile history without
+discarding newer main changes or rewriting either protected branch. Intentionally
+unreleased main work is permitted; hold `env-prod` until its prerequisites are
+met rather than deploying unrelated features to obtain equal trees. See the
+[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases)
+and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
 
 Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
 and adoption are ready. Initial setup remains an explicit owner operation. Configure:
@@ -244,3 +266,14 @@ cleanup or off-host backup is included. Never remove a mounted/current release,
 any pending attempt or its predecessor. Monitor disk space before future releases.
 Production acceptance still requires the separately authorized first and second
 independent release plus recovery evidence recorded on #4.
+
+## 🧹 Retired MCP routes
+
+The [retirement record](mcp-retirement.md) governs the removal in #96. This
+controller accepts the ordinary three-network gateway and can read the exact
+previously accepted disabled tombstones for rollback. Enabled legacy profiles,
+unmatched marker/vhost bytes and extra route networks are rejected. Contain
+retired routes with their matched historical controller before using this source.
+New source bundles contain no retired vhosts or profile selectors. Preserve
+private accepted/recovery generations; historical controllers are evidence, not
+authorization to reactivate retired services.
