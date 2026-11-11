@@ -5,6 +5,7 @@
 ### Changed
 
 - Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
+- Align CodeQL init/analyze at the immutable v4.39.3 revision and refresh the checked workflow architecture inventory.
 
 ## 2026-11-06
 
