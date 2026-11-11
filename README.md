@@ -10,6 +10,9 @@ host-owned gateway from independent Notoli and MacroMapper releases. Existing
 Docker networks, certificate paths and Notoli's exact trusted proxy remain
 preserved through the reviewed migration.
 
+The external YNAB integration and shared MCP issuer are retired; see the
+[retirement record](docs/mcp-retirement.md). Existing Notoli MCP stays app-owned.
+
 ## 📦 What's here
 
 | Area | Source / guide |
@@ -81,4 +84,19 @@ merge approval remains mandatory.
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli and MacroMapper route MCP/discovery to their own backends; advertise each service only after its app registry and OAuth readiness pass. Preserve independent releases and exact app proxy trust.
+
+Security-alert maintenance validates complete source coverage and supports bounded,
+idempotent Project recovery; see [.github/README-WORKFLOWS.md](.github/README-WORKFLOWS.md#security-alert-recovery).
+
+
+Reviewer discussion, feedback ownership, safe usage evidence and recovery are
+documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
+
+
+CI/CD events, reviewer flow, credential boundaries and production-summary behavior
+are mapped in [the architecture reference](docs/CI-CD-ARCHITECTURE.md).
+Shared adoption and justified differences are recorded in [Batch 3 parity](docs/BATCH3-PARITY.md).
+
+Security-alert model overrides are resolved by the three caller workflows and passed
+through validated composite inputs; see the [configuration contract](.github/README-WORKFLOWS.md#security-alert-configuration-contract).

@@ -380,6 +380,7 @@ class TransactionTests(unittest.TestCase):
                    patch.object(release, "certificate_identity", return_value="unchanged"),
                    patch.object(release, "config_identity", side_effect=lambda model: "old-config" if model.get("old") else "new-config"),
                    patch.object(release, "validate_model"), patch.object(release, "healthy"),
+                   patch.object(release, "retired_route_state", return_value={"profile": "base", "auth_profile": "base"}),
                    patch.object(release, "inspect", return_value={"Id": "new-image"}),
                    patch.object(release, "docker"),
                    patch.object(release, "ensure_image"),

@@ -1,5 +1,16 @@
 # 🤖 Infrastructure automation
 
+## Major-upgrade review evidence
+
+Obi-Wan uses Dependabot's per-dependency metadata for grouped upgrades.
+Release lookups use each major update's own ecosystem and target version.
+Repository usage searches cover every listed dependency and retain the
+tracked-file exclusions and 30,000-byte limit. Numeric Actions references
+such as 7 and v7 can match a full release tag such as v7.0.0. Opaque refs
+leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
+source URL. The publisher keeps independent body findings when it suppresses
+duplicate inline comments or sees an unchanged verdict.
+
 ## 🧭 Applicable parity
 
 Audited FullStackTemplate `6ff053460cb6cd5148258c672a2f80b7ca59bc4d` and
@@ -97,9 +108,16 @@ the disposable CI Docker daemon. No live host or application onboarding occurs.
 
 ## 🔑 Separate OpenAI reviewer credentials
 
-Credential provisioning is a separate operator step. Configure the new secrets
-and project variable before activating these workflows. Missing keys fail
-visibly; there is no fallback to the old shared `OPENAI_API_KEY`.
+GitHub App token consumers pin `actions/create-github-app-token` v3.3.0;
+the security-alert regression tests assert that exact SHA alongside the existing
+credential and permission boundaries. CodeQL init/analyze advance together to
+v4.39.1, and the Gitleaks action uses v3.0.0.
+
+The four existing repositories already use the accepted persona-specific
+credentials and reviewer projects. The following is an onboarding/operator
+reference, not a pending model or credential migration. Configure these names
+before activating a new installation; missing keys fail visibly and there is
+no fallback to a shared `OPENAI_API_KEY`.
 
 Use a dedicated **JudeAndrewAlabaInfrastructure · AI Reviewers** OpenAI project (or the
 repository's existing reviewer-only project). Never share credentials between
@@ -148,14 +166,12 @@ apply even when a human reruns a Dependabot-triggered workflow.
 5. In OpenAI Usage, filter by the reviewer project and individual API key to
    confirm each persona's attribution. An empty alert feed may make no model
    call; record that outcome rather than assuming usage was verified.
-6. Stage the new secrets and `OPENAI_REVIEWERS_PROJECT_ID` while leaving the
-   legacy `OPENAI_API_KEY` and `OPENAI_PROJECT_ID` unchanged. Existing default-
-   branch jobs can continue using the legacy pair until the source is merged.
-   Keep old keys valid until every affected consumer has verified the new keys;
-   retain any Default-project key still used elsewhere. To reverse the source
-   change, revert the workflow change; the retained legacy pair remains usable.
-   Do not place a shared legacy key into the three new secret slots or expose
-   key values in logs/issues.
+6. For configuration recovery, restore the last accepted persona-specific key/
+   project bindings and validated reviewer variables, then rerun the latest head.
+   Any source revert must use ordinary protected review and retain its matching
+   credential contract. A legacy key used elsewhere is not an active reviewer
+   fallback; never copy it into all three persona slots or expose key values.
+   This reference does not rotate or provision credentials during Batch 3.
 
 See [OpenAI key security, expiration and usage guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys).
 
@@ -225,3 +241,178 @@ Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
+
+## 🤖 Reviewer model
+
+Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models and Jules schedules are independent of this setting.
+
+## 📦 Compatible CodeQL updates
+
+The current CodeQL entry points use the same immutable v4.39.3 revision.
+After updating action references, regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+with `python scripts/ci_architecture.py` and verify it with `--check`; the
+architecture guard intentionally rejects stale workflow hashes.
+
+Dependabot groups all `github/codeql-action` entry points (including `init`,
+`analyze`, `autobuild` and `upload-sarif`) in `codeql` version-update PRs.
+A separate `codeql-security` group applies the same matching to security updates;
+GitHub does not combine version and security updates in one group. Keep both
+patterns (`github/codeql-action` and `github/codeql-action/*`) so repository and
+entry-point dependency names match. Review every CodeQL entry point together,
+keep their immutable revisions aligned, and preserve normal CI/reviewer gates.
+
+The applications retain daily updates. Infrastructure retains weekly updates,
+its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
+separate Compose updates. The template aligns its mutable CodeQL tag with the other repositories'
+immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
+gates remain unchanged. Canonical rollout:
+[FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+
+## 🧪 Atomic CodeQL regression guard
+
+FullStackTemplate is the canonical application Dependabot policy (#240).
+Infrastructure adopts the common CodeQL revision guard and negative tests before
+its required scope detection: every CodeQL entry point in `.github` must use
+the same full immutable SHA. Split init/analyze, cross-workflow drift, mutable
+tags and missing analysis fail visibly. The version/security update groups
+merged in #106 remain unchanged, including weekly cadence and separate Compose
+updates. Run `node --test .github/actions/check-codeql-pins/*.test.js` locally.
+
+Application auto-merge is intentionally inapplicable here: retain owner merge,
+independent Required CI, all three same-repository Dependabot reviewers, no fork
+secrets, and separate production/recovery authorization. Successful Dependabot
+review evidence already exists on #53 and #33; human implementation PRs alone
+do not prove Dependabot secret access. No shared app-release behavior changes.
+
+The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
+including flow mappings, quoted/escaped keys, folded values and aliases. Install
+that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.
+
+
+## Security-alert recovery
+
+Each feed serializes scheduled and manual reconciliation. Before issue writes,
+source coverage must be complete and unique. A valid model draft that omits refs
+gets deterministic source-linked work items and an explicit warning; malformed
+JSON, invalid schemas, unknown refs and duplicate memberships fail before writes.
+Existing managed source refs select the canonical issue even when wording changes.
+
+Project attachment retries transient failures at most three times, reading back
+possibly committed writes before retrying. Unresolved attachments identify the
+saved issue; rerun the same feed to reuse it. Interrupted field initialization fills
+only missing fields, preserving human planning. All active groups synchronize before
+superseded issues can close. Closure saves source history and End date before Done.
+Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 may
+recover, and only after readback proves closed/completed with the exact saved body.
+All other errors remain failures. A successful empty feed does not exercise the race.
+
+Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
+
+Malware lookup retains per-source-GHSA requests and rejects mismatched or unknown advisory classifications before writing the source checkpoint or changing issues. Empty feeds make no advisory requests.
+
+## 🔒 Batch 2 workflow supply chain
+
+The workflow security checker and mocked regressions reject mutable external
+Action references, missing version comments, broad permission grants and privileged
+PR-target triggers. Run `node .github/actions/check-workflow-security/check-workflow-security.js`
+and its `*.test.js` suite locally. Repository defaults were independently audited
+as read-only with workflow-token PR approvals disabled. GitHub App reviewers keep
+their separate credentials and explicit grants. SHA enforcement is enabled only
+after source compliance and required final-head validation.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+
+Mapping-form writes are checked against `.github/workflow-write-grants.json`,
+which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
+new writes fail. Changes to that policy require review with the workflow; it does
+not grant GitHub permissions itself or replace branch protection.
+
+## 🧪 Automation regressions and bounded diagnostics
+
+See [the shared inventory](../docs/AUTOMATION-COVERAGE.md). Actual composite
+request construction and prior-review collection run with mocked curl/GitHub reads,
+not live paid API calls. The new log regression retains failures near the beginning,
+middle and end while bounding context to16000characters and artifacts to about1MiB
+per log for7days. Complete output remains in the job log. Preprocessing feeds the
+existing ci_report.py interface; the overlapping Marty #52 reporter work stays intact.
+
+Workflow grant authority in PR audits now comes from the platform base commit.
+Bootstrap derives that base's existing writes if it lacks a manifest; a proposed
+policy cannot approve simultaneous workflow permission expansion. New grants
+first require a reviewed policy-only merge under the current protected gates.
+The shared alias/flow/mapping/base-policy regression suite matches the applications.
+Repository writers remain privileged; this linter is not a security sandbox.
+Infrastructure retains its existing shellcheck, Compose, secret scan, manifest,
+RequiredCI and independent gateway controls. Application browser tests and npm
+malware gates are not applicable here.
+
+
+## Reviewer context, follow-ups and usage
+
+See [the reviewer contract](AI-REVIEWERS.md) for bounded untrusted human discussion,
+verified App ownership, conservative self-owned thread reconciliation, serialized
+writers, dated usage estimates and configuration recovery. The owner-selected
+`gpt-6-luna` model, per-persona keys/projects and blocking native checks remain.
+Repository variables `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT` and
+`AI_REVIEW_MAX_OUTPUT_TOKENS` are validated; unset values retain Luna/medium/16000.
+
+The reviewed `workflow-write-grants.json` grants only `pull-requests: write`
+to the deterministic promotion-summary workflow. That policy merged before the
+workflow was introduced; proposed workflows cannot authorize their own new grants.
+Summary publication does not authorize releases or change gates.
+
+Reviewer evidence reads use the existing read-only workflow token, explicitly
+limited to contents/pull-requests/checks/statuses read (plus existing security
+evidence reads for RoboCop). Native review/follow-up/thread writes use the
+separate persona App token; its existing contents-read/pull-requests-write
+installation capabilities are not expanded.
+
+
+## Architecture and production summaries
+
+The [canonical architecture reference](../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+Dependabot paths, required checks, reviewer interactions, scheduled alerts,
+main-to-env-prod/manual release paths and credential trust boundaries to source.
+Its per-repository source inventory is checked against actual workflow YAML.
+
+`promotion-summary-request.yml` is a read-only PR/target-push signal with no checkout or
+artifact/cache handoff. Its default-branch `workflow_run` consumer
+`promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
+same-repository `env-prod` PR using the actual current target comparison. Reruns
+update the same comment; stale/incomplete/denied evidence is reported visibly.
+Observed area counts are separate from inferred risks. The workflow loads trusted
+main code, never PR code/prose or secret values, and does not change review,
+merge, release or recovery authorization. Infrastructure uses gateway-specific
+wording. FullStackTemplate's inactive target is not created for symmetry.
+
+## Security-alert configuration contract
+
+The three `alert-codeql.yml`, `alert-vulnerability.yml`, and `alert-malware.yml`
+workflows resolve `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT`, and
+`AI_REVIEW_MAX_OUTPUT_TOKENS` in their supported workflow `vars` context. They
+pass explicit `model`, `reasoning-effort`, and `max-output-tokens` inputs to the
+security-alert composite. Do not reference repository `vars` inside composite
+manifests: GitHub rejects that metadata before alert fetching starts (#300).
+
+Absent or empty values deliberately preserve `gpt-6-luna`, `medium`, and `16000`.
+Nonempty overrides pass through the existing Responses policy. Configuration is
+validated before source reads or issue/Project writes, including empty feeds;
+invalid models, efforts or token limits fail visibly without a provider call.
+No model migration, credential/project consolidation, retry or spending policy
+change is implied. Infrastructure retains its additional Project-schema preflight,
+all-severity vulnerability feed and distinct token/Project permissions.
+
+`node --test .github/actions/custom-regressions/security-alert-contract.test.js`
+checks actual YAML inputs/callers, audits local composites for unsupported `vars`,
+and executes manifest-derived configuration, fetching, nested Responses shell,
+validation and reconciliation code using synthetic feeds and mocked provider/API
+writes. Existing lifecycle tests still cover complete accounting, partial-progress
+recovery and the exact concurrent-close HTTP 422 case. These fixtures are not a
+GitHub runner. After a reviewed repair, run one fresh controlled dispatch of each
+alert workflow from corrected `main`, after checking managed labels/Project side
+effects. Record runner loading/empty-feed evidence separately from nonempty mock
+coverage; never rerun an old failed revision as proof of the new source.

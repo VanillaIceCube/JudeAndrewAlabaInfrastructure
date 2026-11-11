@@ -48,6 +48,9 @@ def verify(phase, allow_missing_proxy=False):
             if proxy and proxy in members:
                 if members[proxy]["IPv4Address"].split("/")[0] != "172.30.88.2":
                     raise ValueError("Topology invariant failed")
+        if name == "macromapper-ingress" and phase == "host" and proxy in members:
+            if members[proxy]["IPv4Address"].split("/")[0] != "172.20.0.3":
+                raise ValueError("MacroMapper proxy trust address changed")
     backend = inspect("container", "notoli-backend")
     if "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2" not in backend["Config"]["Env"]:
         raise ValueError("Proxy trust changed")

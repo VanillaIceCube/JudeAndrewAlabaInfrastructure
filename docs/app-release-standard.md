@@ -32,6 +32,14 @@ fields. Gateway and current-app endpoints are required. Companion absence is
 allowed during app recovery, while unexpected members, address/trust drift and
 published-port drift fail. Both apps must pass gateway cutover acceptance.
 
+Preflight verifies running frontend bindings against the accepted release's
+checksummed app policy. The incoming bundle's own policy is checked against
+rendered Compose before staging images and against Docker after recreation,
+before recording success. This allows a reviewed port change while still
+rejecting drift. Notoli and MacroMapper use shared HTTPS ingress and have no
+host frontend publication. See [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
+for Notoli's consumer inventory and rollout evidence.
+
 The transaction stays in one file because its ordering and crash barriers form
 one recovery state machine. Separating app policy and readiness predicates removes
 unreachable code without scattering that state machine across artificial layers.
@@ -45,10 +53,10 @@ unreachable code without scattering that state machine across artificial layers.
 | Backend networks | private `/29` + separate egress | app ingress + app default/egress |
 | Frontend networks | `notoli_default` | app ingress + app default |
 | Trust/address | exact proxy `.2`, backend `.3`; Uvicorn peer handling preserved | canonical forwarded HTTPS behind restricted backend reachability |
-| Published frontend port | existing IPv4/IPv6 3000 retained | none |
+| Published frontend port | none | none |
 | Common readiness | direct API 401, public HTML 200 and JSON API 401 | same |
-| Extra readiness | OAuth issuer/resource metadata and MCP challenge | none; functional AI/mail checks are separately authorized |
-| Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout |
+| Extra readiness | OAuth issuer/resource metadata and MCP challenge | Same for the app-owned MCP release; functional AI/mail checks remain separately authorized |
+| Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout; app-owned MCP origin and exact `172.20.0.3` trust |
 | Frontend build argument | `REACT_APP_API_BASE_URL=` | `VITE_API_BASE_URL=` |
 
 ## 🔒 Automated parity and updates
@@ -62,6 +70,10 @@ All external production action references are pinned. The deployment build check
 parity again before accessing destination credentials or publishing images.
 
 For a coordinated update:
+
+The current template pins `docker/login-action` v4.8.0. Dependabot login-action
+updates in application workflows must adopt the shared template commit through
+the procedure below; changing only the rendered workflow fails parity.
 
 1. Edit common source/tests/template here and run
    `python scripts/update_release_manifest.py`. Infrastructure CI verifies the
@@ -101,6 +113,10 @@ contract/preflight regressions derive fixtures from the selected policy; explici
 checks still preserve the two existing applications' trust and secret boundaries.
 `tests/fixtures/release-profiles` runs the same five release suites for Notoli,
 MacroMapper, and the isolated template example in Linux/disposable-Docker CI.
+The MacroMapper fixture enables app-owned MCP with exact `172.20.0.3` trust and
+origin/challenge readiness; the ordinary template fixture retains the disabled
+MCP contract. Consumers adopting the updated canonical tests pin this same
+reviewed Infrastructure commit before synchronizing their vendored copies.
 
 The template profile is an onboarding example, not a third application approved
 for the shared host. It does not add gateway routes, networks, certificates,
@@ -112,3 +128,10 @@ All consumers must pin the same reviewed source commit when adopting this change
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+
+## 🔬 Batch 2 parity acceptance
+
+The shared contract suite models an approved immutable Action upgrade: changing
+only the app workflow fails, synchronizing the approved source template passes,
+and unrelated workflow drift still fails. Version comments are source-owned and
+synchronized with the same manifest and commit pin; no engine or runtime change.
