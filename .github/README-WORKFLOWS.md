@@ -248,6 +248,11 @@ Code, build and security reviewers and security-alert grouping use `gpt-6-luna` 
 
 ## 📦 Compatible CodeQL updates
 
+The current CodeQL entry points use the same immutable v4.39.3 revision.
+After updating action references, regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+with `python scripts/ci_architecture.py` and verify it with `--check`; the
+architecture guard intentionally rejects stale workflow hashes.
+
 Dependabot groups all `github/codeql-action` entry points (including `init`,
 `analyze`, `autobuild` and `upload-sarif`) in `codeql` version-update PRs.
 A separate `codeql-security` group applies the same matching to security updates;
