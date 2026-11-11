@@ -2,6 +2,11 @@
 
 ## 2026-11-11
 
+### Fixed
+
+- Preserve SQLite snapshot errors and interruptions when temporary-artifact cleanup fails; report the artifact and exit code or exception type without exposing subprocess output.
+- Read CI reports as UTF-8 and allow gateway evidence without a configured step-summary file.
+
 ### Changed
 
 - Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
