@@ -29,6 +29,19 @@ def archive(path, content="events {}\nhttp {}\n"):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_evidence_with_optional_step_summary(self):
+        message = "Safe gateway evidence 🦀"
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary"
+            for value in (None, "", str(summary)):
+                with self.subTest(summary=value):
+                    env = {} if value is None else {"GITHUB_STEP_SUMMARY": value}
+                    with patch.dict(os.environ, env, clear=True), \
+                            patch("sys.stdout", new_callable=io.StringIO) as output:
+                        transport.evidence(message)
+                    self.assertEqual(output.getvalue(), message + "\n")
+            self.assertEqual(summary.read_text(encoding="utf-8"), message + "\n\n")
+
     def test_pending_preflight_allows_absent_gateway_without_weakening_app_trust(self):
         objects = {}
         for name, (internal, subnet, apps) in release.check_host.NETWORKS.items():

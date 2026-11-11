@@ -100,7 +100,8 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
             json.dumps(metadata, indent=2) + "\n"
         )
         return metadata
-    except Exception as exc:
+    except BaseException as exc:
+        # Interruptions must also survive a secondary cleanup failure.
         primary_exc = exc
         raise
     finally:
