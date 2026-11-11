@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-11-11
+
+### Changed
+
+- Align CodeQL init/analyze at the immutable v4.39.3 revision and refresh the checked workflow architecture inventory.
+
 ## 2026-11-06
 
 ### Fixed
