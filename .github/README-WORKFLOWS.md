@@ -98,6 +98,11 @@ Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
 actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
 while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
 
+CI report files are decoded as UTF-8 with replacement for malformed bytes. Gateway
+evidence always goes to stdout; it also appends UTF-8 text when a nonempty
+`GITHUB_STEP_SUMMARY` path is configured. Only validated identities and fixed prose
+belong in this evidence; never include credentials or private recovery output.
+
 See [setup](GITHUB_SETUP.md). Default-branch Dependabot/schedules activate after
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
 activation. No merge, promotion or production operation is implied.

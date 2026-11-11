@@ -111,8 +111,16 @@ consistent SQLite snapshots inside each running backend namespace, including
 container-local WAL, with isolated restore checks (60-second copy budget)
 without replacing either live DB. It creates/removes one private `/tmp` snapshot
 inside each container and copies it to the private recovery directory; this
-is an explicit approved preparation action. Errors stop preparation and no verified marker
-is written. Run under the same hold, after recording both app identities:
+is an explicit approved preparation action. Errors stop preparation. Snapshot or restore
+validation errors do not write a verified marker. A later cleanup failure can leave
+verified local evidence, but still fails the command: do not treat that marker alone
+as successful preparation. Cleanup reports the unique temporary artifact and exit
+code or exception type without printing subprocess output; if snapshotting also
+fails, its original exception (including interruptions) is preserved and cleanup
+emits a warning. Cleanup targets only the generated `/tmp/ingress-snapshot-*.sqlite3`
+file, never `/backend/db.sqlite3` or its journals. Have the authorized operator
+resolve any leftover artifact within the approved hold before proceeding.
+Run under the same hold, after recording both app identities:
 
 ```bash
 python3 scripts/snapshot_sqlite.py notoli-backend "$recovery/notoli-data"
