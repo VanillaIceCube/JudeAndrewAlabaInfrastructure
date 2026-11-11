@@ -123,7 +123,9 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
             )
             if cleanup.returncode != 0:
                 cleanup_err = f"Cleanup command exited with code {cleanup.returncode}"
-        except Exception as exc:
+        except BaseException as exc:
+            if primary_exc is None and not isinstance(exc, Exception):
+                raise  # Preserve a cleanup-only interruption too.
             cleanup_err = f"Cleanup command failed: {type(exc).__name__}"
 
         if cleanup_err:
