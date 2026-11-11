@@ -8,7 +8,7 @@
     "deploy/tests/test_guards.py": "a4dd8fe3b9b2f0b4a55956f954799cadd97d16370ade96bf86bad2f091b9274e",
     "deploy/tests/test_recovery_docker.py": "0b3e4bcbdfe596ebf8db5f4b184c97bc51b0b6a355dfee741969d49cd9b2addd",
     "deploy/tests/test_generation_docker.py": "88611d4f020ed9098d93fe5daf03248153718e8cc3051690823f60abdffdb8fa",
-    "deploy/tests/test_contract.py": "77bf72c9cffb8cc0f3bcf8e73c3899b5a7f91cf420824594f85ce467295085bd"
+    "deploy/tests/test_contract.py": "94a78197e40114ac0d0414942dc7043abae4002218a8073fad8cee07024cea9c"
   },
   "workflow_sha256": "6f78ea83e7fc9c5e1fe5155917b2ece78887c2d558fad7da394d27dfc4ef959c"
 }
