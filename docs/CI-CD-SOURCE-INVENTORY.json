@@ -353,7 +353,7 @@
         "contents": "read",
         "security-events": "write"
       },
-      "source_sha256": "9d3185ae5242069c2b632e047516a35437181d2c44c3d12e58c6e6d47b8d4a03",
+      "source_sha256": "eb825b83dcc9ce78f357f95f63724d9a02227ae5438511a600e20c1405707c20",
       "variable_names": []
     },
     "gate-lint.yml": {
