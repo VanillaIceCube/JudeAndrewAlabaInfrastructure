@@ -1,5 +1,23 @@
 # 📝 Changelog
 
+## 2026-11-11
+
+### Removed
+
+- Remove retired Jules notebooks, persona prompts and active operating instructions after the linked PRs merged and a fresh open-PR inventory passed (#117); preserve general maintenance guidance, historical evidence and independent CI/security/release controls.
+
+## 2026-11-11
+
+### Fixed
+
+- Preserve SQLite snapshot errors and interruptions when temporary-artifact cleanup fails; report the artifact and exit code or exception type without exposing subprocess output.
+- Read CI reports as UTF-8 and allow gateway evidence without a configured step-summary file.
+
+### Changed
+
+- Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
+- Align CodeQL init/analyze at the immutable v4.39.3 revision and refresh the checked workflow architecture inventory.
+
 ## 2026-11-06
 
 ### Fixed
