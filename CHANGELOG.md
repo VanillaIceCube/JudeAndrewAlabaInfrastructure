@@ -2,6 +2,12 @@
 
 ## 2026-11-11
 
+### Removed
+
+- Remove retired Jules notebooks, persona prompts and active operating instructions after the linked PRs merged and a fresh open-PR inventory passed (#117); preserve general maintenance guidance, historical evidence and independent CI/security/release controls.
+
+## 2026-11-11
+
 ### Fixed
 
 - Preserve SQLite snapshot errors and interruptions when temporary-artifact cleanup fails; report the artifact and exit code or exception type without exposing subprocess output.
