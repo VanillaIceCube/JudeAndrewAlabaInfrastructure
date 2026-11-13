@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+### Fixed
+
+- Narrow SQLite snapshot cleanup handling to subprocess failures, OS errors and explicit interruptions, preserving the original snapshot failure when cleanup also fails (#133).
+
+## 2026-11-12
+
 ### Changed
 
 - Consolidate gateway deploy and rollback input validation. The transport helper now reports a specific error when a deploy request includes a recovery ID.
