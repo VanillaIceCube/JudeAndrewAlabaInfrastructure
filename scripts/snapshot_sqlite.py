@@ -100,7 +100,7 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
             json.dumps(metadata, indent=2) + "\n"
         )
         return metadata
-    except BaseException as exc:
+    except (Exception, KeyboardInterrupt, SystemExit) as exc:
         # Interruptions must also survive a secondary cleanup failure.
         primary_exc = exc
         raise
@@ -123,8 +123,8 @@ print(json.dumps({'uid':info.st_uid, 'gid':info.st_gid, 'mode':oct(info.st_mode 
             )
             if cleanup.returncode != 0:
                 cleanup_err = f"Cleanup command exited with code {cleanup.returncode}"
-        except BaseException as exc:
-            if primary_exc is None and not isinstance(exc, Exception):
+        except (OSError, subprocess.SubprocessError, KeyboardInterrupt, SystemExit) as exc:
+            if primary_exc is None and isinstance(exc, (KeyboardInterrupt, SystemExit)):
                 raise  # Preserve a cleanup-only interruption too.
             cleanup_err = f"Cleanup command failed: {type(exc).__name__}"
 
