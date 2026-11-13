@@ -234,6 +234,10 @@ class IngressTests(unittest.TestCase):
                             time.sleep(0.5)
                             continue
                         if response.status == expected:
+                            self.assertEqual(
+                                response.headers["Strict-Transport-Security"],
+                                "max-age=3600",
+                            )
                             body = response.read()
                             return response, json.loads(
                                 body
