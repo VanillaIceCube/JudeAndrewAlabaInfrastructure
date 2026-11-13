@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+### Added
+
+- Start a one-hour HSTS policy on application HTTPS responses, including private and error routes, with ingress coverage and documented expiry behavior (FullStackTemplate #299).
+
+## 2026-11-12
+
 ### Fixed
 
 - Narrow SQLite snapshot cleanup handling to subprocess failures, OS errors and explicit interruptions, preserving the original snapshot failure when cleanup also fails (#133).
