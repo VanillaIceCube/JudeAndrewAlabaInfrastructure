@@ -324,3 +324,20 @@ network ownership, recovery semantics or production authorization.
 ## 🔌 Optional MCP applications
 
 Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+
+
+## HTTPS browser policy
+
+The two HTTPS application vhosts send Strict-Transport-Security with max-age=3600.
+This initial one-hour policy applies to each application hostname. Subdomain and
+preload directives are omitted. Both general TLS responses and private routes
+set the header because a location-level add_header overrides Nginx inheritance.
+The ingress regression checks the header on successful and rejected routes.
+
+Keep the explicit HTTP-to-HTTPS redirect. The gateway owns HSTS; Django's W004
+is assessed against the public and origin headers. Removing the header does not
+immediately clear a browser's stored policy. To disable it, serve max-age=0 over
+working HTTPS and allow the previous one-hour policy to expire.
+
+See the [Django HSTS guidance](https://docs.djangoproject.com/en/6.1/ref/middleware/#http-strict-transport-security)
+and [header semantics](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Strict-Transport-Security).
