@@ -112,13 +112,20 @@ def finalize_failure():
                "before retry or explicit recovery. Any earlier verified host result remains historical evidence.")
 
 
-def execute(source, operation, recovery, directory):
+def validated_attempt_id(source, operation, recovery):
     identity = f"{source}-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
     require(IDENTITY.fullmatch(identity), "Invalid Actions identity")
-    if operation == "rollback":
+    if operation == "deploy":
+        require(not recovery, "Deploy does not accept a recovery identity")
+    elif operation == "rollback":
         require(IDENTITY.fullmatch(recovery), "Explicit recovery identity required")
     else:
-        require(operation == "deploy" and not recovery, "Unexpected release operation")
+        raise ReleaseError("Unexpected release operation")
+    return identity
+
+
+def execute(source, operation, recovery, directory):
+    identity = validated_attempt_id(source, operation, recovery)
     config = ssh_configuration(directory, os.environ)
     ssh = ["ssh", "-F", config, "gateway"]
     scp = ["scp", "-F", config]
@@ -153,11 +160,7 @@ def main():
     source = authorization()
     operation = os.environ.get("GATEWAY_OPERATION") or "deploy"
     recovery = os.environ.get("GATEWAY_RECOVERY", "")
-    identity = f"{source}-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
-    require(IDENTITY.fullmatch(identity), "Invalid Actions identity")
-    require(operation in {"deploy", "rollback"}, "Unexpected release operation")
-    require(IDENTITY.fullmatch(recovery) if operation == "rollback" else not recovery,
-            "Explicit recovery identity required only for rollback")
+    identity = validated_attempt_id(source, operation, recovery)
     evidence(f"Gateway {operation} attempt `{identity}`; promoted source `{source}`. "
              "Host journal is authoritative; starting transport does not establish acceptance.")
     if recovery:
