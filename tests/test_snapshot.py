@@ -183,6 +183,15 @@ class SnapshotTests(unittest.TestCase):
             self.assertEqual(len(commands), 3)
             self.assertTrue(result["isolated_restore_verified"])
 
+    def test_unexpected_cleanup_error_propagates(self):
+        unexpected = ValueError("unexpected cleanup failure")
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(
+                snapshot.subprocess, "run", side_effect=self.container_run(unexpected)
+            ), self.assertRaises(ValueError) as raised:
+                snapshot.capture_container("fake-container", Path(directory) / "recovery")
+            self.assertIs(raised.exception, unexpected)
+
     def test_cleanup_only_interruption_is_preserved(self):
         for interruption in (KeyboardInterrupt(), SystemExit(2)):
             with self.subTest(interruption=type(interruption).__name__), \
