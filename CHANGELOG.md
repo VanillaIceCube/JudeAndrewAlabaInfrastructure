@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-11-12
+
+### Changed
+
+- Consolidate gateway deploy and rollback input validation. The transport helper now reports a specific error when a deploy request includes a recovery ID.
+
 ## 2026-11-11
 
 ### Removed
