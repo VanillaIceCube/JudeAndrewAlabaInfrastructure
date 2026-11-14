@@ -1,5 +1,11 @@
 # 📝 Changelog
 
+## 2026-11-13
+
+### Changed
+
+- Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
+
 ## 2026-11-12
 
 ### Added

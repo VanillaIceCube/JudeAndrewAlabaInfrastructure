@@ -82,3 +82,11 @@ Follow the [optional MCP contract](docs/optional-mcp.md) for app-owned ASGI/OAut
 ## 🤖 Reviewer model policy
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
+
+## 📚 Documentation ownership
+
+The main README introduces the repository. Keep setup, commands, configuration,
+and maintenance details in the owning folder README and its linked references.
+Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
+🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
+See the [documentation index](docs/README.md) for scripts, tests, and other guides.
