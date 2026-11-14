@@ -10,8 +10,7 @@
 
 ### Removed
 
-- Remove historical audit reports, batch/hash snapshots, completed writeups, and redundant documentation indexes; consolidate current guidance into the owning READMEs and relocate CI references into `.github/`. Preserve active ingress and release procedures under `nginx/` and `app-release/`.
-
+- Remove obsolete documentation reports, snapshots, and redundant indexes; leave surviving guides in their original locations for review.
 
 ## 2026-11-12
 
