@@ -112,3 +112,12 @@ shared networks, prune global images or blindly retry. Remove a newly activated
 optional profile through a reviewed component release; retained OAuth tables and
 grants require deliberate application cleanup. See [onboarding](onboarding.md)
 and [the release standard](app-release-standard.md).
+
+## 📚 Application implementation
+
+Each application keeps its MCP transport, source pin, and runtime manifest in
+`backend/app_mcp/`. ChatGPT connection metadata, artwork, and packaging helpers
+live in `backend/app_mcp/chatgpt/`. The Python package is named `app_mcp` to
+remain distinct from the external `mcp` SDK. The shared refactor is tracked in
+[FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324).
+This source layout changes no gateway route, network, issuer, or live client.
