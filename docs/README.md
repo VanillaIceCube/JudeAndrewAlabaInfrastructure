@@ -34,5 +34,4 @@ Architecture or CI approval alone does not authorize merging or deployment.
 
 ## 🗂️ Verification and history
 
-- [Batch 3 shared capability parity](BATCH3-PARITY.md).
 - [Retire the external YNAB integration and shared MCP issuer](mcp-retirement.md).

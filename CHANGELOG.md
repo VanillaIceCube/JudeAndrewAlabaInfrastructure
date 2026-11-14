@@ -8,6 +8,10 @@
 
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
 
+### Removed
+
+- Delete historical Batch 2/3 parity reports and hash snapshots; remove obsolete links without moving or consolidating documentation.
+
 ## 2026-11-12
 
 ### Added
