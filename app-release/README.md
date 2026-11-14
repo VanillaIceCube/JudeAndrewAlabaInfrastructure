@@ -8,7 +8,7 @@ database, and production authorization.
 
 `v1/` contains the canonical release implementation, tests, workflow template,
 parity checker, and manifest. The
-[release standard](REFERENCE.md) documents the contract and
+[release standard](../docs/app-release-standard.md) documents the contract and
 consumer-specific differences, including template onboarding.
 
 ## 🧰 Maintenance
@@ -26,6 +26,6 @@ suites, and the release standard's parity checks. Test on disposable fixtures.
 
 ## 📚 Further reading
 
-- [Architecture and application ownership](../nginx/ARCHITECTURE.md).
-- [Application onboarding](../nginx/ONBOARDING.md).
+- [Architecture and application ownership](../docs/architecture-v2.md).
+- [Application onboarding](../docs/onboarding.md).
 - [Contributing](../CONTRIBUTING.md).

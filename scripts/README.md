@@ -23,11 +23,10 @@ repository root with the dependencies required by the relevant guide.
 ## 🚀 Host operations
 
 Gateway release, transport, host preflight, and SQLite capture helpers follow
-the [operations guides](../README.md#-documentation).
+the [operations guides](../nginx/README.md).
 Read the designated procedure before invoking a host-facing command.
 
 ## 📚 Further reading
 
 - [Tests and validation](../tests/README.md).
 - [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
-- [Documentation index](../README.md#-documentation).

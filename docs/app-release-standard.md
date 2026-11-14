@@ -1,7 +1,7 @@
 # 📦 Shared application release standard
 
 Notoli and MacroMapper use the same versioned release implementation in
-[`app-release/v1`](v1). Each application vendors an exact copy of
+[`app-release/v1`](../app-release/v1). Each application vendors an exact copy of
 the release/bundle tools, parity checker and five test modules. Its
 `deploy/shared-source.json` selects a full Infrastructure commit SHA. This is a
 build-time dependency: the private release bundle contains the runtime script,
@@ -127,9 +127,9 @@ All consumers must pin the same reviewed source commit when adopting this change
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](../nginx/MCP.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
 
-## 🧪 Consumer verification
+## 🔬 Batch 2 parity acceptance
 
 The shared contract suite models an approved immutable Action upgrade: changing
 only the app workflow fails, synchronizing the approved source template passes,

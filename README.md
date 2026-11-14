@@ -24,10 +24,7 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 - [Gateway and routing](nginx/README.md) — configuration and routing ownership.
 - [Application release standard](app-release/README.md) — shared release tooling.
-- [Deployment and operations](nginx/README.md#-operations) — onboarding, releases, and recovery.
 - [GitHub setup and workflows](.github/README-WORKFLOWS.md) — configuration and automation.
-- [Scripts](scripts/README.md) — repository helpers.
-- [Tests](tests/README.md) — validation commands and coverage.
 - [Contributing](CONTRIBUTING.md) — contribution and review expectations.
 - [Changelog](CHANGELOG.md) — project updates.
 
