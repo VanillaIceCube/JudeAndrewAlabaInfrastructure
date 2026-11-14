@@ -8,10 +8,6 @@
 
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
 
-### Removed
-
-- Remove obsolete documentation reports, snapshots, and redundant indexes; leave surviving guides in their original locations for review.
-
 ## 2026-11-12
 
 ### Added

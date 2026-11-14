@@ -1,7 +1,7 @@
 # 🛠️ Working in this repository
 
 The owner retired the external YNAB integration and shared MCP issuer on October 30.
-Follow [#96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96). Preserve existing
+Follow the [retirement record](docs/mcp-retirement.md) and #96. Preserve existing
 Notoli MCP; future MCP services and OAuth belong to each application.
 
 This repository owns shared ingress and the versioned application release
@@ -89,3 +89,4 @@ The main README introduces the repository. Keep setup, commands, configuration,
 and maintenance details in the owning folder README and its linked references.
 Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
 🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
+See the [documentation index](docs/README.md) for scripts, tests, and other guides.

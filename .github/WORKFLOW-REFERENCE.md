@@ -338,7 +338,7 @@ not grant GitHub permissions itself or replace branch protection.
 
 ## 🧪 Automation regressions and bounded diagnostics
 
-Actual composite
+See [the shared inventory](../docs/AUTOMATION-COVERAGE.md). Actual composite
 request construction and prior-review collection run with mocked curl/GitHub reads,
 not live paid API calls. The new log regression retains failures near the beginning,
 middle and end while bounding context to16000characters and artifacts to about1MiB
