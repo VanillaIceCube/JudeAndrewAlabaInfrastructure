@@ -25,13 +25,13 @@ required AI reviews. Missing required credentials and unavailable reviewer
 results remain visible failures. Forks retain their credential isolation.
 
 Gateway promotion, owner authorization, and rollback follow the
-[gateway release guide](../docs/gateway-releases.md). CI success does not
+[gateway release guide](../nginx/RELEASES.md). CI success does not
 authorize merging or production operations.
 
 ## 🧪 Checks and diagnostics
 
 See the [repository test guide](../tests/README.md) for local commands and
-prerequisites. The [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md) maps
+prerequisites. The [CI/CD architecture](CI-CD-ARCHITECTURE.md) maps
 workflow events and trust boundaries.
 
 ## 📚 Detailed workflow reference

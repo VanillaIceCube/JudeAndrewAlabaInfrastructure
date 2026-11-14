@@ -1,7 +1,7 @@
 # 🚦 Subsequent gateway releases
 
 This is the release procedure for the already adopted `host-ingress` gateway,
-not the [one-time cutover](cutover.md). The owner's October 19 policy makes an
+not the [one-time cutover](CUTOVER.md). The owner's October 19 policy makes an
 authorized promotion of reviewed source to `env-prod` the release authorization:
 it automatically deploys without another human reviewer or per-release approval
 variable. Source/CI approval alone still does not authorize branch promotion.
@@ -32,7 +32,7 @@ differ without introducing production-only code. Reconcile history without
 discarding newer main changes or rewriting either protected branch. Intentionally
 unreleased main work is permitted; hold `env-prod` until its prerequisites are
 met rather than deploying unrelated features to obtain equal trees. See the
-[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases)
+[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/AGENTS.md#production)
 and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
 
 Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
@@ -269,7 +269,7 @@ independent release plus recovery evidence recorded on #4.
 
 ## 🧹 Retired MCP routes
 
-The [retirement record](mcp-retirement.md) governs the removal in #96. This
+The [retirement record](README.md#-retired-integrations) governs the removal in #96. This
 controller accepts the ordinary three-network gateway and can read the exact
 previously accepted disabled tombstones for rollback. Enabled legacy profiles,
 unmatched marker/vhost bytes and extra route networks are rejected. Contain

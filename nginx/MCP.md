@@ -16,7 +16,7 @@ shared OAuth service; the application supplies the actual metadata and challenge
 Each enabled app vhost defines its own `$app_backend`, `$app_frontend`, fixed
 `server_name`, certificates and reviewed network attachment. At server level,
 include `nginx/snippets/mcp-locations.conf`. The inactive
-[example vhost](optional-mcp.conf.example) contains no production activation.
+[example vhost](mcp.conf.example) contains no production activation.
 The include preserves exact `/mcp` without a trailing-slash rewrite, HTTP/1.1,
 buffering off, empty Connection and a 120-second upstream **idle** read timeout.
 It forwards `/.well-known/*` to the same backend. The backend OAuth endpoints
@@ -106,12 +106,12 @@ owner's existing connection to test revocation.
 
 On failure stop and inspect the exact attempt, journal and barrier. Use the
 affected component's explicit retained-source/image recovery from
-[gateway releases](gateway-releases.md) or the app release guide. Preserve current
+[gateway releases](RELEASES.md) or the app release guide. Preserve current
 databases and private recovery evidence. Never rerun the initial cutover, rebuild
 shared networks, prune global images or blindly retry. Remove a newly activated
 optional profile through a reviewed component release; retained OAuth tables and
-grants require deliberate application cleanup. See [onboarding](onboarding.md)
-and [the release standard](app-release-standard.md).
+grants require deliberate application cleanup. See [onboarding](ONBOARDING.md)
+and [the release standard](../app-release/REFERENCE.md).
 
 ## 📚 Application implementation
 
