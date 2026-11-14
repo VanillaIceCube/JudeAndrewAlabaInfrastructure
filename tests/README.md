@@ -34,5 +34,6 @@ automation changes. See [contributing](../CONTRIBUTING.md).
 
 ## 📚 Further reading
 
+- [Automation coverage](../docs/AUTOMATION-COVERAGE.md).
 - [Workflow reference](../.github/WORKFLOW-REFERENCE.md).
 - [Repository scripts](../scripts/README.md).

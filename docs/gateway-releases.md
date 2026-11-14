@@ -269,7 +269,7 @@ independent release plus recovery evidence recorded on #4.
 
 ## 🧹 Retired MCP routes
 
-The owner decision in [#96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
+The [retirement record](mcp-retirement.md) governs the removal in #96. This
 controller accepts the ordinary three-network gateway and can read the exact
 previously accepted disabled tombstones for rollback. Enabled legacy profiles,
 unmatched marker/vhost bytes and extra route networks are rejected. Contain
