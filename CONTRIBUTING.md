@@ -20,7 +20,7 @@ node --test .github/actions/*/*.test.js
 Tests create uniquely named temporary containers/networks and local fixture
 certificates. They never execute the production runbook. Changes to the common
 release implementation also require both apps' tests and
-[parity verification](docs/app-release-standard.md#-automated-parity-and-updates).
+[parity verification](app-release/REFERENCE.md#-automated-parity-and-updates).
 
 ## 📚 Documentation and review
 

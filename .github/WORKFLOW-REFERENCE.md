@@ -77,7 +77,7 @@ locking and gateway-only recovery. Review/scanner workflows cannot deploy.
 Like the Notoli and MacroMapper deployment workflows, an authorized promotion
 to `env-prod` starts deployment without a second reviewer or per-release
 approval variable. Source PRs still require the normal main-branch checks.
-See [gateway releases](../docs/gateway-releases.md) for setup, bounded probes,
+See [gateway releases](../nginx/RELEASES.md) for setup, bounded probes,
 relevant-change policy, Actions evidence, interruptions and retention. Gateway SSH
 configuration lives only in repository Actions settings; no GitHub Environment
 or Deployment API record is required. Repository-wide key exposure and the
@@ -254,7 +254,7 @@ Code, build and security reviewers and security-alert grouping use `gpt-6-luna` 
 ## 📦 Compatible CodeQL updates
 
 The current CodeQL entry points use the same immutable v4.39.3 revision.
-After updating action references, regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+After updating action references, regenerate `.github/CI-CD-SOURCE-INVENTORY.json`
 with `python scripts/ci_architecture.py` and verify it with `--check`; the
 architecture guard intentionally rejects stale workflow hashes.
 
@@ -338,7 +338,7 @@ not grant GitHub permissions itself or replace branch protection.
 
 ## 🧪 Automation regressions and bounded diagnostics
 
-See [the shared inventory](../docs/AUTOMATION-COVERAGE.md). Actual composite
+See [coverage and limitations](../tests/README.md#-coverage-and-limitations). Actual composite
 request construction and prior-review collection run with mocked curl/GitHub reads,
 not live paid API calls. The new log regression retains failures near the beginning,
 middle and end while bounding context to16000characters and artifacts to about1MiB
@@ -379,7 +379,7 @@ installation capabilities are not expanded.
 
 ## Architecture and production summaries
 
-The [canonical architecture reference](../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+The [canonical architecture reference](CI-CD-ARCHITECTURE.md) maps PR/fork/
 Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
 Its per-repository source inventory is checked against actual workflow YAML.

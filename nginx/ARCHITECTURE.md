@@ -3,7 +3,7 @@
 **APPROVED FOR IMPLEMENTATION** by the
 [owner's architecture approval](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759).
 Each PR merge and production operation still requires separate authorization.
-This is the approved technical contract. The [cutover runbook](cutover.md)
+This is the approved technical contract. The [cutover runbook](CUTOVER.md)
 contains the candidate operational procedure; neither document authorizes execution.
 Current operators, approval evidence, implementation status and remaining gates
 are maintained in [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
@@ -119,7 +119,7 @@ locations with local `proxy_set_header` directives. Disable backend proxy
 caching and return `no-store` for authenticated auth/API/admin/MCP responses;
 discovery remains publicly readable with `no-store`. Both vhosts use the same
 `mcp-locations.conf` include; app registries and OAuth readiness determine whether
-a service is advertised. Follow the [ordered MCP activation](optional-mcp.md#-macromapper-activation-order)
+a service is advertised. Follow the [ordered MCP activation](MCP.md#-macromapper-activation-order)
 before the first MacroMapper MCP app release. Do not log OAuth codes/tokens or sensitive query
 strings in new ingress logs. Verify the logging policy in the config tests.
 
@@ -315,7 +315,7 @@ and [Nginx proxy semantics](https://nginx.org/en/docs/http/ngx_http_proxy_module
 
 ## 📦 Shared application release implementation
 
-Both applications adopt the [versioned release standard](app-release-standard.md).
+Both applications adopt the [versioned release standard](../app-release/REFERENCE.md).
 App policy remains explicit configuration; common behavior and tests are vendored
 from one pinned source and checked in CI. This changes source organization, not
 network ownership, recovery semantics or production authorization.
@@ -323,7 +323,7 @@ network ownership, recovery semantics or production authorization.
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
+Follow the [optional MCP contract](MCP.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
 
 
 ## HTTPS browser policy

@@ -99,7 +99,7 @@ class IngressTests(unittest.TestCase):
             # enabled application vhosts, using only disposable backends.
             vhosts = target / "vhosts"
             shutil.copytree(ROOT / "nginx/vhosts", vhosts)
-            example = (ROOT / "docs/optional-mcp.conf.example").read_text()
+            example = (ROOT / "nginx/mcp.conf.example").read_text()
             example = example.replace("app.example.com", "optional.judeandrewalaba.com")
             example = example.replace("example-backend", "optional-backend")
             example = example.replace("example-frontend", "optional-frontend")

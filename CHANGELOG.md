@@ -8,6 +8,11 @@
 
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
 
+### Removed
+
+- Remove historical audit reports, batch/hash snapshots, completed writeups, and redundant documentation indexes; consolidate current guidance into the owning READMEs and relocate CI references into `.github/`. Preserve active ingress and release procedures under `nginx/` and `app-release/`.
+
+
 ## 2026-11-12
 
 ### Added
