@@ -7,7 +7,7 @@ integration contracts, maintenance, and recorded verification.
 
 - [Gateway and routing](../nginx/README.md).
 - [Application release standard](../app-release/README.md).
-- [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
+- [GitHub setup and workflows](../.github/README.md).
 - [Scripts](../scripts/README.md).
 - [Tests](../tests/README.md).
 

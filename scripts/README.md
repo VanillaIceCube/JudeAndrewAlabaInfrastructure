@@ -29,5 +29,5 @@ Read the designated procedure before invoking a host-facing command.
 ## 📚 Further reading
 
 - [Tests and validation](../tests/README.md).
-- [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
+- [GitHub setup and workflows](../.github/README.md).
 - [Documentation index](../docs/README.md).

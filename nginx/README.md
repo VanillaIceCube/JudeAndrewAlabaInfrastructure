@@ -23,5 +23,5 @@ an instruction to run a cutover.
 
 ## 🧪 Checks
 
-Follow the [test guide](../tests/README.md) on a disposable Docker daemon and
-the [contribution guide](../CONTRIBUTING.md). Never use production as a fixture.
+Follow the [test guide](../tests/README.md) on a disposable Docker daemon.
+Never use production as a fixture.
