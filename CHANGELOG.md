@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Document the consolidated application MCP code, source metadata, and ChatGPT package locations; gateway runtime and release policy remain unchanged ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).
+
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
 
 ## 2026-11-12
