@@ -20,14 +20,14 @@ and the [release standard](docs/app-release-standard.md) before related changes.
   disposable local/CI Docker daemon. Also run
   `python scripts/update_release_manifest.py --check`; shared behavior changes
   require both applications' deployment suites and parity checks.
-- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for review and validation. Never run
+- Follow [tests/README.md](tests/README.md) for review and validation. Never run
   the production cutover guide as a test or expose private recovery/env/key data.
 
 Owner decisions are recorded on [issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Architecture approval does not authorize merging, release-branch promotion or
 production operations. Use issue #4 for the designated operator and exact
 production authorization; do not infer either from source approval. Repository automation in issues #5–#9 is owner-prioritized; follow the
-[workflow guide](.github/README-WORKFLOWS.md). Implementation approval still
+[workflow guide](.github/README.md). Implementation approval still
 does not authorize merging or production operations.
 
 ## 🚀 Gateway promotion authorization
@@ -63,7 +63,7 @@ Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
 all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this repository's
 reviewer project. Keep credentials separate across repositories and application
 environments, preserve visible missing-key failures, and follow the deferred
-cutover steps in `.github/README-WORKFLOWS.md`.
+cutover steps in `.github/README.md`.
 
 ## 🤖 Dependabot AI reviews
 

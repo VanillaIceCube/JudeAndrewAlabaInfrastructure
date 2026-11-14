@@ -30,10 +30,10 @@ Tests use temporary certificates, unique networks, containers, and loopback
 ports. They do not execute the production cutover procedure. Common release
 changes also require both consumer app suites and pinned-source parity checks.
 Run Actionlint and ShellCheck through `scripts/lint_infrastructure.sh` for
-automation changes. See [contributing](../CONTRIBUTING.md).
+automation changes.
 
 ## 📚 Further reading
 
 - [Automation coverage](../docs/AUTOMATION-COVERAGE.md).
-- [Workflow reference](../.github/WORKFLOW-REFERENCE.md).
+- [Workflow reference](../.github/workflows/README.md).
 - [Repository scripts](../scripts/README.md).

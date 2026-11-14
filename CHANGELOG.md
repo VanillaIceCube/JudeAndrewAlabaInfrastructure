@@ -4,11 +4,15 @@
 
 ### Changed
 
+- Standardize GitHub documentation across the four repositories: setup in `.github/README.md`, workflow behavior in `.github/workflows/README.md`, and shared reviewer/action contracts in `.github/actions/README.md`.
+
 - Document the consolidated application MCP code, source metadata, and ChatGPT package locations; gateway runtime and release policy remain unchanged ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).
 
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
 
 ### Removed
+
+- Remove the contribution guide and pull request template; retain operational requirements in existing guides.
 
 - Delete historical Batch 2/3 parity reports and hash snapshots; remove obsolete links without moving or consolidating documentation.
 

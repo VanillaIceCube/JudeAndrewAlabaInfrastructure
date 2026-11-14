@@ -28,4 +28,3 @@ suites, and the release standard's parity checks. Test on disposable fixtures.
 
 - [Architecture and application ownership](../docs/architecture-v2.md).
 - [Application onboarding](../docs/onboarding.md).
-- [Contributing](../CONTRIBUTING.md).
