@@ -8,6 +8,11 @@ All notable changes to this project are documented in this file.
 
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
+- Place active CI helpers under `.github/tools/`, gateway release/preflight tools under `nginx/`, and manifest maintenance under `app-release/`; retain the manual cutover snapshot tool in `scripts/` and update callers and owner guides.
+
+### Removed
+
+- Remove the root `tests/` suites and fixtures for ingress, gateway transactions and retirement, SQLite snapshots, release profiles, automation policy and bounded diagnostics. Retain Compose configuration, shared release manifest validation and action-local regressions; reusable ingress/recovery outputs explicitly report the retired suites as not applicable.
 
 ## 2026-11-13
 

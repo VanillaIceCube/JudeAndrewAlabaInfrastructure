@@ -130,7 +130,7 @@ Run the reviewed helper from an operator-controlled checkout:
 
 ```sh
 umask 077
-python3 scripts/gateway_release.py adopt --source <accepted-full-sha> \
+python3 nginx/gateway_release.py adopt --source <accepted-full-sha> \
   --directory /opt/host-ingress
 ```
 
@@ -217,7 +217,7 @@ For SSH/Actions unavailability, the approved operator can invoke the same
 reviewed helper on the host:
 
 ```sh
-python3 scripts/gateway_release.py rollback --source <approved-helper-full-sha> \
+python3 nginx/gateway_release.py rollback --source <approved-helper-full-sha> \
   --id <retained-sha-run-attempt>
 ```
 

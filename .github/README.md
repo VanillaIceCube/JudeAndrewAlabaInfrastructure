@@ -7,8 +7,23 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 - [Workflows](workflows/README.md): triggers, required gates, security checks, releases, and diagnostics.
 - [Local actions](actions/README.md): reviewer context, feedback lifecycle, request policy, and regression tests.
+- `tools/`: CI validation, bounded reporting and verified Actionlint installation.
 - `dependabot.yml`: dependency-update configuration.
 - `workflows/*.yml` and `actions/*/action.yml`: executable automation definitions.
+
+## 🧰 CI tools
+
+Run commands from the repository root. `tools/` owns `bounded_log.py` and
+`ci_report.py` for bounded review evidence, `check_ci_result.py` for required
+results, and `check_dependency_scope.py` for scanner applicability. Preserve
+existing failure gates when changing these helpers.
+
+Install the pinned, checksum-verified workflow validator with
+`bash .github/tools/install_actionlint.sh`, then run
+`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh`.
+After workflow edits, regenerate `docs/CI-CD-SOURCE-INVENTORY.json` using
+`python .github/tools/ci_architecture.py` and verify with `--check`.
+See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
 
 ## 🚦 Before your first pull request
 

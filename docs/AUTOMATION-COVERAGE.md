@@ -15,16 +15,20 @@ live GitHub writes, or a paid model request.
 | Prior reviewer identity/history and untrusted discussion (medium) | Execute the actual github-script body with mocked reads/writes; verify persona history, ordering, human association/body caps, reply caps and visible API failure. Human text is evidence, never authority. |
 | Lint attribution/push credentials (high) | Execute the composite with mocked gh/git: valid identity, missing slug and invalid numeric ID. Infrastructure N/A: it has no lint autofix/push action. |
 | PR diff acquisition (high) | Existing Python fixture tests retain full/oversized/failure behavior; live credential/read API availability remains an integration boundary. |
-| Shared release parity and recovery (high) | Infrastructure-owned manifest, source-pinned app suites, approved template-upgrade positive test, unauthorized drift negatives, disposable Docker profiles. Never edit vendored copies independently. |
-| Development entrypoint (medium) | Mocked failed install/reverted manifests and command status; actual CI images plus fresh/unchanged/changed named-volume cases. |
-| Early/middle/late diagnostics (medium) | Synthetic long-output regression retains all three failure positions, random output delimiters and bounded artifacts. Existing pipeline exit codes still determine success. |
+| Shared release parity and recovery (high) | Infrastructure-owned manifest, source-pinned consumer deployment suites, approved template-upgrade positive test and unauthorized drift negatives. Infrastructure's root disposable Docker profile matrix has been retired. Never edit vendored copies independently. |
+| Development entrypoint (medium) | Application development-image checks are app-owned; Infrastructure has no frontend entrypoint. |
+| Early/middle/late diagnostics (medium) | Bounded preprocessing remains active; the root synthetic long-output regression has been retired. Existing pipeline exit codes still determine success. |
 
 Application automation runs on `.github/**`, scripts, deploy, tests and maintained
 docs changes. Actionlint plus safe YAML/composite validation, Bash syntax parsing,
 PowerShell parser-only validation, Python AST parsing and synthetic Compose `config`
 run without deployments or private environment files. Infrastructure retains its
 existing stronger shellcheck/Compose/manifest/RequiredCI strategy instead of an
-application clone. Markdown uses `git diff --check`; no brittle external-link crawler
+application clone. Root ingress, gateway transaction/retirement, SQLite snapshot,
+release-profile and automation-policy suites have been retired; current checks do
+not establish runtime or recovery acceptance. Action-local regressions, including
+architecture dependency and privilege assertions, remain active. Markdown uses
+`git diff --check`; no brittle external-link crawler
 is introduced. Actionlint's only compatibility exception is the existing newly
 supported GitHub `vulnerability-alerts` scope, not a generic syntax waiver.
 
