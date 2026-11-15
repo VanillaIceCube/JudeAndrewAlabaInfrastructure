@@ -132,10 +132,11 @@ def execute(source, operation, recovery, directory):
     remote = REMOTE + identity
     run([*ssh, "umask 077; mkdir " + remote])
     archive = directory / "source.tar"
-    uploads = [Path("scripts/gateway_release.py"), Path("scripts/check_host.py")]
+    uploads = [Path("nginx/gateway_release.py"), Path("nginx/check_host.py")]
     if operation == "deploy":
         run(["git", "archive", "--format=tar", "--output=" + str(archive), source,
-             "compose.yml", "nginx", "scripts/gateway_release.py", "scripts/check_host.py"])
+             "compose.yml", "nginx/nginx.conf", "nginx/vhosts/*.conf",
+             "nginx/snippets/*.conf", "nginx/gateway_release.py", "nginx/check_host.py"])
         uploads.insert(0, archive)
     for path in uploads:
         run([*scp, path, "gateway:" + remote + "/" + path.name])

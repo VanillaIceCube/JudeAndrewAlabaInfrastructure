@@ -161,12 +161,12 @@ def unpack(archive, destination):
             path = Path(name)
             require(not path.is_absolute() and ".." not in path.parts, "Unsafe archive path")
             if item.isdir():
-                require(name.rstrip("/") in {"nginx", "nginx/vhosts", "nginx/snippets", "scripts"},
+                require(name.rstrip("/") in {"nginx", "nginx/vhosts", "nginx/snippets"},
                         "Unexpected payload directory")
                 (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
                 continue
             require(item.isfile() and name not in seen and
-                    (name == "compose.yml" or name in {"scripts/check_host.py", "scripts/gateway_release.py"}
+                    (name == "compose.yml" or name in {"nginx/check_host.py", "nginx/gateway_release.py"}
                      or (name.startswith("nginx/") and name.endswith(".conf"))), "Unexpected payload")
             seen.add(name)
             total += item.size
