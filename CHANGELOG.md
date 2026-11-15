@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Normalize historical custom Resend backend selectors to the maintained django-anymail backend in new app bundles; preserve SMTP and retained recovery artifacts (#148; FullStackTemplate #340).
 - Support application `config/` and `apps/` namespaces in release tooling; normalize the known legacy Resend backend paths only when creating new bundles and retain historical recovery data (#148; FullStackTemplate #339).
 - Introduce a locked uv Python 3.12 project for repository tooling; synchronize CI and local parser environments, add uv dependency updates and retain a narrow reviewed dependency-scope gate (#147).
 - Point the canonical application release workflow at `backend/docker/Dockerfile` while retaining the backend build context (FullStackTemplate #337).
