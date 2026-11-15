@@ -99,7 +99,7 @@ jobs:
             });
             const securitySensitiveFiles = files
               .map((file) => file.filename)
-              .filter((filename) => /(^app-release\/|^scripts\/|^nginx\/|compose\.ya?ml$|^\.github\/|requirements|package|Dockerfile|auth|token|secret|password)/i.test(filename));
+              .filter((filename) => /(^app-release\/|^scripts\/|^nginx\/|compose\.ya?ml$|^\.github\/|pyproject\.toml|uv\.lock|requirements|package|Dockerfile|auth|token|secret|password)/i.test(filename));
 
             const securityChecks = checkRuns
               .filter((check) => /malware|vulnerab|dependency|codeql|security/i.test(check.name || ''))

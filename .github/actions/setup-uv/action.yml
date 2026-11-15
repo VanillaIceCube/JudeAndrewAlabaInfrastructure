@@ -1,0 +1,18 @@
+name: Set up repository Python tooling with uv
+description: Install the pinned Python toolchain and synchronize the locked tooling environment.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      with:
+        python-version-file: pyproject.toml
+    - name: Install uv
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: python -m pip install --disable-pip-version-check uv==0.13.8
+    - name: Synchronize repository tooling
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        uv sync --locked
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"

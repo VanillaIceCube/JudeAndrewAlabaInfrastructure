@@ -48,10 +48,16 @@ history and valid UTF-8 text when editing or merging entries.
 ## 💻 Local development
 
 This repository owns shared ingress and release tooling rather than a Django/React
-application. Use Python 3.12+, Node.js, Docker Engine/Compose and OpenSSL with a
+application. Use the locked uv Python 3.12 tooling project, Node.js, Docker Engine/Compose and OpenSSL with a
 disposable local/CI daemon; follow [.github/README.md](.github/README.md) and
 [workflow checks](.github/workflows/README.md#-checks-and-diagnostics). Read the architecture and release standard
 before changing topology or shared release behavior.
+
+Install uv and run `uv sync --locked` from the repository root. The root
+`pyproject.toml` and `uv.lock` own the pinned PyYAML tooling environment. The project
+`requires-python` constraint selects Python 3.12. Run local Python/Node checks through `uv run --locked` so
+Node child processes find that same parser. Runtime gateway/release scripts do
+not require uv on production hosts. See the GitHub workflow guide for coverage.
 
 ## ⚙️ Configuration
 
@@ -68,8 +74,8 @@ Validate Compose configuration and the retained action-local regressions:
 
 ```sh
 docker compose -f compose.yml config --quiet
-python app-release/update_release_manifest.py --check
-node --test .github/actions/*/*.test.js
+uv run --locked python app-release/update_release_manifest.py --check
+uv run --locked node --test .github/actions/*/*.test.js
 ```
 
 For automation changes, run Actionlint and ShellCheck through
