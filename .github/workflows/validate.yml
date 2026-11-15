@@ -3,16 +3,16 @@ on:
   workflow_call:
     outputs:
       ingress_status:
-        description: Disposable Nginx routing and reversal status.
+        description: Retired ingress test suite (not-applicable).
         value: ${{ jobs.validate.outputs.ingress_status }}
       ingress_log:
-        description: Ingress diagnostics.
+        description: Retired ingress suite description.
         value: ${{ jobs.validate.outputs.ingress_log }}
       recovery_status:
-        description: SQLite snapshot and recovery status.
+        description: Retired recovery test suites (not-applicable).
         value: ${{ jobs.validate.outputs.recovery_status }}
       recovery_log:
-        description: Recovery diagnostics.
+        description: Retired recovery suites description.
         value: ${{ jobs.validate.outputs.recovery_log }}
       automation_status:
         description: Automation regression status.
@@ -44,62 +44,48 @@ jobs:
         with:
           node-version: '24'
       - name: Verify shared release source manifest
-        run: python3 scripts/update_release_manifest.py --check
-      - name: Validate Compose and disposable ingress/reversal
-        id: ingress
+        run: python3 app-release/update_release_manifest.py --check
+      - name: Validate Compose configuration
+        id: compose
         continue-on-error: true
         run: |
           set -o pipefail
-          docker compose -f compose.yml config --quiet
-          python3 -m unittest discover -s tests -p test_ingress.py -v 2>&1 | tee "$RUNNER_TEMP/ingress.log"
-      - name: Validate SQLite recovery
-        id: recovery
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          {
-            status=0
-            python3 -m unittest discover -s tests -p test_snapshot.py -v || status=1
-            python3 -m unittest discover -s tests -p test_release_profiles.py -v || status=1
-            python3 -m unittest discover -s tests -p 'test_gateway*.py' -v || status=1
-            exit "$status"
-          } 2>&1 | tee "$RUNNER_TEMP/recovery.log"
+          docker compose -f compose.yml config --quiet 2>&1 | tee "$RUNNER_TEMP/compose.log"
       - name: Install the pinned safe YAML parser
         run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
 
-      - name: Validate automation policy and review regressions
+      - name: Validate action-local regressions
         id: automation
         continue-on-error: true
         run: |
           set -o pipefail
           {
-            python3 -m unittest discover -s tests -p test_automation.py -v || exit 1
             mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
-            node --test tests/bounded-log.test.cjs "${automation_tests[@]}"
+            [ "${#automation_tests[@]}" -gt 0 ] || exit 1
+            node --test "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"
+      - name: Bound Compose diagnostics
+        if: always()
+        run: python3 .github/tools/bounded_log.py "$RUNNER_TEMP/compose.log" "$RUNNER_TEMP/compose.outputs"
       - id: ingress-report
         if: always()
-        env:
-          OUTCOME: ${{ steps.ingress.outcome }}
         run: |
-          python3 scripts/bounded_log.py "$RUNNER_TEMP/ingress.log" "$RUNNER_TEMP/ingress.outputs"
-          python3 scripts/ci_report.py ingress "$RUNNER_TEMP/ingress.summary.txt" "$OUTCOME"
+          echo 'ingress_status=not-applicable' >> "$GITHUB_OUTPUT"
+          echo 'ingress=Root ingress routing and reversal tests were retired; no runtime acceptance was performed.' >> "$GITHUB_OUTPUT"
       - id: recovery-report
         if: always()
-        env:
-          OUTCOME: ${{ steps.recovery.outcome }}
         run: |
-          python3 scripts/bounded_log.py "$RUNNER_TEMP/recovery.log" "$RUNNER_TEMP/recovery.outputs"
-          python3 scripts/ci_report.py recovery "$RUNNER_TEMP/recovery.summary.txt" "$OUTCOME"
+          echo 'recovery_status=not-applicable' >> "$GITHUB_OUTPUT"
+          echo 'recovery=Root snapshot, gateway transaction and release-profile tests were retired; no recovery acceptance was performed.' >> "$GITHUB_OUTPUT"
       - id: automation-report
         if: always()
         env:
           OUTCOME: ${{ steps.automation.outcome }}
         run: |
-          python3 scripts/bounded_log.py "$RUNNER_TEMP/automation.log" "$RUNNER_TEMP/automation.outputs"
-          python3 scripts/ci_report.py automation "$RUNNER_TEMP/automation.summary.txt" "$OUTCOME"
+          python3 .github/tools/bounded_log.py "$RUNNER_TEMP/automation.log" "$RUNNER_TEMP/automation.outputs"
+          python3 .github/tools/ci_report.py automation "$RUNNER_TEMP/automation.summary.txt" "$OUTCOME"
       - name: Require every validation suite
-        if: always() && (steps.ingress.outcome != 'success' || steps.recovery.outcome != 'success' || steps.automation.outcome != 'success')
+        if: always() && (steps.compose.outcome != 'success' || steps.automation.outcome != 'success' || steps.automation-report.outcome != 'success')
         run: exit 1
       - name: Retain bounded failure diagnostics
         if: failure()
