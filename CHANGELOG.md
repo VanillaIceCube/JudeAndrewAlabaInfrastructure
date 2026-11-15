@@ -9,7 +9,7 @@ All notable changes to this project are documented in this file.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
-- Place active CI helpers under `.github/tools/`, gateway release/preflight tools under `nginx/`, and manifest maintenance under `app-release/`; retain the manual cutover snapshot tool in `scripts/` and update callers and owner guides.
+- Place active CI helpers under `.github/tools/`, gateway release/preflight tools under `nginx/`, and manifest maintenance under `app-release/`; update callers and owner guides.
 
 ### Removed
 

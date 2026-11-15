@@ -7,7 +7,7 @@ mapfile -t shell_files < <(git ls-files --cached --others --exclude-standard '*.
 if [ "${#shell_files[@]}" -gt 0 ]; then
   shellcheck "${shell_files[@]}"
 fi
-python3 -m compileall -q .github/tools nginx scripts app-release
+python3 -m compileall -q .github/tools nginx app-release
 while IFS= read -r source; do
   node --check "$source"
 done < <(git ls-files --cached --others --exclude-standard '*.js')
