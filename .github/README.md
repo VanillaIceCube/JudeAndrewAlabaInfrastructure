@@ -11,7 +11,7 @@ Source-controlled configuration and GitHub account/repository settings are separ
 - `dependabot.yml`: dependency-update configuration.
 - `workflows/*.yml` and `actions/*/action.yml`: executable automation definitions.
 
-## 🧰 CI tools
+### 🧰 CI tools
 
 Run commands from the repository root. `tools/` owns `bounded_log.py` and
 `ci_report.py` for bounded review evidence, `check_ci_result.py` for required
@@ -21,7 +21,7 @@ existing failure gates when changing these helpers.
 Install the pinned, checksum-verified workflow validator with
 `bash .github/tools/install_actionlint.sh`, then run
 `PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh`.
-After workflow edits, regenerate `docs/CI-CD-SOURCE-INVENTORY.json` using
+After workflow edits, regenerate `.github/workflows/ci-source-inventory.json` using
 `python .github/tools/ci_architecture.py` and verify with `--check`.
 See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
 
@@ -192,5 +192,14 @@ required. Fork exclusions, independent checks and manual owner merging remain.
 
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
-- [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md).
-- [Gateway setup, releases, and recovery](../docs/gateway-releases.md).
+- [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
+- [Gateway setup, releases, and recovery](../nginx/README.md#-operations).
+
+## 🤝 Shared engineering ownership and rollout
+
+Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+for repository applicability, canonical source ownership, downstream acceptance and
+[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+Preserve app-specific profiles and Infrastructure's separate owner authorization,
+Required CI and host operations. A shared parent closes only after required downstream
+adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.

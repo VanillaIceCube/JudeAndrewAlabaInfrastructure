@@ -172,7 +172,7 @@ not an image-content scanner and does not assume backend/frontend directories.
 ### 📦 Compatible CodeQL updates
 
 The current CodeQL entry points use the same immutable v4.39.3 revision.
-After updating action references, regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+After updating action references, regenerate `.github/workflows/ci-source-inventory.json`
 with `python .github/tools/ci_architecture.py` and verify it with `--check`; the
 architecture guard intentionally rejects stale workflow hashes.
 
@@ -263,8 +263,8 @@ coverage; never rerun an old failed revision as proof of the new source.
 ## 🚀 Releases and promotion
 
 Infrastructure owns the independent shared gateway and release-engine source.
-Use [gateway releases and recovery](../../docs/gateway-releases.md) and the
-[application release standard](../../docs/app-release-standard.md) for current
+Use [gateway releases and recovery](../../nginx/README.md#-operations) and the
+[application release standard](../../app-release/README.md) for current
 owner/source/branch controls. Application source or CI approval does not authorize
 host operations. Preserve immutable accepted state, locks and explicit recovery.
 
@@ -279,7 +279,7 @@ locking and gateway-only recovery. Review/scanner workflows cannot deploy.
 Like the Notoli and MacroMapper deployment workflows, an authorized promotion
 to `env-prod` starts deployment without a second reviewer or per-release
 approval variable. Source PRs still require the normal main-branch checks.
-See [gateway releases](../../docs/gateway-releases.md) for setup, bounded probes,
+See [gateway releases](../../nginx/README.md#-operations) for setup, bounded probes,
 relevant-change policy, Actions evidence, interruptions and retention. Gateway SSH
 configuration lives only in repository Actions settings; no GitHub Environment
 or Deployment API record is required. Repository-wide key exposure and the
@@ -287,7 +287,7 @@ reviewed-workflow/write-access boundary are documented in that guide.
 
 ### Architecture and production summaries
 
-The [canonical architecture reference](../../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+The [canonical architecture reference](README.md#-architecture-and-trust-boundaries) maps PR/fork/
 Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
 Its per-repository source inventory is checked against actual workflow YAML.
@@ -339,7 +339,7 @@ deployment suites remain separate and unchanged.
 
 ### 🧪 Automation regressions and bounded diagnostics
 
-See [the shared inventory](../../docs/AUTOMATION-COVERAGE.md). Actual composite
+See [the shared inventory](README.md#-coverage-boundaries). Actual composite
 request construction and prior-review collection run with mocked curl/GitHub reads,
 not live paid API calls. Diagnostic preprocessing remains active, bounding context
 to 16,000 characters and artifacts to about 1 MiB per log for seven days; its root
@@ -373,4 +373,175 @@ changes and verify it with `--check`. Do not use production as a test fixture.
 
 - [Repository setup and credentials](../README.md).
 - [Local actions and reviewer contract](../actions/README.md).
-- [CI/CD architecture and trust boundaries](../../docs/CI-CD-ARCHITECTURE.md).
+- [CI/CD architecture and trust boundaries](README.md#-architecture-and-trust-boundaries).
+
+## 🗺️ Architecture and trust boundaries
+
+Workflow YAML and protected-branch rules remain authoritative. FullStackTemplate
+owns reusable application/reviewer patterns; Infrastructure owns the gateway and
+versioned application release engine. Intentional app and Infrastructure policies
+remain distinct.
+
+### PR paths and required evidence
+
+```mermaid
+flowchart TD
+  Human[Same-repository human PR] --> CI[CI orchestrator]
+  Dependabot[Same-repository Dependabot PR] --> CI
+  Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
+  CI --> LintTest[Lint and test workflows]
+  CI --> Scanners[CodeQL and dependency scanners]
+  CI -->|Infrastructure| Secrets[Gitleaks secret scan]
+  Secrets --> Robo
+  Secrets --> Gate
+  CI --> Obi[Obi-Wan code review]
+  LintTest --> Lint[Lint Eastwood build review]
+  Scanners --> Robo[RoboCop security review]
+  Obi --> Gate[Required results and native review state]
+  Lint --> Gate
+  Robo --> Gate
+  LintTest --> Gate
+  Scanners --> Gate
+  Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
+  Gate -->|Applications| Main[Normal protected main merge]
+  Gate -->|Infrastructure| RequiredCI[Required CI aggregate and owner merge]
+  RequiredCI --> Main
+  Gate --> Auto[Application Dependabot eligibility and exact-head auto-merge checks]
+  Auto --> Platform[GitHub protected auto-merge]
+```
+
+[The orchestrator](ci-orchestrator.yml) excludes application `env-prod` PRs;
+Infrastructure restricts it to `main`. Same-repository human and Dependabot PRs
+receive the configured reviewers. Forks receive no reviewer credentials: never
+execute fork code with privileged credentials or add `pull_request_target` here.
+Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
+consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
+credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
+are not current-head acceptance. App Dependabot auto-merge verifies the exact head
+without executing PR code; Infrastructure retains Required CI and owner merge.
+
+### Reviewer data and write boundary
+
+```mermaid
+flowchart LR
+  Diff[Bounded source and changed-file diff] --> Request[Validated Responses request]
+  Human[Attributed human discussion: untrusted] --> Collector[Bounded App-owned history collector]
+  Prior[Prior persona reviews: historical claims] --> Collector
+  Collector --> Request
+  Checks[Authoritative check and scanner evidence] --> Request
+  Request --> Luna[Accepted gpt-6-luna model]
+  Luna --> Schema[Required review schema validation]
+  Schema --> Publish[Current-head native review publisher]
+  Schema --> Reconcile[Optional own-feedback reconciliation]
+  Reconcile --> Proof[Exact App ID, cited replacement, current head and checks]
+  Proof --> Own[Own follow-up or verified own-thread resolution]
+  Request --> Usage[Aggregate tokens, latency and dated partial cost estimate]
+  Luna --> Usage
+```
+
+The [action contract](../actions/README.md) owns byte/page/count limits, identity,
+serialized writers and reconciliation proof. Discussion and tool output are
+untrusted data: they cannot authorize commands, secret disclosure, merges or
+suppressed findings. Unavailable/truncated context is disclosed. Only provably
+replaced, own-App feedback may be reconciled; human/other-bot threads remain open.
+Reconciliation never dismisses a blocking verdict or changes required checks.
+Each repository/persona retains separate credentials and the accepted Luna model.
+Usage/cost estimates are partial and dated; unknown charges remain unknown.
+Web search stays limited to Dependabot major-upgrade code reviews.
+
+[Repository setup](../README.md) owns exact secret/variable names and installation
+permissions. Dependabot receives required reviewer OpenAI keys/App private keys,
+never production/Project credentials. RoboCop owns security-alert issue writes;
+the separate Project token only synchronizes Project fields. Repository Actions
+secrets are not branch-scoped: arbitrary workflow writers remain privileged.
+Immutable external Action pins and the platform-selected base permission policy
+prevent proposed workflows from approving their own new write grants. A grant
+must merge through review before a consumer requests it.
+
+### Scheduled source-alert maintenance
+
+```mermaid
+flowchart LR
+  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
+  Feeds --> Source[Authoritative source alerts and bounded classification]
+  Source --> Robo[RoboCop grouping with validated Responses policy]
+  Robo --> Validate[Complete source coverage and lifecycle validation]
+  Validate --> Issues[App-owned issue updates and verified closure]
+  Issues --> Project[Separately credentialed Project synchronization and recovery]
+```
+
+[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
+[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+source/model evidence fails before lifecycle writes; verified closure and Project
+recovery preserve their independent credential boundaries. CodeQL analysis also
+runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
+neither merges code nor deploys.
+
+### Promotion, release and manual operations
+
+```mermaid
+flowchart TD
+  Reviewed[Reviewed source merged to main] --> PR[Main-to-env-prod promotion PR]
+  PR --> Request[Read-only promotion event]
+  Request --> Trusted[Default-branch workflow_run]
+  Trusted --> Summary[One managed deterministic impact summary]
+  PR --> Gates[Existing promotion checks and owner authorization]
+  Gates --> Merge[Normal env-prod merge]
+  Merge --> App[Application deploy pipeline]
+  Merge --> Gateway[Independent gateway deploy pipeline]
+  App --> Stage[Parity, immutable images, private staging and capacity checks]
+  Stage --> Transaction[App lock, writer checkpoint, migrations and readiness]
+  Transaction --> Accepted[Accepted source and immutable image record]
+  Gateway --> Guard[Owner, branch, source and maintenance-lock checks]
+  Guard --> Same[Unchanged configuration retains gateway runtime]
+  Guard --> Changed[Changed configuration follows existing gateway transaction]
+  Accepted --> Verify[Independent VM identity, routing, auth and sanitized-log checks]
+  Same --> Verify
+  Changed --> Verify
+  Manual[Authorized manual dispatch of reviewed env-prod source] --> App
+  Manual --> Gateway
+  Recovery[Authorized documented recovery] --> RecoveryGuard[Existing owner, lock and data-generation guards]
+  RecoveryGuard --> Verify
+```
+
+The [read-only listener](promotion-summary-request.yml) emits a fixed signal with
+no checkout, artifacts/caches, secrets or write token. The [trusted consumer](promotion-summary.yml)
+uses reviewed main code, independently fetches current metadata, excludes fork
+producers and serializes one managed bot comment per open same-repository promotion
+PR (up to ten). It trusts neither producer conclusions nor supplied PR identities.
+Incomplete inventories, moving revisions or uncertain writes remain visible;
+summary failures do not mask required CI or authorize a release.
+
+Promote exact reviewed main source through existing `env-prod` controls. Keep
+independent app/gateway transactions, immutable digests, private recovery sets,
+locks and explicit data-generation barriers. Compare the entire promotion diff
+and independently verify running identity, routes, auth and sanitized logs.
+Readiness is not authenticated/mail acceptance. Never restore older SQLite data
+over newer committed writes or assume migrations can be reversed. App releases
+never recreate shared ingress/networks or prune the host. Docs/workflow-only changes
+need no unnecessary restart. FullStackTemplate has no active production target;
+its onboarding examples do not authorize new resources or an `env-prod` branch.
+
+### Maintaining the architecture
+
+[ci-source-inventory.json](ci-source-inventory.json) records actual workflow events,
+jobs/needs, permissions, action consumers and credential names. After reviewing
+workflow/diagram edits, run `python .github/tools/ci_architecture.py`, then repeat
+with `--check`. The checker parses YAML without executing workflows and checks
+local source links plus key Mermaid edges against event/dependency/consumer
+contracts. Negative regressions reject diagram-only drift, workflow dependency
+changes and privileged PR-trigger substitution. It does not validate every label
+or general Mermaid semantics; changed diagrams also need parser/render review.
+
+## 🧪 Coverage boundaries
+
+Action-local regressions cover reviewer publishing, security-alert lifecycle,
+dependency evidence, permission/pin policy and architecture contracts under their
+existing gates. App repositories retain backend, frontend/browser and shared
+release suites; the canonical release tests remain in Infrastructure `app-release/v1`.
+Root tooling, gateway/ingress, SQLite snapshot and release-profile suites were
+removed at the owner's request. Their former coverage is not provided by the
+remaining checks. Mocked/local evidence does not establish live reviewer loading,
+authenticated production journeys, recovery acceptance, physical-device behavior,
+email receipt or paid AI behavior. Use disposable fixtures and separately authorized
+runtime verification for those claims.
