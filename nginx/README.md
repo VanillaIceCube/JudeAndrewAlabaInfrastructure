@@ -170,7 +170,9 @@ fixtures cannot establish that acceptance.
 Subsequent gateway releases use the procedure below. Preserve accepted recovery
 generations; legacy proxy handoff is outside the ordinary release procedure.
 
-### 🔒 Approval and prerequisites
+<a id="-approval-and-prerequisites"></a>
+
+### Approval and prerequisites
 
 Source changes land through reviewed `main` first, with explicit owner approval
 for each merge; review alone does not authorize merging or the later production
@@ -235,7 +237,9 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
 GitHub references: [Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
 and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).
 
-### 📦 Private host preparation and adoption
+<a id="-private-host-preparation-and-adoption"></a>
+
+### Private host preparation and adoption
 
 Within the approved preparation plan, provision root-owned mode 0700
 `/opt/host-ingress-deploy` and its `incoming`, `releases`, `attempts` children.
@@ -263,7 +267,9 @@ ingress. Existing app data and certificate/key files are neither copied into
 the release bundle nor modified. Drift or an existing baseline blocks adoption;
 resolve it privately, do not fabricate or edit release records to bypass checks.
 
-### 🚀 Promotion and retry
+<a id="-promotion-and-retry"></a>
+
+### Promotion and retry
 
 After source review/green CI, the authorized operator promotes that reviewed
 `main` commit to `env-prod`. The push starts **Deploy gateway** automatically;
@@ -295,7 +301,9 @@ logging. Nginx syntax runs with no network or published ports. Activation uses
 only `up --no-deps --pull never --force-recreate proxy`; no project shutdown,
 network provisioning/removal, app restart, database restore or pruning occurs.
 
-### 🩺 Health and relevant changes
+<a id="-health-and-relevant-changes"></a>
+
+### Health and relevant changes
 
 Both the public edge and loopback origin verify HTTPS frontend HTML, JSON API
 401 responses for both apps, Notoli issuer/resource discovery and the MCP 401
@@ -315,7 +323,9 @@ paths. Changes only to docs, workflow/helpers or `app-release/v1` produce an
 source stay unchanged. Compose/Nginx byte changes restart after validation.
 Unsupported payload files and Compose settings fail explicitly.
 
-### ↩️ Failure, interruption and explicit rollback
+<a id="-failure-interruption-and-explicit-rollback"></a>
+
+### Failure, interruption and explicit rollback
 
 Before activation, `attempts/<identity>/journal.json` captures the previous
 matched configuration/image/source/runtime, application identities, network IDs,
@@ -355,7 +365,9 @@ rejects changed route-network IDs before recreating the gateway. The original
 attempt journal remains historical evidence; the pending record holds the new
 recovery baseline, which must remain unchanged through restoration.
 
-### 🧾 Evidence and retention
+<a id="-evidence-and-retention"></a>
+
+### Evidence and retention
 
 Actions run status, summary and logs record the promoted source, unique
 source/run/attempt identity, operation and explicit recovery target when present.
@@ -389,7 +401,9 @@ any pending attempt or its predecessor. Monitor disk space before future release
 Production acceptance still requires the separately authorized first and second
 independent release plus recovery evidence recorded on #4.
 
-### 🧹 Retired MCP routes
+<a id="-retired-mcp-routes"></a>
+
+### Retired MCP routes
 
 The [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
 controller accepts the ordinary three-network gateway and can read the exact
