@@ -173,7 +173,7 @@ not an image-content scanner and does not assume backend/frontend directories.
 
 The current CodeQL entry points use the same immutable v4.39.3 revision.
 After updating action references, regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
-with `python scripts/ci_architecture.py` and verify it with `--check`; the
+with `python .github/tools/ci_architecture.py` and verify it with `--check`; the
 architecture guard intentionally rejects stale workflow hashes.
 
 Dependabot groups all `github/codeql-action` entry points (including `init`,
@@ -308,11 +308,10 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ```sh
 docker compose -f compose.yml config --quiet
-python scripts/update_release_manifest.py --check
-python -m unittest discover -s tests -v
+python app-release/update_release_manifest.py --check
 node --test .github/actions/*/*.test.js
-bash scripts/install_actionlint.sh
-PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash scripts/lint_infrastructure.sh
+bash .github/tools/install_actionlint.sh
+PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh
 ```
 
 Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
@@ -328,18 +327,24 @@ See [setup](../README.md#-before-your-first-pull-request). Default-branch Depend
 owner merge. The unmerged feature PR proves checks and identities, not scheduled
 activation. No merge, promotion or production operation is implied.
 
-The recovery gate also runs `tests/test_release_profiles.py`: all five shared
-release suites execute against Notoli, MacroMapper, and the template fixture on
-the disposable CI Docker daemon. No live host or application onboarding occurs.
+Infrastructure validation checks Compose configuration, the canonical shared
+release manifest and action-local Node regressions, including architecture
+dependency/privilege contracts. Compose and action-test failures still fail the
+validation job. The root ingress, gateway transaction/retirement, snapshot,
+release-profile matrix, automation-policy and bounded-log suites were retired.
+Reusable ingress/recovery outputs remain available to the build reviewer as
+`not-applicable`, with explicit retired-suite descriptions; no runtime routing or
+recovery acceptance is claimed. Canonical `app-release/v1/tests/` and consumer
+deployment suites remain separate and unchanged.
 
 ### 🧪 Automation regressions and bounded diagnostics
 
 See [the shared inventory](../../docs/AUTOMATION-COVERAGE.md). Actual composite
 request construction and prior-review collection run with mocked curl/GitHub reads,
-not live paid API calls. The new log regression retains failures near the beginning,
-middle and end while bounding context to16000characters and artifacts to about1MiB
-per log for7days. Complete output remains in the job log. Preprocessing feeds the
-existing ci_report.py interface; the overlapping Marty #52 reporter work stays intact.
+not live paid API calls. Diagnostic preprocessing remains active, bounding context
+to 16,000 characters and artifacts to about 1 MiB per log for seven days; its root
+regression test has been retired. Complete output remains in the job log.
+Preprocessing feeds the existing `ci_report.py` interface.
 
 Workflow grant authority in PR audits now comes from the platform base commit.
 Bootstrap derives that base's existing writes if it lacks a manifest; a proposed
@@ -361,7 +366,7 @@ snapshot cleanup and primary-error behavior covered by the existing tests.
 
 Validate syntax and relevant behavioral tests after automation changes. Preserve
 original check failures and bounded/redacted diagnostics. Update the existing
-architecture inventory with `python scripts/ci_architecture.py` after workflow
+architecture inventory with `python .github/tools/ci_architecture.py` after workflow
 changes and verify it with `--check`. Do not use production as a test fixture.
 
 ## 📚 Related guides

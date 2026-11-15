@@ -209,8 +209,8 @@ This is the required order, not permission to execute it:
    confirm `.2` and 80/443 are vacant before replacement.
    Never remove app containers, networks or data for this handoff. Stopping
    alone is not treated as freeing `.2`. The exact removal/recreation commands
-   are covered by disposable tests and still require a separately approved
-   operator plan.
+   require a separately approved operator plan; the former root disposable
+   handoff tests have been retired.
 4. Start the replacement as sole 80/443 owner and sole `.2` proxy peer. Keep
    both current apps attached to their existing networks. Expect a brief outage
    to both sites. Verify routing and exact trust immediately, then Notoli
@@ -273,13 +273,12 @@ The following implementation and operational requirements remain mandatory:
   retry limits and failure cutoff; rehearse endpoint conflict and reverse
   recreation on disposable infrastructure. Verify both apps before releases.
 
-Disposable regression suites cover real Compose expansion with synthetic secrets;
-private network membership and `.2/.3` trust; no published backend ports;
-Nginx syntax and HTTPS route/header/cache/URI behavior; missing-app startup;
-DNS recovery after app recreation; release concurrency and failure recovery;
-and app-only operations leaving the other app and ingress untouched. Use
-disposable local/CI networks and test certificates, never the live VM.
-Existing app proxy/settings tests remain part of applicable validation.
+Infrastructure CI retains Compose configuration, shared release manifest and
+action-local checks. Its former root routing, gateway, snapshot and release-profile
+regressions have been retired, so those checks do not establish runtime or recovery
+acceptance. Consumer deployment suites retain app release/recovery coverage and
+existing app proxy/settings tests remain part of applicable validation. Use
+disposable local/CI networks and test certificates for rehearsals, never the live VM.
 
 Before requesting production approval, resolve:
 

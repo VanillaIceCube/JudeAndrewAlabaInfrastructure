@@ -26,7 +26,7 @@ The main README introduces the repository. Keep setup, commands, configuration,
 and maintenance details in the owning folder README and its linked references.
 Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
 🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
-See the [documentation index](docs/README.md) for scripts, tests, and other guides.
+See the [documentation index](docs/README.md) for scripts, validation, and other guides.
 Keep this file current when its commands or constraints change, and update the
 owning README/reference when setup, routing, environment, deployment or CI changes.
 Record user-visible or operational changes in `CHANGELOG.md`.
@@ -50,7 +50,7 @@ history and valid UTF-8 text when editing or merging entries.
 This repository owns shared ingress and release tooling rather than a Django/React
 application. Use Python 3.12+, Node.js, Docker Engine/Compose and OpenSSL with a
 disposable local/CI daemon; follow [.github/README.md](.github/README.md) and
-[tests/README.md](tests/README.md). Read the architecture and release standard
+[workflow checks](.github/workflows/README.md#-checks-and-diagnostics). Read the architecture and release standard
 before changing topology or shared release behavior.
 
 ## ⚙️ Configuration
@@ -64,20 +64,20 @@ repository Actions secrets/variables under the explicit authorization below.
 
 ## 🧪 Checks
 
-Validate against a disposable local/CI Docker daemon, following
-[tests/README.md](tests/README.md):
+Validate Compose configuration and the retained action-local regressions:
 
 ```sh
 docker compose -f compose.yml config --quiet
-python scripts/update_release_manifest.py --check
-python -m unittest discover -s tests -v
-node --test tests/*.test.cjs .github/actions/*/*.test.js
+python app-release/update_release_manifest.py --check
+node --test .github/actions/*/*.test.js
 ```
 
 For automation changes, run Actionlint and ShellCheck through
-`scripts/lint_infrastructure.sh`. Shared behavior changes also require both
-applications' deployment suites and pinned-source parity checks. Tests use
-temporary resources and must never execute the production cutover procedure.
+`.github/tools/lint_infrastructure.sh`. Shared behavior changes also require both
+applications' deployment suites and pinned-source parity checks. Root ingress,
+gateway, snapshot, release-profile and tooling suites have been retired; retained
+checks do not establish runtime or recovery acceptance. Never execute the
+production cutover procedure as a test.
 
 ## 🚀 Production
 
@@ -156,7 +156,7 @@ and token inputs. Run `.github/actions/custom-regressions/security-alert-contrac
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Maintain CI architecture diagrams and regenerate
-`docs/CI-CD-SOURCE-INVENTORY.json` with `python scripts/ci_architecture.py` after
+`docs/CI-CD-SOURCE-INVENTORY.json` with `python .github/tools/ci_architecture.py` after
 workflow edits. Promotion summaries are informational.
 
 Require `Required CI`, preserve independent gates and applicable reviewer failures,

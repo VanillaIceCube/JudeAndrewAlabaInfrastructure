@@ -87,7 +87,7 @@ umask 077
 exec 9<>/var/lib/jude-deploy-locks/maintenance.lock
 flock -n -x 9
 cd /opt/host-ingress
-python3 scripts/check_host.py legacy
+python3 nginx/check_host.py legacy
 docker compose -p host-ingress -f compose.yml config --quiet
 recovery="/opt/host-ingress-recovery/$(date -u +%Y%m%dT%H%M%SZ)"
 install -d -m 0700 /opt/host-ingress-recovery
@@ -190,10 +190,10 @@ Only after all conditions pass and Agent 3 has explicit cutover approval:
 docker update --restart=no notoli-proxy
 docker stop notoli-proxy
 docker rm notoli-proxy
-python3 scripts/check_host.py vacant
+python3 nginx/check_host.py vacant
 # Also inspect ss -lnt to confirm :80/:443 vacancy; unexpected ownership stops work.
 docker compose -p host-ingress -f compose.yml up -d --no-deps --pull never proxy
-python3 scripts/check_host.py host
+python3 nginx/check_host.py host
 ```
 
 Do not use `down`, `--remove-orphans`, a mutable image pull, network recreation,
@@ -205,13 +205,13 @@ exclusive lock are retained:
 ```bash
 docker stop host-ingress-proxy
 docker rm host-ingress-proxy
-python3 scripts/check_host.py vacant
+python3 nginx/check_host.py vacant
 # Verify original live vhost files match their captures (restore only if altered).
 cmp /root/apps/notoli/nginx-proxy.conf "$recovery/notoli-vhost.conf"
 cmp /opt/apps/macromapper/nginx-shared.conf "$recovery/macromapper-vhost.conf"
 docker compose -p notoli -f "$recovery/legacy-proxy.json" \
   up -d --no-deps --pull never proxy
-python3 scripts/check_host.py legacy
+python3 nginx/check_host.py legacy
 ```
 
 If replacement creation failed before a container exists, inspect and skip its
