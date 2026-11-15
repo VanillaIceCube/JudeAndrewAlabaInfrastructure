@@ -11,7 +11,9 @@ Source-controlled configuration and GitHub account/repository settings are separ
 - `dependabot.yml`: dependency-update configuration.
 - `workflows/*.yml` and `actions/*/action.yml`: executable automation definitions.
 
-### 🧰 CI tools
+<a id="-ci-tools"></a>
+
+### CI tools
 
 Run commands from the repository root. `tools/` owns `bounded_log.py` and
 `ci_report.py` for bounded review evidence, `check_ci_result.py` for required
@@ -40,7 +42,9 @@ owner's approved process. Never weaken checks to make setup pass.
 
 ## ⚙️ Repository setup
 
-### 🤖 Identity and credentials
+<a id="-identity-and-credentials"></a>
+
+### Identity and credentials
 
 Existing account installations include this repository. Obi-Wan App `4276219`,
 Lint Eastwood `4271110` and RoboCop `4271112` mint short-lived tokens scoped to
@@ -64,7 +68,9 @@ Store the three OpenAI keys and three App private keys in both Actions and
 Dependabot (six reviewer secrets in each). Keep review keys separate from production
 app/SSH/environment credentials; no values enter tickets, logs or artifacts.
 
-### 🛡️ Repository and Project settings
+<a id="-repository-and-project-settings"></a>
+
+### Repository and Project settings
 
 Enable dependency graph, Dependabot alerts/security-update PRs, secret scanning
 and push protection where available. Keep `allow_auto_merge=false`. CodeQL uses
@@ -80,7 +86,9 @@ access/schema before issue writes; RoboCop alone mutates issues.
 Require `Required CI` in the CI workflow after its first green run using the owner's review
 policy. Do not weaken protections to accept a PR.
 
-### 🔑 Deferred OpenAI migration
+<a id="-deferred-openai-migration"></a>
+
+### Deferred OpenAI migration
 
 Follow the [exact key mapping and cutover sequence](README.md#-credential-ownership). Configure the three new secrets before merging the source change; retain the legacy key until usage and all consumers are verified.
 
@@ -157,7 +165,9 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 Require `Required CI`, preserve all independent gates and applicable reviews, and keep manual owner merging. Dependabot security-update PRs do not authorize merging. Gateway promotion has its own owner/source/branch controls.
 
-## 🧪 Verification
+<a id="-verification"></a>
+
+## 🧪 Checks
 
 Verify the current head's independent checks and all three native review identities.
 Distinguish synthetic local tests from actual GitHub runner/credential acceptance.
@@ -166,7 +176,9 @@ alert-workflow side effects before fresh manual dispatches. A successful human P
 does not prove access to the separate Dependabot secret store. Source review does
 not authorize merging, branch promotion, production deployment, or key rotation.
 
-### ✅ Acceptance
+<a id="-acceptance"></a>
+
+### Acceptance
 
 Verify green independent gates and native reviews from
 `obi-wan-code-nobi-reviewer[bot]`, `lint-eastwood-build-sheriff[bot]` and
@@ -178,7 +190,9 @@ After owner merge, verify the default-branch baseline, manually run the three
 alert workflows and observe Dependabot's first PR. Keep tickets open for
 acceptance evidence still dependent on default-branch activation.
 
-### 🤖 Dependabot reviewer acceptance
+<a id="-dependabot-reviewer-acceptance"></a>
+
+### Dependabot reviewer acceptance
 
 Follow the [six-secret setup and four-repository parity contract](README.md#-credential-ownership).
 Use original GitHub App PEM contents in Dependabot; existing Actions secret
@@ -188,7 +202,9 @@ ID and reviewer project variables, then validate a real Dependabot-triggered
 PR after the reviewed source is merged by the owner. All three reviews are
 required. Fork exclusions, independent checks and manual owner merging remain.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
