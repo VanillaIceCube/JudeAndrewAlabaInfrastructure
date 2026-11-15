@@ -28,7 +28,9 @@ leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
 source URL. The publisher keeps independent body findings when it suppresses
 duplicate inline comments or sees an unchanged verdict.
 
-### 🔄 AI reviewer parity across repositories
+<a id="-ai-reviewer-parity-across-repositories"></a>
+
+### AI reviewer parity across repositories
 
 The common contract is all three reviewers on trusted same-repository human
 and Dependabot PRs, no secret-dependent reviews on forks, separate per-persona
@@ -56,7 +58,9 @@ revision. Verify the run actually uses the new policy, all three App identities,
 required review outcomes, and supported major-upgrade evidence or documented
 gaps. A human PR run does not prove access to the Dependabot secret store.
 
-### 🔒 Workflow supply-chain controls
+<a id="-workflow-supply-chain-controls"></a>
+
+### Workflow supply-chain controls
 
 The workflow security checker and mocked regressions reject mutable external
 Action references, missing version comments, broad permission grants and privileged
@@ -79,7 +83,9 @@ not grant GitHub permissions itself or replace branch protection.
 
 ## 🔒 Merge and dependency controls
 
-### 🔒 Required checks and permissions
+<a id="-required-checks-and-permissions"></a>
+
+### Required checks and permissions
 
 `Required CI` in the CI workflow requires independent gates and all applicable reviews.
 Failed/cancelled/unexpectedly skipped checks block it. REQUEST_CHANGES,
@@ -130,7 +136,9 @@ malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust
 logging and reversal. Image updates require separate operator-reviewed
 image/advisory assessment and production authorization.
 
-### 🛡️ Dependency evidence and alert lifecycle parity
+<a id="-dependency-evidence-and-alert-lifecycle-parity"></a>
+
+### Dependency evidence and alert lifecycle parity
 
 The reusable baseline is FullStackTemplate's `.github/actions/prepare-vulnerability-report`.
 MacroMapper, Notoli and Infrastructure carry the same report implementation and
@@ -169,7 +177,9 @@ Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
 
-### 📦 Compatible CodeQL updates
+<a id="-compatible-codeql-updates"></a>
+
+### Compatible CodeQL updates
 
 The current CodeQL entry points use the same immutable v4.39.3 revision.
 After updating action references, regenerate `.github/workflows/ci-source-inventory.json`
@@ -191,7 +201,9 @@ immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
 
-### 🧪 Atomic CodeQL regression guard
+<a id="-atomic-codeql-regression-guard"></a>
+
+### Atomic CodeQL regression guard
 
 FullStackTemplate is the canonical application Dependabot policy (#240).
 Infrastructure adopts the common CodeQL revision guard and negative tests before
@@ -268,7 +280,9 @@ Use [gateway releases and recovery](../../nginx/README.md#-operations) and the
 owner/source/branch controls. Application source or CI approval does not authorize
 host operations. Preserve immutable accepted state, locks and explicit recovery.
 
-### 🚦 Gateway release workflow
+<a id="-gateway-release-workflow"></a>
+
+### Gateway release workflow
 
 `deploy-gateway.yml` handles only separately authorized `env-prod` promotions
 and explicit manual retries/rollback on that branch. It is disabled until the
@@ -304,7 +318,9 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
 
-### 🧪 Validation and activation
+<a id="-validation-and-activation"></a>
+
+### Validation and activation
 
 ```sh
 docker compose -f compose.yml config --quiet
@@ -337,7 +353,9 @@ Reusable ingress/recovery outputs remain available to the build reviewer as
 recovery acceptance is claimed. Canonical `app-release/v1/tests/` and consumer
 deployment suites remain separate and unchanged.
 
-### 🧪 Automation regressions and bounded diagnostics
+<a id="-automation-regressions-and-bounded-diagnostics"></a>
+
+### Automation regressions and bounded diagnostics
 
 See [the shared inventory](README.md#-coverage-boundaries). Actual composite
 request construction and prior-review collection run with mocked curl/GitHub reads,
@@ -356,7 +374,9 @@ Infrastructure retains its existing shellcheck, Compose, secret scan, manifest,
 RequiredCI and independent gateway controls. Application browser tests and npm
 malware gates are not applicable here.
 
-### 🧪 Locally runnable reporting helpers
+<a id="-locally-runnable-reporting-helpers"></a>
+
+### Locally runnable reporting helpers
 
 Guard runner-only output/summary variables. CI reports must preserve identical
 framing and bounded evidence through output-file and unset-variable stdout
@@ -369,7 +389,9 @@ original check failures and bounded/redacted diagnostics. Update the existing
 architecture inventory with `python .github/tools/ci_architecture.py` after workflow
 changes and verify it with `--check`. Do not use production as a test fixture.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Repository setup and credentials](../README.md).
 - [Local actions and reviewer contract](../actions/README.md).
