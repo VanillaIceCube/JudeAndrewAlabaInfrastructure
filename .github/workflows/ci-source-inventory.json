@@ -250,7 +250,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "0ff7fb35e61ece420da936fe73c7d1303f64c60c909c27854a103f7dbd3977e8",
+      "source_sha256": "4993e090e95ff1d1cf0109ba2946c4742ac2e9161c06be55a3a05eab89a86625",
       "variable_names": []
     },
     "deploy-gateway.yml": {
@@ -294,7 +294,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "1482c6f662b69bfdb3a0d578d08bed4045cf7a202a08473702d1d2aaf573f323",
+      "source_sha256": "7fb9d84803d39b2af7ee7f4480f7851a6915c3bf1823d3664aadd60a6d8ae239",
       "variable_names": [
         "DEPLOY_ENABLED",
         "DEPLOY_HOST",
@@ -382,7 +382,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "3207bcd0dd45a0450506327e486747f93d4df6586833948a57c434dc01f3de6a",
+      "source_sha256": "e227a82abdc46b8e23a55ca8f8ab336990a6a223be275febe309e3b8babdc15a",
       "variable_names": []
     },
     "gate-malware.yml": {
@@ -406,7 +406,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "4657397501222fdfa6a7da6808c2722062487822ae0b63c021a1402bc213e692",
+      "source_sha256": "41db0d12db7dff21ed8903917ce4ded54199b4d2160ef8e470d3e4da0660478f",
       "variable_names": []
     },
     "gate-secrets.yml": {
@@ -735,19 +735,19 @@
               "value": "${{ jobs.validate.outputs.automation_status }}"
             },
             "ingress_log": {
-              "description": "Ingress diagnostics.",
+              "description": "Retired ingress suite description.",
               "value": "${{ jobs.validate.outputs.ingress_log }}"
             },
             "ingress_status": {
-              "description": "Disposable Nginx routing and reversal status.",
+              "description": "Retired ingress test suite (not-applicable).",
               "value": "${{ jobs.validate.outputs.ingress_status }}"
             },
             "recovery_log": {
-              "description": "Recovery diagnostics.",
+              "description": "Retired recovery suites description.",
               "value": "${{ jobs.validate.outputs.recovery_log }}"
             },
             "recovery_status": {
-              "description": "SQLite snapshot and recovery status.",
+              "description": "Retired recovery test suites (not-applicable).",
               "value": "${{ jobs.validate.outputs.recovery_status }}"
             }
           }
@@ -760,7 +760,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "39f7c0a92b4693e78eae6dc5307df2c3bbfe65576563e97f054a1e20642af692",
+      "source_sha256": "2521016cbd188fe0015bdb7f2b9e7b2dc38d977ac296de13e5f589e8b7f7cdca",
       "variable_names": []
     }
   }

@@ -1,6 +1,58 @@
+# Python / Django
 __pycache__/
-*.pyc
-.env
-certs/
-*.key
+*.py[cod]
+*.egg-info/
+local_settings.py
 *.sqlite3
+*.sqlite3-*
+
+# Local environments and private configuration
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+!.env.template
+!*.env.template
+.venv/
+env/
+venv/
+
+# Dependencies and generated builds
+node_modules/
+npm-debug.log*
+build/
+dist/
+staticfiles/
+release_bundle/
+
+# Test, lint, coverage, and browser artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+*.coverage
+coverage.xml
+coverage/
+htmlcov/
+frontend/playwright-report/
+frontend/test-results/
+browser-evidence/
+
+# Local Docker configuration and certificates
+docker-compose.override.yml
+/certs/
+*.key
+*.pfx
+*.p12
+
+# Logs, editor, OS, and local task files
+*.log
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+.codex-remote-attachments/
+.codex-ticket-bodies/

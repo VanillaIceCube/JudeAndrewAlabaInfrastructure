@@ -27,21 +27,21 @@ jobs:
       - name: Install pinned safe YAML parser
         run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
       - name: Install verified actionlint
-        run: bash scripts/install_actionlint.sh
+        run: bash .github/tools/install_actionlint.sh
       - name: Validate workflow, shell, Python, JavaScript and Compose
         id: lint
         continue-on-error: true
         run: |
           set -o pipefail
-          bash scripts/lint_infrastructure.sh 2>&1 | tee "$RUNNER_TEMP/lint.log"
+          bash .github/tools/lint_infrastructure.sh 2>&1 | tee "$RUNNER_TEMP/lint.log"
       - name: Report diagnostics
         id: report
         if: always()
         env:
           LINT_OUTCOME: ${{ steps.lint.outcome }}
         run: |
-          python3 scripts/bounded_log.py "$RUNNER_TEMP/lint.log" "$RUNNER_TEMP/lint.outputs"
-          python3 scripts/ci_report.py log "$RUNNER_TEMP/lint.summary.txt" "$LINT_OUTCOME"
+          python3 .github/tools/bounded_log.py "$RUNNER_TEMP/lint.log" "$RUNNER_TEMP/lint.outputs"
+          python3 .github/tools/ci_report.py log "$RUNNER_TEMP/lint.summary.txt" "$LINT_OUTCOME"
       - name: Enforce lint result
         if: steps.lint.outcome != 'success'
         run: exit 1
