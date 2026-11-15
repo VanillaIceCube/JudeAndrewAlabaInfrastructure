@@ -66,7 +66,9 @@ The checker fetches the manifest and workflow template at the pinned commit,
 then compares common source/tests/checker hashes and the rendered workflow.
 Unintended code, test or workflow changes fail CI. Windows CRLF is normalized;
 other byte differences are rejected. Source retrieval failure also fails the gate.
-All external production action references are pinned. The deployment build checks
+The frontend build keeps `./frontend` as its context and selects
+`./frontend/docker/Dockerfile` explicitly; Nginx configuration stays under that
+application-owned folder. All external production action references are pinned. The deployment build checks
 parity again before accessing destination credentials or publishing images.
 
 For a coordinated update:
