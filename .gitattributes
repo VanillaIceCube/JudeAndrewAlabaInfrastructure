@@ -1,5 +1,15 @@
+# Automatically detect text files and normalize their stored line endings in Git.
+# Binary files, such as images, are left unchanged.
 * text=auto
+
+# Check shell scripts out with LF endings so they run in Linux containers and CI.
 *.sh text eol=lf
+
+# Keep Python source checked out with consistent LF endings across platforms.
 *.py text eol=lf
+
+# Use LF endings for GitHub Actions and Compose YAML configuration.
 *.yml text eol=lf
+
+# Use LF endings for configuration files such as the deployed Nginx configuration.
 *.conf text eol=lf
