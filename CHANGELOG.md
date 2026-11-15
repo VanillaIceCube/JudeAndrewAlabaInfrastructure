@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Standardize root ignore rules across the repository family for local environments, builds, caches, test reports, databases, and certificates; keep configuration examples and dependency lockfiles visible.
 - Standardize GitHub documentation across the four repositories: setup in `.github/README.md`, workflow behavior in `.github/workflows/README.md`, and shared reviewer/action contracts in `.github/actions/README.md`.
 - Document the consolidated application MCP code, source metadata, and ChatGPT package locations; gateway runtime and release policy remain unchanged ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).
 - Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
