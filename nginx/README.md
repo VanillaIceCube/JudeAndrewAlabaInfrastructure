@@ -6,8 +6,6 @@ independent releases. [Architecture approval](https://github.com/VanillaIceCube/
 authorizes the technical contract; each merge and production operation retains
 its separate authorization. Coordination, named operators and actual acceptance
 belong on [#4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
-The retained [initial cutover](../docs/cutover.md) and [MCP retirement record](../docs/mcp-retirement.md)
-carry unique operational qualifications; source cleanup does not authorize execution.
 
 ## 🧭 Structure and ownership
 
@@ -169,10 +167,8 @@ Nginx image upgrades require native-package security assessment plus applicable 
 proxy, gzip, DNS, MCP streaming and recovery evidence before promotion; retired root
 fixtures cannot establish that acceptance.
 
-Subsequent gateway releases use the procedure below. The [one-time cutover](../docs/cutover.md)
-retains its separately approved legacy handoff/reversal qualifications; never rerun
-it for an ordinary release. Preserve the [retirement record](../docs/mcp-retirement.md)
-and accepted recovery generations; source cleanup does not establish live retirement.
+Subsequent gateway releases use the procedure below. Preserve accepted recovery
+generations; legacy proxy handoff is outside the ordinary release procedure.
 
 ### 🔒 Approval and prerequisites
 
@@ -395,7 +391,7 @@ independent release plus recovery evidence recorded on #4.
 
 ### 🧹 Retired MCP routes
 
-The [retirement record](../docs/mcp-retirement.md) governs the removal in #96. This
+The [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
 controller accepts the ordinary three-network gateway and can read the exact
 previously accepted disabled tombstones for rollback. Enabled legacy profiles,
 unmatched marker/vhost bytes and extra route networks are rejected. Contain

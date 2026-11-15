@@ -208,12 +208,12 @@ Read the [architecture](nginx/README.md#-structure-and-ownership),
 [gateway guide](nginx/README.md) before related changes. Keep independent app
 releases, existing network objects and Notoli's exact proxy trust intact. The
 external YNAB integration and shared MCP issuer were retired by the owner on
-October 30; follow the [retirement record](docs/mcp-retirement.md) and #96.
+October 30; follow the [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96).
 
 Owner decisions are recorded in
 [issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Architecture/implementation approval does not authorize merging, release-branch
 promotion or production operations. Use #4 for the designated operator and exact
 production authorization. Repository automation in issues #5–#9 is owner-prioritized;
-follow the workflow guide. Never run the production cutover guide as a test or
+follow the workflow guide. Never run a production cutover as a test or
 expose private recovery, environment or key data.
