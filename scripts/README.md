@@ -11,8 +11,9 @@ and release-manifest maintenance in `app-release/`.
 
 ## 🚀 Operations
 
-Follow the [cutover and reversal procedure](../docs/cutover.md) within its
-separately authorized hold. The helper preserves the source database; off-host
+Use an owner-approved recovery plan coordinated in
+[issue #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
+The helper preserves the source database; off-host
 protection remains an operator step. It is not a recurring backup service.
 
 ## 🧪 Checks

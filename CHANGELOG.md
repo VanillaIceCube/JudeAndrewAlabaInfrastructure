@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the retired cutover and MCP-retirement guides after owner review, and update remaining links to the owning READMEs and recorded decisions.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts. Retain the cutover and MCP-retirement operator guides for separate review.
 - Remove the root `tests/` suites and fixtures for ingress, gateway transactions and retirement, SQLite snapshots, release profiles, automation policy and bounded diagnostics. Retain Compose configuration, shared release manifest validation and action-local regressions; reusable ingress/recovery outputs explicitly report the retired suites as not applicable.
 
