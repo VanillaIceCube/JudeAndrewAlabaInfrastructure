@@ -137,11 +137,14 @@ fail parity; approved source synchronization passes; unrelated drift remains rej
 
 ### Backend namespace compatibility
 
-Application configuration now lives in `backend/config/` and Django modules in
-`backend/apps/`. The Resend backend is
-`apps.email.backends.ResendApiEmailBackend`. New bundle creation
-normalizes the previously accepted `authentication.email_backends.ResendApiEmailBackend`
-and intermediate `apps.authentication.email_backends.ResendApiEmailBackend`
-values to that path so existing approved repository variables remain compatible.
-SMTP stays unchanged; arbitrary backend classes remain rejected. This migration
-does not edit retained release bundles, rollback data or live repository variables.
+Application configuration lives in `backend/config/` and domain modules in
+`backend/apps/`. Resend API delivery uses `anymail.backends.resend.EmailBackend`.
+New bundle creation normalizes only the three known historical custom-backend
+selectors (`authentication.email_backends.ResendApiEmailBackend`,
+`apps.authentication.email_backends.ResendApiEmailBackend`, and
+`apps.email.backends.ResendApiEmailBackend`) to that maintained backend. Existing
+approved repository variables remain compatible without a custom wrapper.
+SMTP stays unchanged; arbitrary backend classes remain rejected by the existing
+production policy. This migration does not edit retained release bundles,
+rollback data or live repository variables. Each application owns its Anymail
+credential/timeout configuration and mocked auth/privacy acceptance.
