@@ -1,7 +1,7 @@
 # 📦 Shared application release standard
 
 Notoli and MacroMapper use the same versioned release implementation in
-[`app-release/v1`](../app-release/v1). Each application vendors an exact copy of
+[`v1/`](v1/). Each application vendors an exact copy of
 the release/bundle tools, parity checker and five test modules. Its
 `deploy/shared-source.json` selects a full Infrastructure commit SHA. This is a
 build-time dependency: the private release bundle contains the runtime script,
@@ -76,7 +76,7 @@ updates in application workflows must adopt the shared template commit through
 the procedure below; changing only the rendered workflow fails parity.
 
 1. Edit common source/tests/template here and run
-   `python scripts/update_release_manifest.py`. Infrastructure CI verifies the
+   `python app-release/update_release_manifest.py`. Infrastructure CI verifies the
    manifest with `--check`.
 2. Commit and review the shared changes. In both app PRs, set the same immutable
    commit in `deploy/shared-source.json`, then run
@@ -96,8 +96,9 @@ Both apps execute the same fault, SQLite/WAL, generation/checkpoint, timeout,
 lock, readiness, missing-backend and retry tests. App-policy regressions retain
 Notoli's exact trust/MCP behavior and MacroMapper's unpublished frontend/OpenAI
 requirements. Real Docker recovery checks preserve companion container identity,
-configuration, database bytes and a separate gateway fixture. The gateway's real
-Nginx route/handoff/reversal tests remain in this repository.
+configuration, database bytes and a separate gateway fixture. Infrastructure's
+root Nginx route/handoff/reversal suite has been retired; current CI does not
+establish gateway runtime acceptance.
 
 Each app keeps one canonical `deploy/production/README.md`; local Docker setup
 lives in `deploy/README.md`. Architecture/merge/production approvals and rollout
@@ -111,12 +112,12 @@ FullStackTemplate may vendor this standard using its own app policy, without
 inheriting Notoli's MCP/proxy trust or MacroMapper's OpenAI requirements. Common
 contract/preflight regressions derive fixtures from the selected policy; explicit
 checks still preserve the two existing applications' trust and secret boundaries.
-`tests/fixtures/release-profiles` runs the same five release suites for Notoli,
-MacroMapper, and the isolated template example in Linux/disposable-Docker CI.
-The MacroMapper fixture enables app-owned MCP with exact `172.20.0.3` trust and
-origin/challenge readiness; the ordinary template fixture retains the disabled
-MCP contract. Consumers adopting the updated canonical tests pin this same
-reviewed Infrastructure commit before synchronizing their vendored copies.
+The former root release-profile matrix and its fixtures have been retired.
+Canonical `app-release/v1/tests/` remains unchanged and consumers execute their
+vendored suites against their own app policies. MacroMapper's policy enables
+app-owned MCP with exact `172.20.0.3` trust and origin/challenge readiness; the
+ordinary template retains the disabled MCP contract. Consumers pin the same
+reviewed Infrastructure source commit before synchronizing their vendored copies.
 
 The template profile is an onboarding example, not a third application approved
 for the shared host. It does not add gateway routes, networks, certificates,
@@ -127,11 +128,7 @@ All consumers must pin the same reviewed source commit when adopting this change
 
 ## 🔌 Optional MCP applications
 
-Follow the [optional MCP contract](optional-mcp.md) for app-owned ASGI/OAuth, shared ingress, readiness and rollback. Notoli remains enabled; MacroMapper is not advertised until its application registry is ready. Preserve independent releases and exact app proxy trust.
-
-## 🔬 Batch 2 parity acceptance
-
-The shared contract suite models an approved immutable Action upgrade: changing
-only the app workflow fails, synchronizing the approved source template passes,
-and unrelated workflow drift still fails. Version comments are source-owned and
-synchronized with the same manifest and commit pin; no engine or runtime change.
+Follow the [gateway MCP contract](../nginx/README.md#-optional-mcp-contract). Apps own
+ASGI/OAuth, readiness and rollback; keep independent releases and exact proxy trust.
+The shared contract suite models immutable Action upgrades: isolated consumer edits
+fail parity; approved source synchronization passes; unrelated drift remains rejected.
