@@ -92,6 +92,12 @@ same checks without network access. CI never uses this override. A version bump
 is required for incompatible contract semantics; coordinate adoption in both app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
+The November 14 unused-code audit found no additional release or gateway code
+safe to remove. SQLite backup progress callbacks retain their three-argument
+signature, and historical-generation guards remain necessary for recovery.
+The `cleanup-02` build-path update above is the only release-source change in
+this cleanup; it does not authorize a production operation.
+
 ## 🧪 Verification and operations
 
 Both apps execute the same fault, SQLite/WAL, generation/checkpoint, timeout,
