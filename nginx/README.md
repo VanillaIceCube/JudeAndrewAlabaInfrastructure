@@ -1,26 +1,176 @@
-# 🚦 Subsequent gateway releases
+# 🌐 Gateway and routing
 
-This is the release procedure for the already adopted `host-ingress` gateway,
-not the [one-time cutover](cutover.md). The owner's October 19 policy makes an
-authorized promotion of reviewed source to `env-prod` the release authorization:
-it automatically deploys without another human reviewer or per-release approval
-variable. Source/CI approval alone still does not authorize branch promotion.
-GitHub's original actor and retrying actor must both be the repository owner;
-another collaborator or bot cannot authorize a production operation.
-Record initial setup, the designated operator, rollout/recovery scope and results
-on [coordination #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
-Independent Notoli/MacroMapper workflows and shared release code are unchanged.
+This folder owns shared Nginx ingress, host topology verification and gateway
+release/recovery. Apps retain their own data, credentials, OAuth issuers and
+independent releases. [Architecture approval](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6111586759)
+authorizes the technical contract; each merge and production operation retains
+its separate authorization. Coordination, named operators and actual acceptance
+belong on [#4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
-The current source candidate pins the official Nginx **1.31.8 Alpine 3.24 slim**
-Linux/amd64 image at
-`nginx@sha256:f9238a4aacf18df0f059cf0389490fc2e876352f75d019f475a48e8765576f24`.
-Its complete native-package assessment and existing TLS, proxy, gzip, DNS, MCP
-streaming and recovery fixtures must pass before source promotion. This replaces
-the blocked Debian candidate without changing the Nginx release version. Historical
-image references in the one-time cutover guide remain matched recovery evidence;
-they are not an approval to deploy an image with unresolved advisories.
+## 🧭 Structure and ownership
 
-## 🔒 Approval and prerequisites
+[compose.yml](../compose.yml) owns project `host-ingress`, service `proxy`, container
+`host-ingress-proxy`, runtime `/opt/host-ingress`. `gateway_release.py` owns authorized
+transactions; `gateway_transport.py` verifies promotion before credential loading
+and transports immutable inputs; `check_host.py` validates topology without repair.
+App-only releases never shut down/reload ingress, alter certificates/shared networks,
+use `down`/`--remove-orphans`, or prune the host. The independent website/apex route
+is not transferred here. Inventory other hostnames before changing default rejection.
+
+### Networks and proxy trust
+
+Adopt existing network objects in place; inspect actual membership and IPAM rather
+than assuming external Compose declarations verify them. Keep historical labels.
+
+| Network | Permitted membership | Upstream / address contract |
+| --- | --- | --- |
+| `notoli_backend_private`, internal `172.30.88.0/29` | ingress + Notoli backend | ingress `172.30.88.2`, backend `172.30.88.3`, `notoli-backend:8000` |
+| `notoli_default`, `172.18.0.0/16` | ingress + Notoli frontend | `notoli-frontend:80` |
+| `macromapper-ingress`, `172.20.0.0/16` | ingress + MacroMapper frontend/backend | ingress `172.20.0.3`, `macromapper-frontend:80`, `macromapper-backend:8000` |
+| `notoli_backend_egress`, `172.19.0.0/16` | Notoli backend only | app-owned outbound path |
+| `macromapper_default`, `172.21.0.0/16` | MacroMapper frontend/backend | app-owned egress and frontend's generic `backend` alias |
+
+Ingress joins only the first three. MacroMapper never joins Notoli networks;
+Notoli frontend never joins its private backend network. Both apps have unpublished
+backends and frontends. Shared ingress uses unique namespaced upstreams, never generic
+`backend`/`frontend`. Keep app projects/container names and existing DB paths:
+Notoli `/root/apps/notoli/db.sqlite3`, MacroMapper `/opt/apps/macromapper/db.sqlite3`.
+No storage move accompanies ingress changes. Docker/root administrators remain privileged.
+
+### Routing, TLS and privacy
+
+Serve `notoli.judeandrewalaba.com` and `macromapper.judeandrewalaba.com` on 80/443
+with HTTPS redirects, 25 MiB body limits and `/api`, `/auth`, `/admin` slash redirects.
+Route `/api/`, `/auth/`, `/admin/`, `/static/admin/`, `/static/rest_framework/`, exact
+`/mcp` and `/.well-known/*` directly to each app backend. `/` and SPA deep links,
+including `/connections*`, go to its frontend. Preserve URI, query and encoded paths.
+Docker DNS uses `127.0.0.11`, `valid=10s`, `ipv6=off`, variable upstreams and original
+`$request_uri`; absent/recreated apps must not prevent startup or serving companions.
+
+Overwrite Host and forwarded scheme/client with canonical Host, gateway scheme
+and immediate `$remote_addr`; clear `Forwarded` and `X-Forwarded-Host`. Never trust
+incoming chains. Notoli retains exact `DJANGO_TRUSTED_PROXY_IPS=172.30.88.2`, Uvicorn
+`--no-proxy-headers`, exact-peer ASGI validation/stripping and Django's existing
+forwarded-host/proto rejection. MacroMapper's app ASGI validates exact `172.20.0.3`
+and strips untrusted forwarding headers. Do not copy Notoli's subnet or trust a CIDR.
+Cloudflare visitor-IP restoration is outside this contract.
+
+MacroMapper backend and MCP routes use a 120-second upstream idle read timeout,
+allowing the app's 110-second total AI budget to return JSON before the proxy.
+Confirm the effective CDN timeout independently. `/mcp` stays exact, HTTP/1.1,
+empty Connection and buffering off; frontend upgrade behavior is separate. Verify
+Nginx header inheritance in locations that add their own `proxy_set_header`.
+Disable backend caching, hide upstream cache policy and return `no-store` for
+private auth/API/admin/MCP and discovery, including failures. Keep query-free access
+logs and disabled raw-request error logging so OAuth codes/state/tokens cannot leak.
+
+The gateway owns HSTS `max-age=3600` on both HTTPS hosts, including private/error
+locations; omit subdomain/preload directives. Keep explicit HTTP redirects. Django
+W004/W008 must be assessed against real edge/origin behavior. Disabling HSTS requires
+`max-age=0` over working HTTPS and expiry of the previous one-hour browser policy.
+
+Certificates are host-owned and mounted read-only from the approved actual path
+(default `/root/apps/notoli/certs`). App bundles never upload keys/vhosts or modify
+that directory. Certificate relocation, rotation or rootless-user changes need
+separate review. Keep private dirs/files 0700/0600 with runtime-compatible ownership;
+never blindly change DB ownership. Preserve raw env-file bytes. No private keys,
+environment values or full inspect/log output enters Git, comments or artifacts.
+Full (strict) TLS, origin SANs/firewall, cache/WAF/challenges, actual key access and
+SSH/GHCR capability require operator verification; HTTPS 200 alone proves none of them.
+The accepted immutable image is selected by reviewed Compose and the host record;
+historical cutover image digests remain recovery evidence only.
+
+## 🌱 Application admission
+
+Obtain owner architecture/admission approval after peak CPU/RAM, disk plus retained
+images/backups and concurrent-release headroom review. Current checks do not certify
+a third app. Assign independent project/data/env directories and a reviewed route
+network with exact IPAM/membership/namespaced upstreams; keep unrelated DB/backend
+networks off ingress. Network creation is an explicit operator action, never an app
+release repair. Add reviewed DNS/SAN/vhost/edge policy with runtime DNS, safe headers,
+encoded URI preservation, streaming/no-store/logging checks while the app is absent.
+
+Adopt the [app-release contract](../app-release/README.md): immutable images, unique
+private staging, protected maintenance/app locks, consistent SQLite capture, matched
+config/env/images, bounded readiness and explicit data rollback. Capture backup
+destination/retention/restore owner, bounded logs, alerts/response ownership and
+capacity upgrade triggers. Proposed operational baseline is daily encrypted off-host
+backup with 7 daily + 4 weekly retained; destination/credentials/spend remain unapproved
+until selected. Source PR approval is separate from each merge and command-level
+activation approval. Prove independent redeploy/recovery without changing companions.
+
+## 🔌 Optional MCP contract
+
+Each app advertises MCP only after its own reviewed ASGI lifecycle, registry/scopes,
+OAuth migrations/client policy, exact proxy trust and readiness pass. Infrastructure
+creates no accounts, grants, business tools or shared issuer. Include
+`snippets/mcp-locations.conf` at server level with reviewed app upstreams/networks.
+`/auth/mcp/authorize/`, `/token/`, `/revoke/` and `/connections/` stay within private
+`/auth/`; browser `/connections` and `/connections/authorize` remain frontend pages.
+JSON Streamable HTTP needs no WebSocket route. Bounds/lifespan/session handling are
+app-owned. Use exact HTTPS public-client callbacks, S256 PKCE, no password/implicit
+grants or dynamic registration. Tools enforce live ownership/membership per call.
+Review MCP/discovery edge rules: no interactive challenge, caching or path rewriting.
+
+Enabled readiness adds exact issuer/resource metadata and `/mcp` 401 with the
+resource-metadata Bearer challenge to normal frontend HTML/API JSON checks. Ordinary
+profiles must not advertise metadata/challenges; SPA HTML is not discovery. Notoli
+and MacroMapper own their profiles; template onboarding is no third deployment.
+
+### MacroMapper activation order
+
+For initial adoption, review both sources and app assertions, then release reviewed
+gateway routing first. Confirm the old backend returns unimplemented-path 404 for
+MCP/discovery (uncached, never SPA HTML/another issuer). Verify ordinary routes and
+unchanged app/network/certificate identity. Independently release the app ASGI/OAuth
+implementation through its matched SQLite/recovery transaction; required metadata
+checks otherwise fail behind an old gateway. Verify public/origin metadata, exact
+resource audience/challenge, both approved PKCE clients and existing Notoli behavior.
+Routing stubs do not prove authenticated tools or isolation. Recover failed app
+acceptance with the app's matched release; gateway can keep forwarding old 404s.
+Gateway rollback does not reverse OAuth migrations or revoke grants. Do not revoke
+the owner's existing connection merely to test revocation. Record scope/outcomes on #4.
+
+### Inactive onboarding example
+
+This example is not loaded by Nginx and authorizes no new service. Review network,
+TLS/header inheritance and readiness policy before use:
+
+```nginx
+# Example only; not loaded by nginx.conf. Onboarding requires a reviewed vhost,
+# network membership, certificate and app readiness policy. No new app is enabled.
+server {
+  listen 443 ssl;
+  server_name app.example.com;
+  include /etc/nginx/snippets/tls.conf;
+  include /etc/nginx/snippets/headers.conf;
+  set $app_backend example-backend:8000;
+  set $app_frontend example-frontend:80;
+  include /etc/nginx/snippets/mcp-locations.conf;
+  location ~ ^/(auth|api|admin)/ {
+    proxy_pass http://$app_backend$request_uri;
+    include /etc/nginx/snippets/private.conf;
+  }
+  location / { proxy_pass http://$app_frontend$request_uri; }
+}
+```
+
+## 🚀 Operations
+
+The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
+authorizes automatic gateway deployment when the owner promotes reviewed main
+source to `env-prod`; no second reviewer or per-release approval variable is
+required. Both the original actor and retrying actor must be the repository owner.
+Manual retries retain owner authorization; initial host preparation and explicit
+recovery have separate approved scope. Source/CI approval does not authorize promotion.
+Nginx image upgrades require native-package security assessment plus applicable TLS,
+proxy, gzip, DNS, MCP streaming and recovery evidence before promotion; retired root
+fixtures cannot establish that acceptance.
+
+Subsequent gateway releases use the procedure below. Preserve accepted recovery
+generations; legacy proxy handoff is outside the ordinary release procedure.
+
+### 🔒 Approval and prerequisites
 
 Source changes land through reviewed `main` first, with explicit owner approval
 for each merge; review alone does not authorize merging or the later production
@@ -32,7 +182,7 @@ differ without introducing production-only code. Reconcile history without
 discarding newer main changes or rewriting either protected branch. Intentionally
 unreleased main work is permitted; hold `env-prod` until its prerequisites are
 met rather than deploying unrelated features to obtain equal trees. See the
-[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases)
+[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases)
 and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
 
 Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
@@ -72,7 +222,7 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
   Only the gateway workflow references the key, only its transport step receives
   it, and its only triggers are `env-prod` push and owner manual dispatch on that
   branch. Review/scanner jobs must never request deployment credentials; keep
-  the key outside Dependabot. Regression checks enforce these workflow rules.
+  the key outside Dependabot. Review these workflow rules explicitly; the root gateway regression suite has been retired.
   These controls prevent other existing jobs from initiating gateway operations;
   a writer able to install an arbitrary secret-reading workflow remains privileged.
   The helper's context checks cannot constrain a workflow that bypasses it.
@@ -85,35 +235,7 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
 GitHub references: [Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
 and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).
 
-## 🔄 Migrating existing Actions settings
-
-1. Inventory `production`, `gateway-approval` and `gateway-production` secrets,
-   variables and consumers. Keep the old settings until the new path is verified.
-2. Securely re-enter the original dedicated key as repository Actions secret
-   `DEPLOY_SSH_KEY`; GitHub cannot reveal an existing secret. Reuse the verified
-   key when available; rotation changes host access and needs explicit scope.
-   Copy the four connection variables to repository Actions variables. Preserve
-   `DEPLOY_ENABLED`; do not copy deployment credentials into Dependabot.
-3. Merge reviewed source to `main`, then make the owner-authorized `env-prod`
-   promotion. Verify the exact Actions run/attempt, sanitized summary and durable
-   host result, including the actual running source for an unchanged gateway.
-   Confirm host health, preserved app/network/certificate identities and locks.
-4. Only after acceptance, delete the obsolete `production`, `gateway-approval`
-   and `gateway-production` environments and their scoped settings. Check for
-   active jobs and any unrelated consumers first. Deletion removes environment
-   secrets and protection rules and fails jobs waiting on those rules; retain
-   sanitized Actions evidence before cleanup. See [environment deletion effects](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#deleting-an-environment).
-   Historical deployment records can still reference the old environment names;
-   retain their run links, but do not use them as the current release authority. The new
-   workflow creates neither environment jobs nor Deployment API records, so it
-   cannot recreate these environments. The concurrency group name is only a lock.
-
-To reverse source before cleanup, retain the old environment credentials and
-use the normal reviewed promotion process. After cleanup, reverting to the old
-workflow also requires securely reprovisioning its environment settings. This
-settings migration does not authorize a gateway configuration rollback or app release.
-
-## 📦 Private host preparation and adoption
+### 📦 Private host preparation and adoption
 
 Within the approved preparation plan, provision root-owned mode 0700
 `/opt/host-ingress-deploy` and its `incoming`, `releases`, `attempts` children.
@@ -130,7 +252,7 @@ Run the reviewed helper from an operator-controlled checkout:
 
 ```sh
 umask 077
-python3 scripts/gateway_release.py adopt --source <accepted-full-sha> \
+python3 nginx/gateway_release.py adopt --source <accepted-full-sha> \
   --directory /opt/host-ingress
 ```
 
@@ -141,7 +263,7 @@ ingress. Existing app data and certificate/key files are neither copied into
 the release bundle nor modified. Drift or an existing baseline blocks adoption;
 resolve it privately, do not fabricate or edit release records to bypass checks.
 
-## 🚀 Promotion and retry
+### 🚀 Promotion and retry
 
 After source review/green CI, the authorized operator promotes that reviewed
 `main` commit to `env-prod`. The push starts **Deploy gateway** automatically;
@@ -173,7 +295,7 @@ logging. Nginx syntax runs with no network or published ports. Activation uses
 only `up --no-deps --pull never --force-recreate proxy`; no project shutdown,
 network provisioning/removal, app restart, database restore or pruning occurs.
 
-## 🩺 Health and relevant changes
+### 🩺 Health and relevant changes
 
 Both the public edge and loopback origin verify HTTPS frontend HTML, JSON API
 401 responses for both apps, Notoli issuer/resource discovery and the MCP 401
@@ -182,8 +304,8 @@ and SNI with a separately provisioned CA if necessary. Redirects/challenges
 cannot silently pass. Requests use `JudeGatewayRelease/1.0` and cache bypass
 headers. Each complete suite has an 80-second process deadline, three attempts
 and two-second intervals (244 seconds maximum); each socket has a five-second
-timeout and responses are limited to 256 KiB. Real ingress route/DNS tests also
-cover the existing 120-second backend/MCP timeout contract.
+timeout and responses are limited to 256 KiB. The former root ingress route/DNS suite has been retired; verify the
+120-second backend/MCP timeout contract under separately authorized acceptance.
 
 Restart policy compares the effective expanded Compose model, immutable image,
 all `nginx/**/*.conf` bytes and certificate mount location to the **actually
@@ -193,7 +315,7 @@ paths. Changes only to docs, workflow/helpers or `app-release/v1` produce an
 source stay unchanged. Compose/Nginx byte changes restart after validation.
 Unsupported payload files and Compose settings fail explicitly.
 
-## ↩️ Failure, interruption and explicit rollback
+### ↩️ Failure, interruption and explicit rollback
 
 Before activation, `attempts/<identity>/journal.json` captures the previous
 matched configuration/image/source/runtime, application identities, network IDs,
@@ -217,7 +339,7 @@ For SSH/Actions unavailability, the approved operator can invoke the same
 reviewed helper on the host:
 
 ```sh
-python3 scripts/gateway_release.py rollback --source <approved-helper-full-sha> \
+python3 nginx/gateway_release.py rollback --source <approved-helper-full-sha> \
   --id <retained-sha-run-attempt>
 ```
 
@@ -233,7 +355,7 @@ rejects changed route-network IDs before recreating the gateway. The original
 attempt journal remains historical evidence; the pending record holds the new
 recovery baseline, which must remain unchanged through restoration.
 
-## 🧾 Evidence and retention
+### 🧾 Evidence and retention
 
 Actions run status, summary and logs record the promoted source, unique
 source/run/attempt identity, operation and explicit recovery target when present.
@@ -267,9 +389,9 @@ any pending attempt or its predecessor. Monitor disk space before future release
 Production acceptance still requires the separately authorized first and second
 independent release plus recovery evidence recorded on #4.
 
-## 🧹 Retired MCP routes
+### 🧹 Retired MCP routes
 
-The [retirement record](mcp-retirement.md) governs the removal in #96. This
+The [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
 controller accepts the ordinary three-network gateway and can read the exact
 previously accepted disabled tombstones for rollback. Enabled legacy profiles,
 unmatched marker/vhost bytes and extra route networks are rejected. Contain
@@ -277,3 +399,13 @@ retired routes with their matched historical controller before using this source
 New source bundles contain no retired vhosts or profile selectors. Preserve
 private accepted/recovery generations; historical controllers are evidence, not
 authorization to reactivate retired services.
+
+## 🧪 Checks and acceptance
+
+See [workflow checks](../.github/workflows/README.md#-checks-and-diagnostics).
+Compose configuration, shared release manifest and action-local regressions remain;
+root routing, gateway transaction/retirement, snapshot and profile tests were retired.
+No current local result substitutes for live topology, handoff/recovery or authenticated
+acceptance. Use disposable networks/test certificates for rehearsals. Never run the
+production cutover as a test. Unauthenticated public readiness is separate from account,
+email and billable-AI operations, each requiring its authorized scope.
