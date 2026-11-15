@@ -24,9 +24,8 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 - [Gateway and routing](nginx/README.md) — configuration and routing ownership.
 - [Application release standard](app-release/README.md) — shared release tooling.
-- [Deployment and operations](docs/README.md#-deployment-and-operations) — onboarding, releases, and recovery.
+- [Initial cutover](docs/cutover.md) and [MCP retirement record](docs/mcp-retirement.md) — retained operator procedures and authorization limits.
 - [GitHub setup and workflows](.github/README.md) — configuration and automation.
-- [Additional documentation](docs/README.md) — architecture, maintenance, scripts, and testing.
 - [Changelog](CHANGELOG.md) — project updates.
 
 ## 📜 License
