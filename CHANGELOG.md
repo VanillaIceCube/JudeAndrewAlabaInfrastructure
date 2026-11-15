@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Introduce a locked uv Python 3.12 project for repository tooling; synchronize CI and local parser environments, add uv dependency updates and retain a narrow reviewed dependency-scope gate (#147).
+- Point the canonical application release workflow at `backend/docker/Dockerfile` while retaining the backend build context (FullStackTemplate #337).
 - Standardize README heading emojis, sentence case, reference labels and Markdown spacing while preserving substantive content, code examples and existing anchors.
 - Point the canonical application release workflow at `frontend/docker/Dockerfile` while retaining the frontend build context and application-specific build arguments.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.

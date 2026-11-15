@@ -43,6 +43,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Set up locked Python tooling
+        uses: ./.github/actions/setup-uv
       - name: Verify shared release source manifest
         run: python3 app-release/update_release_manifest.py --check
       - name: Validate Compose configuration
@@ -51,8 +53,6 @@ jobs:
         run: |
           set -o pipefail
           docker compose -f compose.yml config --quiet 2>&1 | tee "$RUNNER_TEMP/compose.log"
-      - name: Install the pinned safe YAML parser
-        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
 
       - name: Validate action-local regressions
         id: automation
