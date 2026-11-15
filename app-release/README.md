@@ -134,3 +134,14 @@ Follow the [gateway MCP contract](../nginx/README.md#-optional-mcp-contract). Ap
 ASGI/OAuth, readiness and rollback; keep independent releases and exact proxy trust.
 The shared contract suite models immutable Action upgrades: isolated consumer edits
 fail parity; approved source synchronization passes; unrelated drift remains rejected.
+
+### Backend namespace compatibility
+
+Application configuration now lives in `backend/config/` and Django modules in
+`backend/apps/`. The Resend backend is
+`apps.email.backends.ResendApiEmailBackend`. New bundle creation
+normalizes the previously accepted `authentication.email_backends.ResendApiEmailBackend`
+and intermediate `apps.authentication.email_backends.ResendApiEmailBackend`
+values to that path so existing approved repository variables remain compatible.
+SMTP stays unchanged; arbitrary backend classes remain rejected. This migration
+does not edit retained release bundles, rollback data or live repository variables.
