@@ -1,4 +1,36 @@
-# 📝 Changelog
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+## 2026-11-14
+
+### Changed
+
+- Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
+- Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
+- Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
+- Place active CI helpers under `.github/tools/`, gateway release/preflight tools under `nginx/`, and manifest maintenance under `app-release/`; update callers and owner guides.
+
+### Removed
+
+- Remove the root `scripts/` folder and manual SQLite snapshot helper.
+- Remove the retired cutover and MCP-retirement guides after owner review, and update remaining links to the owning READMEs and recorded decisions.
+- Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts. Retain the cutover and MCP-retirement operator guides for separate review.
+- Remove the root `tests/` suites and fixtures for ingress, gateway transactions and retirement, SQLite snapshots, release profiles, automation policy and bounded diagnostics. Retain Compose configuration, shared release manifest validation and action-local regressions; reusable ingress/recovery outputs explicitly report the retired suites as not applicable.
+
+## 2026-11-13
+
+### Changed
+
+- Standardize root ignore rules across the repository family for local environments, builds, caches, test reports, databases, and certificates; keep configuration examples and dependency lockfiles visible.
+- Standardize GitHub documentation across the four repositories: setup in `.github/README.md`, workflow behavior in `.github/workflows/README.md`, and shared reviewer/action contracts in `.github/actions/README.md`.
+- Document the consolidated application MCP code, source metadata, and ChatGPT package locations; gateway runtime and release policy remain unchanged ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).
+- Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
+
+### Removed
+
+- Remove the contribution guide and pull request template; retain operational requirements in existing guides.
+- Delete historical Batch 2/3 parity reports and hash snapshots; remove obsolete links without moving or consolidating documentation.
 
 ## 2026-11-12
 
@@ -6,23 +38,13 @@
 
 - Start a one-hour HSTS policy on application HTTPS responses, including private and error routes, with ingress coverage and documented expiry behavior (FullStackTemplate #299).
 
-## 2026-11-12
-
 ### Fixed
 
 - Narrow SQLite snapshot cleanup handling to subprocess failures, OS errors and explicit interruptions, preserving the original snapshot failure when cleanup also fails (#133).
 
-## 2026-11-12
-
 ### Changed
 
 - Consolidate gateway deploy and rollback input validation. The transport helper now reports a specific error when a deploy request includes a recovery ID.
-
-## 2026-11-11
-
-### Removed
-
-- Remove retired Jules notebooks, persona prompts and active operating instructions after the linked PRs merged and a fresh open-PR inventory passed (#117); preserve general maintenance guidance, historical evidence and independent CI/security/release controls.
 
 ## 2026-11-11
 
@@ -36,12 +58,9 @@
 - Upgrade the shared application build template to immutable Docker login action v4.8.0; consumers must synchronize the same Infrastructure source commit and manifest.
 - Align CodeQL init/analyze at the immutable v4.39.3 revision and refresh the checked workflow architecture inventory.
 
-## 2026-11-06
+### Removed
 
-### Fixed
-
-- Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
-- Cover default, empty, explicit and invalid configuration plus empty/nonempty mocked alert pipelines and all three caller contracts.
+- Remove retired Jules notebooks, persona prompts and active operating instructions after the linked PRs merged and a fresh open-PR inventory passed (#117); preserve general maintenance guidance, historical evidence and independent CI/security/release controls.
 
 ## 2026-11-06
 
@@ -49,45 +68,36 @@
 
 - Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.
 - Source-linked Mermaid CI/CD architecture and checked per-repository workflow/action inventories, preserving application and gateway trust differences.
-
-### Fixed
-
-- Architecture guidance no longer presents completed reviewer credential migration or obsolete test/runtime assumptions as future work.
-
-## 2026-11-06
-
-### Added
-
 - Bounded, attributed human discussion context and conservative App-owned reviewer follow-ups, with adversarial, stale-head, idempotency and permission regressions.
 - Safe Responses token/latency evidence, dated partial cost estimates and validated owner configuration/recovery controls; existing Luna model selection is preserved.
 
 ### Fixed
 
+- Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
+- Cover default, empty, explicit and invalid configuration plus empty/nonempty mocked alert pipelines and all three caller contracts.
+- Architecture guidance no longer presents completed reviewer credential migration or obsolete test/runtime assumptions as future work.
 - Reviewer ownership no longer falls back to persona-name matching; old-head verdicts are rejected and writer runs serialize.
 
 ## 2026-11-05
-### Added
-- Mocked composite request/history regressions and bounded early/middle/late failure evidence.
-### Changed
-- Use the platform base commit for workflow grant authority and retain bounded diagnostic artifacts.
-- Preserve the existing reporter interface and independent Infrastructure validation model.
 
-## 2026-11-05
 ### Added
+
+- Mocked composite request/history regressions and bounded early/middle/late failure evidence.
 - Shared deployment parity regression for approved Action updates and unauthorized drift.
 - Workflow supply-chain policy regressions.
+
 ### Fixed
+
 - Ingress retry helper now raises explicitly after exhaustion, avoiding mixed return paths.
-### Changed
-- Source-owned deployment Action pins include readable version comments.
-
-## 2026-11-05
-
-### Fixed
 - Reject unverifiable malware advisory classifications before changing source checkpoints or issues.
 - Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
 - Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
 
+### Changed
+
+- Use the platform base commit for workflow grant authority and retain bounded diagnostic artifacts.
+- Preserve the existing reporter interface and independent Infrastructure validation model.
+- Source-owned deployment Action pins include readable version comments.
 
 ## 2026-11-03
 
@@ -113,7 +123,6 @@
 
 - Keep disabled MacroMapper MCP/discovery paths behind uncached 404 responses
   instead of falling through to the frontend during external MCP retirement.
-
 - Allow the validated MCP client's callback origin on its consent page so Chromium
   can complete authorization, preserving exact callback and OAuth checks.
 
@@ -127,11 +136,9 @@
   synchronize consumers through the regenerated shared-source manifest.
 - Use GPT-6 Luna for all OpenAI PR reviewers and security-alert grouping while
   preserving existing review gates, isolated credentials and token budgets.
-
 - Retire external MCP application build/runtime source, disposable experiments
   and their CI first; retain existing deployment controllers and inputs for the
   separately coordinated final cleanup (#96, #99).
-
 - Retire the external YNAB integration and shared MCP issuer in favor of nginx
   routing to app-owned MCP/OAuth; document the ordered, main-first cleanup (#56).
 - Reconcile existing production promotion history into main and document
@@ -151,40 +158,10 @@
 
 ## 2026-10-29
 
-### Changed
-
-- Give the staged YNAB egress policy its service-owned read-only permissions,
-  preserving private release parents and exact matched-file recovery checks.
-- Enable explicitly consented full YNAB MCP access with separate read/write scopes,
-  preserved upstream previews and a persistent operation journal that code/image
-  rollback never rewinds. End the current rollout after YNAB and existing-app checks.
-- Honor Compose null image-default entrypoint/command inheritance in issuer
-  runtime verification, preserving exact process checks and pending recovery.
-- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
-  package assessment and TLS, gzip, streaming, DNS and recovery validation.
-- Require strict issuer readiness for active central MCP consumers, preserve
-  explicit disabled maintenance, and validate legacy gateway adoption separately.
-- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
-  preserving exact topology guards and rejecting unsupported modes.
-- Supply synthetic app-specific required secrets only in disposable shared release
-  fixtures; retain production missing/empty/malformed input rejection.
-- Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
-  test actual canonical staging with synthetic protected files in Linux CI.
-- Separate YNAB stop-only containment from freshly scanned active-image rollback;
-  require explicit stop-only recovery after an initial activation failure.
-- Compare Alpine image coverage using native package names and complete installed
-  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
-- Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
-  hashed C++ packages; verify complete native APK scan coverage.
-
-- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
-  stages and native tracked C++ libraries; retain fresh artifact security gates.
-
 ### Added
 
 - Document the ordered YNAB/shared-issuer first activation, exact artifact/network
   prerequisites, both-client acceptance and contained recovery before app adoption.
-
 - Add fixed inactive auth ingress, contained single-container issuer releases and
   journal-preserving SQLite recovery with grant invalidation and offline JWT
   quarantine; retain independent app releases and explicit recovery barriers.
@@ -219,6 +196,34 @@
   parity checks, protected token-file policy, no-network Compose profile and bounded
   disposable CI tests; retain production dependency/security and activation gates.
 
+### Changed
+
+- Give the staged YNAB egress policy its service-owned read-only permissions,
+  preserving private release parents and exact matched-file recovery checks.
+- Enable explicitly consented full YNAB MCP access with separate read/write scopes,
+  preserved upstream previews and a persistent operation journal that code/image
+  rollback never rewinds. End the current rollout after YNAB and existing-app checks.
+- Honor Compose null image-default entrypoint/command inheritance in issuer
+  runtime verification, preserving exact process checks and pending recovery.
+- Pin the shared proxy to official Nginx 1.31.8 Alpine slim after complete native
+  package assessment and TLS, gzip, streaming, DNS and recovery validation.
+- Require strict issuer readiness for active central MCP consumers, preserve
+  explicit disabled maintenance, and validate legacy gateway adoption separately.
+- Match Notoli's explicit `legacy` MCP mode in shared release fixtures while
+  preserving exact topology guards and rejecting unsupported modes.
+- Supply synthetic app-specific required secrets only in disposable shared release
+  fixtures; retain production missing/empty/malformed input rejection.
+- Normalize parsed Compose memory bytes before exact YNAB runtime comparisons;
+  test actual canonical staging with synthetic protected files in Linux CI.
+- Separate YNAB stop-only containment from freshly scanned active-image rollback;
+  require explicit stop-only recovery after an initial activation failure.
+- Compare Alpine image coverage using native package names and complete installed
+  versions while preserving Debian/Ubuntu epoch/revision and vulnerability gates.
+- Replace the blocked YNAB gateway OS base with pinned Alpine stages and signed,
+  hashed C++ packages; verify complete native APK scan coverage.
+- Move the inactive YNAB gateway candidate to pinned Node/Python slim trixie
+  stages and native tracked C++ libraries; retain fresh artifact security gates.
+
 ## 2026-10-28
 
 ### Added
@@ -245,73 +250,52 @@
 
 ## 2026-10-20
 
+### Added
+
+- Define the optional multi-app MCP ingress/readiness/onboarding contract and an inactive generic vhost example, with isolated enabled/ordinary app routing checks.
+
 ### Fixed
 
 - Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
 - Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
 
-
-## 2026-10-20
-
-### Added
-
-- Define the optional multi-app MCP ingress/readiness/onboarding contract and an inactive generic vhost example, with isolated enabled/ordinary app routing checks.
-
 ### Changed
 
 - Share Notoli's exact MCP transport directives through an opt-in Nginx include and apply no-store policy to discovery; keep MacroMapper's live MCP profile disabled.
-
-
-## 2026-10-20
-
-### Changed
-
 - Use repository Actions settings for gateway SSH configuration, with owner/branch/source/workflow checks before credential loading and contents-read-only tokens; remove GitHub Environment policy and Deployment API dependencies.
 - Record promoted versus running gateway identities in sanitized Actions summaries and the durable host journal; report runner failure/cancellation without asserting a host outcome, and document verified settings migration, cleanup and repository-secret exposure.
 - Align agent/reviewer policy with the owner-selected repository-only gateway settings model, including its workflow-writer trust boundary; preserve all required reviewer gates.
 
 ## 2026-10-19
 
+### Fixed
+
+- Accept regular gateway promotion merge commits only when their complete Git tree matches reviewed main, while preserving exact-source and environment approval checks.
+
 ### Changed
 
 - Require Obi-Wan, Lint Eastwood and RoboCop reviews for same-repository Dependabot PRs, matching the application/template reviewer eligibility; retain fork exclusions and manual owner merging.
 - Require six reviewer secrets in both Actions and Dependabot, and derive Required CI review applicability from the PR source repository for both human and bot authors.
-
-## 2026-10-19
-
-### Changed
-
 - Separate Obi-Wan, Lint Eastwood, and RoboCop OpenAI secrets, including RoboCop alert aggregation; pass only each reviewer's own credentials, stage `OPENAI_REVIEWERS_PROJECT_ID` independently, and document the deferred per-repository key migration.
-
-## 2026-10-19
-
-### Changed
 - Standardize gateway SSH configuration on DEPLOY_* names, one private-key secret and four connection variables; derive known-host pinning only after exact fingerprint verification and retain the renamed dedicated key's identity.
 - Deploy reviewed gateway source automatically when the owner promotes it to env-prod, without a second reviewer or per-release approval variable; verify original/retrying owner identity, the environment branch restriction and exact current source.
 - Align repository reviewer policy with owner-authorized gateway promotion while preserving independent scans, required source reviews and explicit recovery authorization.
 
-### Fixed
-- Accept regular gateway promotion merge commits only when their complete Git tree matches reviewed main, while preserving exact-source and environment approval checks.
-
 ## 2026-10-18
 
 ### Added
+
 - Add disabled-by-default gateway deployment from separately approved `env-prod` revisions, protected environment policy checks and pinned SSH host-key negotiation.
 - Add private versioned gateway staging, exclusive maintenance locking, bounded public/origin readiness, durable interruption barriers and gateway-only rollback.
 - Add promoted/running-source tracking, no-restart handling for unchanged gateway configuration, and disposable release/recovery regression coverage.
 - Document operator adoption, production approval prerequisites, retry, rollback and recovery retention.
-
-### Fixed
-- Revalidate current app identities during interrupted gateway recovery after reboot, while preserving route-network IDs and exact proxy trust.
-- Preserve verified deployment success when retiring older records fails or a later runner finalizer executes.
-- Keep explicit gateway rollback independent of unused candidate archive creation or transfer.
-
-## 2026-10-18
-
-### Added
 - Exercise all shared release suites for the two existing app policies and an isolated FullStackTemplate onboarding fixture.
 
 ### Fixed
+
+- Revalidate current app identities during interrupted gateway recovery after reboot, while preserving route-network IDs and exact proxy trust.
+- Preserve verified deployment success when retiring older records fails or a later runner finalizer executes.
+- Keep explicit gateway rollback independent of unused candidate archive creation or transfer.
 - Derive release preflight test networks and containers from app policy instead of assuming every non-Notoli consumer is MacroMapper; retain explicit existing-app trust and secret assertions.
 
 ### Changed
@@ -321,34 +305,26 @@
 ## 2026-10-11
 
 ### Added
+
 - Add infrastructure Obi-Wan, Lint Eastwood and RoboCop reviews with tested inline publishing, prior-review history and visible failure gates.
 - Add Python, JavaScript and Actions CodeQL analysis, Dependency Review, Gitleaks, actionlint/ShellCheck and explicit package scanner applicability checks.
 - Add weekly Actions/Compose Dependabot updates and daily/manual security-alert issue reconciliation for Infrastructure Project #13.
 - Document credentials, least-privilege tokens, scanner scope and activation acceptance.
-
-### Changed
-- Require independent checks and applicable reviewers without auto-merge, source mutation or production workflows.
-- Include all alert severities and adapt security metadata to Project #13's Work type field.
-
-
-## 2026-10-11
-
-### Fixed
-- Give MacroMapper backend responses a two-minute upstream read timeout so slower meal estimation can return within the companion app's 110-second AI budget.
-- Verify a real delayed upstream response beyond the former 60-second proxy limit in the disposable ingress suite.
-
-## 2026-10-11
-
-### Added
 - Add host-owned ingress Compose, Nginx routes, topology validation and the reviewed cutover/reversal guide.
 - Add SQLite snapshot/restore validation including live container-local WAL, plus disposable ingress/recovery tests.
 - Add versioned common app release tools, workflow template, shared deployment tests and pinned-source parity enforcement for Notoli and MacroMapper.
 - Add repository contribution/agent guidance, a pull-request template, editor conventions and the owner's Modified MIT non-commercial license.
 
 ### Fixed
+
+- Give MacroMapper backend responses a two-minute upstream read timeout so slower meal estimation can return within the companion app's 110-second AI budget.
+- Verify a real delayed upstream response beyond the former 60-second proxy limit in the disposable ingress suite.
 - Identify public readiness requests as `JudeAppRelease/1.0` so Cloudflare accepts the deployment client while preserving all response checks.
 
 ### Changed
+
+- Require independent checks and applicable reviewers without auto-merge, source mutation or production workflows.
+- Include all alert severities and adapt security metadata to Project #13's Work type field.
 - Archive preparation chronology in coordination #4, correct approval/implementation status and clarify cutover-only snapshot ownership.
 - Document the approved architecture, app-specific deployment contract and intentional parity differences.
 - Align repository documentation with the emoji headings and navigation used by the application repositories.

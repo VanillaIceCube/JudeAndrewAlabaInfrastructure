@@ -108,4 +108,4 @@ jobs:
       - name: Require independent gates and applicable reviews
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: python3 scripts/check_ci_result.py
+        run: python3 .github/tools/check_ci_result.py
