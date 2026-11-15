@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-15
+
+### Fixed
+
+- Verify the CI uv bootstrap against a reviewed wheel SHA-256 before installation across all four repositories; reject unsupported runner targets and source distributions.
+
+### Changed
+
+- Raise the complete source-diff limit for all three AI reviewers to 2 MB (2,000,000 bytes) across all four repositories; preserve fail-closed incomplete reviews and all other context, token and model settings.
+
 ## 2026-11-14
 
 ### Changed
