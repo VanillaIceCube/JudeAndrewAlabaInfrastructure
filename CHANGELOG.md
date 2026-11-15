@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the unused origin constant from the shared application bundle builder; release readiness continues to use the application domain.
 - Remove the root `scripts/` folder and manual SQLite snapshot helper.
 - Remove the retired cutover and MCP-retirement guides after owner review, and update remaining links to the owning READMEs and recorded decisions.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts. Retain the cutover and MCP-retirement operator guides for separate review.
