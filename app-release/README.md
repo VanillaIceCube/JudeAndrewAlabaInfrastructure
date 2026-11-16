@@ -1,9 +1,10 @@
 # 📦 Shared application release standard
 
-Notoli and MacroMapper use the same versioned release implementation in
+FullStackTemplate, Notoli and MacroMapper use the same versioned release implementation in
 [`v1/`](v1/). Each application vendors an exact copy of
-the release/bundle tools, parity checker and five test modules. Its
-`deploy/shared-source.json` selects a full Infrastructure commit SHA. This is a
+the release/bundle tools and five test modules. The builder also verifies shared
+parity; `shared_source` in `deploy/production/app.json` selects a full
+Infrastructure commit SHA. This is a
 build-time dependency: the private release bundle contains the runtime script,
 `app.json`, Compose and environment files needed for offline recovery.
 
@@ -61,9 +62,9 @@ unreachable code without scattering that state machine across artificial layers.
 
 ## 🔒 Automated parity and updates
 
-App CI's existing automation test gate runs `python3 deploy/check_parity.py`.
-The checker fetches the manifest and workflow template at the pinned commit,
-then compares common source/tests/checker hashes and the rendered workflow.
+App CI's existing automation test gate runs `python3 deploy/production/build_bundle.py --check-parity`.
+The builder’s explicit `--check-parity` mode fetches the manifest and workflow template at the pinned commit,
+then compares common source/test hashes and the rendered workflow.
 Unintended code, test or workflow changes fail CI. Windows CRLF is normalized;
 other byte differences are rejected. Source retrieval failure also fails the gate.
 Backend and frontend builds keep `./backend` and `./frontend` as their contexts
@@ -80,16 +81,18 @@ the procedure below; changing only the rendered workflow fails parity.
 1. Edit common source/tests/template here and run
    `uv run --locked python app-release/update_release_manifest.py`. Infrastructure CI verifies the
    manifest with `--check`.
-2. Commit and review the shared changes. In both app PRs, set the same immutable
-   commit in `deploy/shared-source.json`, then run
-   `uv run --locked --project backend python deploy/check_parity.py --sync`. It copies the approved common files
+2. Commit and review the shared changes. In all three app PRs, set the same immutable
+   commit in `shared_source` within `deploy/production/app.json`, then run
+   `uv run --locked --project backend python deploy/production/build_bundle.py --check-parity --sync`. It copies the approved common files
    and renders the workflow using that app's configuration.
 3. Run parity and the full deployment tests in each app. Review configuration or
    Compose differences explicitly; never edit only one vendored engine.
 
 During local development, `--source-root <infrastructure-checkout>` performs the
-same checks without network access. CI never uses this override. A version bump
-is required for incompatible contract semantics; coordinate adoption in both app
+same checks without network access. CI never uses this override. Bundle creation
+and retained host recovery never fetch shared source. Use `--sync` only with
+`--check-parity`; it validates all source downloads before replacing local files. A version bump
+is required for incompatible contract semantics; coordinate adoption in all three app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
 The November 14 unused-code audit removed the bundle builder's unused origin
