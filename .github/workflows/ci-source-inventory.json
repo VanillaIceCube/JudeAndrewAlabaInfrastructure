@@ -25,6 +25,11 @@
       ".github/workflows/alert-codeql.yml",
       ".github/workflows/alert-malware.yml",
       ".github/workflows/alert-vulnerability.yml"
+    ],
+    "./.github/actions/setup-uv": [
+      ".github/workflows/gate-codeql.yml",
+      ".github/workflows/gate-lint.yml",
+      ".github/workflows/validate.yml"
     ]
   },
   "workflows": {
@@ -353,7 +358,7 @@
         "contents": "read",
         "security-events": "write"
       },
-      "source_sha256": "eb825b83dcc9ce78f357f95f63724d9a02227ae5438511a600e20c1405707c20",
+      "source_sha256": "8f2a9e5182a4a440e297c8ab9358620fe24ffc6058d8364e00f901c7104608a1",
       "variable_names": []
     },
     "gate-lint.yml": {
@@ -382,7 +387,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "e227a82abdc46b8e23a55ca8f8ab336990a6a223be275febe309e3b8babdc15a",
+      "source_sha256": "c89def97a0e0004da0f6c6c2d99cbebec6d2bd59914d71076c43b7b7e345f7cc",
       "variable_names": []
     },
     "gate-malware.yml": {
@@ -625,7 +630,7 @@
         "pull-requests": "read",
         "statuses": "read"
       },
-      "source_sha256": "d110ec6b8307d2399de280aa491bd257317eb190eda72d682a7cfea3adf8a0b4",
+      "source_sha256": "83490fa1724aab79f0c877a2b70be604a669137aee615eb1c5a0a5cb4c74b7c9",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -707,7 +712,7 @@
         "security-events": "read",
         "statuses": "read"
       },
-      "source_sha256": "3fd99b9a1675e4d062ae71c055af13e0ff888a22104f3ca06800c7cc50f5bc20",
+      "source_sha256": "9ae06a6544a576f97a46538421119db66ec763bfb32e4fdcbf9d63a52fb10dee",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -760,7 +765,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "2521016cbd188fe0015bdb7f2b9e7b2dc38d977ac296de13e5f589e8b7f7cdca",
+      "source_sha256": "2405ca640833f03b4c5eee2554f6963171f9c7d39d385a7105759f0987a42136",
       "variable_names": []
     }
   }

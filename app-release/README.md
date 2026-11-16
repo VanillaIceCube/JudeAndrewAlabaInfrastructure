@@ -66,9 +66,9 @@ The checker fetches the manifest and workflow template at the pinned commit,
 then compares common source/tests/checker hashes and the rendered workflow.
 Unintended code, test or workflow changes fail CI. Windows CRLF is normalized;
 other byte differences are rejected. Source retrieval failure also fails the gate.
-The frontend build keeps `./frontend` as its context and selects
-`./frontend/docker/Dockerfile` explicitly; Nginx configuration stays under that
-application-owned folder. All external production action references are pinned. The deployment build checks
+Backend and frontend builds keep `./backend` and `./frontend` as their contexts
+and select `./backend/docker/Dockerfile` and `./frontend/docker/Dockerfile`
+explicitly; Nginx configuration stays under the frontend Docker folder. All external production action references are pinned. The deployment build checks
 parity again before accessing destination credentials or publishing images.
 
 For a coordinated update:
@@ -78,11 +78,11 @@ updates in application workflows must adopt the shared template commit through
 the procedure below; changing only the rendered workflow fails parity.
 
 1. Edit common source/tests/template here and run
-   `python app-release/update_release_manifest.py`. Infrastructure CI verifies the
+   `uv run --locked python app-release/update_release_manifest.py`. Infrastructure CI verifies the
    manifest with `--check`.
 2. Commit and review the shared changes. In both app PRs, set the same immutable
    commit in `deploy/shared-source.json`, then run
-   `python deploy/check_parity.py --sync`. It copies the approved common files
+   `uv run --locked --project backend python deploy/check_parity.py --sync`. It copies the approved common files
    and renders the workflow using that app's configuration.
 3. Run parity and the full deployment tests in each app. Review configuration or
    Compose differences explicitly; never edit only one vendored engine.
@@ -134,3 +134,17 @@ Follow the [gateway MCP contract](../nginx/README.md#-optional-mcp-contract). Ap
 ASGI/OAuth, readiness and rollback; keep independent releases and exact proxy trust.
 The shared contract suite models immutable Action upgrades: isolated consumer edits
 fail parity; approved source synchronization passes; unrelated drift remains rejected.
+
+### Backend namespace compatibility
+
+Application configuration lives in `backend/config/` and domain modules in
+`backend/apps/`. Resend API delivery uses `anymail.backends.resend.EmailBackend`.
+New bundle creation normalizes only the three known historical custom-backend
+selectors (`authentication.email_backends.ResendApiEmailBackend`,
+`apps.authentication.email_backends.ResendApiEmailBackend`, and
+`apps.email.backends.ResendApiEmailBackend`) to that maintained backend. Existing
+approved repository variables remain compatible without a custom wrapper.
+SMTP stays unchanged; arbitrary backend classes remain rejected by the existing
+production policy. This migration does not edit retained release bundles,
+rollback data or live repository variables. Each application owns its Anymail
+credential/timeout configuration and mocked auth/privacy acceptance.
