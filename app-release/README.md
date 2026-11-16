@@ -57,7 +57,7 @@ unreachable code without scattering that state machine across artificial layers.
 | Common readiness | direct API 401, public HTML 200 and JSON API 401 | same |
 | Extra readiness | OAuth issuer/resource metadata and MCP challenge | Same for the app-owned MCP release; functional AI/mail checks remain separately authorized |
 | Extra environment | MCP origin and trusted proxy | OpenAI key, model and timeout; app-owned MCP origin and exact `172.20.0.3` trust |
-| Frontend build argument | `REACT_APP_API_BASE_URL=` | `VITE_API_BASE_URL=` |
+| Frontend build argument | `VITE_API_BASE_URL=` | `VITE_API_BASE_URL=` |
 
 ## 🔒 Automated parity and updates
 
@@ -91,6 +91,12 @@ During local development, `--source-root <infrastructure-checkout>` performs the
 same checks without network access. CI never uses this override. A version bump
 is required for incompatible contract semantics; coordinate adoption in both app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
+
+The November 14 unused-code audit removed the bundle builder's unused origin
+constant after checking workflow entry points and all three consumer suites.
+Runtime readiness retains its separate origin value. SQLite backup progress
+callbacks keep their three-argument signature, and historical-generation guards
+remain necessary for recovery. This cleanup does not authorize production work.
 
 ## 🧪 Verification and operations
 
