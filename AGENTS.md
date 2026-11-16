@@ -48,10 +48,16 @@ history and valid UTF-8 text when editing or merging entries.
 ## 💻 Local development
 
 This repository owns shared ingress and release tooling rather than a Django/React
-application. Use Python 3.12+, Node.js, Docker Engine/Compose and OpenSSL with a
+application. Use the locked uv Python 3.12 tooling project, Node.js, Docker Engine/Compose and OpenSSL with a
 disposable local/CI daemon; follow [.github/README.md](.github/README.md) and
 [workflow checks](.github/workflows/README.md#-checks-and-diagnostics). Read the architecture and release standard
 before changing topology or shared release behavior.
+
+Install uv and run `uv sync --locked` from the repository root. The root
+`pyproject.toml` and `uv.lock` own the pinned PyYAML tooling environment. The project
+`requires-python` constraint selects Python 3.12. Run local Python/Node checks through `uv run --locked` so
+Node child processes find that same parser. Runtime gateway/release scripts do
+not require uv on production hosts. See the GitHub workflow guide for coverage.
 
 ## ⚙️ Configuration
 
@@ -68,8 +74,8 @@ Validate Compose configuration and the retained action-local regressions:
 
 ```sh
 docker compose -f compose.yml config --quiet
-python app-release/update_release_manifest.py --check
-node --test .github/actions/*/*.test.js
+uv run --locked python app-release/update_release_manifest.py --check
+uv run --locked node --test .github/actions/*/*.test.js
 ```
 
 For automation changes, run Actionlint and ShellCheck through
@@ -133,7 +139,7 @@ commit SHAs with version comments. Workflow updates do not authorize deployment.
 The shared publisher fails after every `REQUEST_CHANGES`, including repeated or
 unchanged verdicts; valid `APPROVE`/`COMMENT` pass and unavailable/invalid output
 fails. Missing credentials, incomplete required major-upgrade briefs and oversized
-diffs must fail visibly. The shared diff budget is 512 KiB. Obi-Wan's semver-major
+diffs must fail visibly. The shared diff budget is 2 MB (2,000,000 bytes). Obi-Wan's semver-major
 Dependabot brief uses complete primary-source evidence; web search remains limited
 to that review path. Run the repository's publisher regression tests and
 Actionlint when changing this contract. Where used, the read-only `verify-gates.js` audit requires actual
@@ -188,7 +194,8 @@ gates. Application AI model selection remains app-owned.
 ## 🔌 MCP integration
 
 Shared MCP framework changes originate in FullStackTemplate's canonical Python
-package; synchronize consumer hashes and pins. Derived applications own enablement,
+package; synchronize reviewed runtime changes across consumers and record source
+commits in the coordinated tracking issue. Derived applications own enablement,
 registries, scopes and business tools. Infrastructure supplies ordinary gateway
 routing and its optional MCP contract. Preserve existing Notoli credentials,
 scopes, tool permissions, connection and exact proxy trust. The retired central

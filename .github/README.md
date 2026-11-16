@@ -15,16 +15,18 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 ### CI tools
 
-Run commands from the repository root. `tools/` owns `bounded_log.py` and
+Install uv and run `uv sync --locked` from the repository root. Run local checks
+with `uv run --locked` so Python and Node subprocesses use the locked environment.
+`tools/` owns `bounded_log.py` and
 `ci_report.py` for bounded review evidence, `check_ci_result.py` for required
 results, and `check_dependency_scope.py` for scanner applicability. Preserve
 existing failure gates when changing these helpers.
 
 Install the pinned, checksum-verified workflow validator with
 `bash .github/tools/install_actionlint.sh`, then run
-`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh`.
+`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" uv run --locked bash .github/tools/lint_infrastructure.sh`.
 After workflow edits, regenerate `.github/workflows/ci-source-inventory.json` using
-`python .github/tools/ci_architecture.py` and verify with `--check`.
+`uv run --locked python .github/tools/ci_architecture.py` and verify with `--check`.
 See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
 
 ## 🚦 Before your first pull request
