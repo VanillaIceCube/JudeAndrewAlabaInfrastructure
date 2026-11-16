@@ -221,7 +221,8 @@ do not prove Dependabot secret access. No shared app-release behavior changes.
 
 The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
 including flow mappings, quoted/escaped keys, folded values and aliases. Install
-that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.
+the locked parser for local Node regressions: `uv sync --locked`, followed by
+`uv run --locked node --test <test files>`.
 
 ### Security-alert recovery
 
@@ -324,13 +325,13 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ```sh
 docker compose -f compose.yml config --quiet
-python app-release/update_release_manifest.py --check
-node --test .github/actions/*/*.test.js
+uv run --locked python app-release/update_release_manifest.py --check
+uv run --locked node --test .github/actions/*/*.test.js
 bash .github/tools/install_actionlint.sh
 PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh
 ```
 
-Use Node 24, Python 3.12+, Docker, OpenSSL and ShellCheck. The Linux amd64
+Use Node 24, uv with the locked Python 3.12 project, Docker, OpenSSL and ShellCheck. The Linux amd64
 actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
 while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
 
@@ -567,3 +568,31 @@ remaining checks. Mocked/local evidence does not establish live reviewer loading
 authenticated production journeys, recovery acceptance, physical-device behavior,
 email receipt or paid AI behavior. Use disposable fixtures and separately authorized
 runtime verification for those claims.
+
+### Locked repository Python tooling
+
+The root `pyproject.toml` declares a non-packaged Python 3.12 tooling project;
+`uv.lock` records the complete PyYAML graph. Run `uv sync --locked` and use
+`uv run --locked` for local checks. The local `setup-uv` action bootstraps uv
+0.13.8, synchronizes the same lockfile and exposes its Python to Node subprocesses.
+Dependabot uses the `uv` ecosystem at `/` with the existing weekly cadence.
+Production hosts still run ordinary Python release/gateway scripts and do not
+need uv or this developer environment.
+
+The dependency-scope gate permits only this root PyYAML tooling project and
+rejects additional manifests, runtime dependencies or an expanded lock graph
+until scanner coverage is reviewed. Dependency Review retains known-advisory
+coverage; no mandatory Python malware service is configured. A locked graph
+provides reproducibility and does not establish package malware safety. Docker
+image advisories and live operations keep their separate operator acceptance.
+
+Dependabot's `uv` updater reads `pyproject.toml` and `uv.lock`; a requirements
+export is unnecessary. Runtime and development dependencies retain the existing
+reviewer and independent-check policy. The source diff keeps `uv.lock` reviewable;
+only the separate dependency-usage search omits generated lockfile matches.
+The uv executable is a deliberately pinned toolchain bootstrap in `setup-uv`
+and application Dockerfiles; package dependency PRs do not change that bootstrap.
+Review and synchronize its version and CI wheel hash separately when upgrading
+the toolchain; see the [verified bootstrap contract](../actions/README.md#-python-toolchain-bootstrap).
+Hosted version/security update acceptance still requires a fresh Dependabot run
+after the reviewed configuration reaches main.
