@@ -2,10 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-15
+
+### Fixed
+
+- Verify the CI uv bootstrap against a reviewed wheel SHA-256 before installation across all four repositories; reject unsupported runner targets and source distributions.
+
+### Changed
+
+- Raise the complete source-diff limit for all three AI reviewers to 2 MB (2,000,000 bytes) across all four repositories; preserve fail-closed incomplete reviews and all other context, token and model settings.
+
 ## 2026-11-14
 
 ### Changed
 
+- Normalize historical custom Resend backend selectors to the maintained django-anymail backend in new app bundles; preserve SMTP and retained recovery artifacts (#148; FullStackTemplate #340).
+- Support application `config/` and `apps/` namespaces in release tooling; normalize the known legacy Resend backend paths only when creating new bundles and retain historical recovery data (#148; FullStackTemplate #339).
+- Introduce a locked uv Python 3.12 project for repository tooling; synchronize CI and local parser environments, add uv dependency updates and retain a narrow reviewed dependency-scope gate (#147).
+- Point the canonical application release workflow at `backend/docker/Dockerfile` while retaining the backend build context (FullStackTemplate #337).
 - Standardize README heading emojis, sentence case, reference labels and Markdown spacing while preserving substantive content, code examples and existing anchors.
 - Point the canonical application release workflow at `frontend/docker/Dockerfile` while retaining the frontend build context and application-specific build arguments.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
