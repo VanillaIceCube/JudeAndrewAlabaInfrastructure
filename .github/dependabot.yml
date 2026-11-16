@@ -30,3 +30,12 @@ updates:
     open-pull-requests-limit: 2
     assignees: [VanillaIceCube]
     labels: [dependencies, docker]
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 2
+    assignees: [VanillaIceCube]

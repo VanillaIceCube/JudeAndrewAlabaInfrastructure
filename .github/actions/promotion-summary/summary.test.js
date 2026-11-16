@@ -91,3 +91,8 @@ test('a newly protected PR retains historical evidence without another mutation'
   h.pr.labels = [];
   assert.equal((await h.call()).status, 'updated'); assert.equal(h.comments.length, 1);
 });
+
+// Folder moves retain authentication/email classification for current and historical paths.
+test("classifies namespaced authentication paths", () => {
+  assert.equal(classify([{ filename: "backend/apps/authentication/views.py" }]).authentication_email, 1);
+});
