@@ -2,7 +2,7 @@
   "contract_version": 1,
   "files": {
     "deploy/production/release.py": "4b5f9d27bba1786a9ef49ddde367c12cc169d91401fd30bcb1998108a805c39d",
-    "deploy/production/build_bundle.py": "ecf6ee443f59eda4abca76ecf8380b57aafced02fcac1131c849d189e57b3ce4",
+    "deploy/production/build_bundle.py": "9329d3fa8fbd8334177fc4fdde14b2cd2a316f7faa1cdbff8ae005122deef858",
     "deploy/check_parity.py": "705887fb8e6d32aa4f1bb40af0584699f6269a77f903c7976c03d668fe9d456a",
     "deploy/tests/test_production.py": "95d9ada84d483cab66dfb4209aff6b6762f2c5131d1e8e36578696efc23e175f",
     "deploy/tests/test_guards.py": "a4dd8fe3b9b2f0b4a55956f954799cadd97d16370ade96bf86bad2f091b9274e",
