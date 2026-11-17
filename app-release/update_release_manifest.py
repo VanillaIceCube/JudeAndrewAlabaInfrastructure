@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parent / "v1"
-spec = importlib.util.spec_from_file_location("parity", SOURCE / "check_parity.py")
+spec = importlib.util.spec_from_file_location("parity", SOURCE / "build_bundle.py")
 parity = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(parity)
 
