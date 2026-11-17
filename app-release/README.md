@@ -91,7 +91,11 @@ the procedure below; changing only the rendered workflow fails parity.
 During local development, `--source-root <infrastructure-checkout>` performs the
 same checks without network access. CI never uses this override. Bundle creation
 and retained host recovery never fetch shared source. Use `--sync` only with
-`--check-parity`; it validates all source downloads before replacing local files. A version bump
+`--check-parity`; it validates all source downloads before replacing local files.
+After verification succeeds, synchronization removes only the retired
+`deploy/check_parity.py`; check-only and failed validation runs preserve it.
+Synchronization rejects a directory or symlink at that path, or a linked `deploy/`
+directory, before writing files. A version bump
 is required for incompatible contract semantics; coordinate adoption in all three app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
