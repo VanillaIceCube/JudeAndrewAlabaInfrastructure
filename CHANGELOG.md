@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-16
+
+### Fixed
+
+- Remove the retired consumer parity checker only after successful shared-source synchronization; preserve it on failed validation and reject unsafe cleanup paths before writes.
+
+### Changed
+
+- Fold shared release verification and synchronization into the existing bundle builder; keep CI/deployment parity gates and store the immutable Infrastructure source pin in the existing app configuration.
+
+### Removed
+
+- Remove the standalone release parity checker and per-application shared-source JSON file while retaining their automated checks.
+
+
 ## 2026-11-15
 
 ### Fixed
