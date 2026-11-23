@@ -15,6 +15,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove translation of the three retired custom Resend backend names from new release bundles; require an explicit maintained Anymail or SMTP selection while preserving retained recovery bundles.
 - Remove nested MCP/cache snippets, unused legacy/vacant host-check modes, the repeated frontend build-argument selector and the completed consumer parity-checker cleanup migration.
 
 ## 2026-11-16

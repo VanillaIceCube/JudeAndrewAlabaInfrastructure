@@ -192,16 +192,16 @@ ASGI/OAuth, readiness and rollback; keep independent releases and exact proxy tr
 The shared contract suite models immutable Action upgrades: isolated consumer edits
 fail parity; approved source synchronization passes; unrelated drift remains rejected.
 
-### Backend namespace compatibility
+### Email backend selection
 
 Application configuration lives in `backend/config/` and domain modules in
-`backend/apps/`. Resend API delivery uses `anymail.backends.resend.EmailBackend`.
-New bundle creation normalizes only the three known historical custom-backend
-selectors (`authentication.email_backends.ResendApiEmailBackend`,
-`apps.authentication.email_backends.ResendApiEmailBackend`, and
-`apps.email.backends.ResendApiEmailBackend`) to that maintained backend. Existing
-approved repository variables remain compatible without a custom wrapper.
-SMTP stays unchanged; arbitrary backend classes remain rejected by the existing
-production policy. This migration does not edit retained release bundles,
-rollback data or live repository variables. Each application owns its Anymail
-credential/timeout configuration and mocked auth/privacy acceptance.
+`backend/apps/`. Set `DJANGO_EMAIL_BACKEND` explicitly to
+`anymail.backends.resend.EmailBackend` for Resend API delivery or
+`django.core.mail.backends.smtp.EmailBackend` for SMTP. New bundles reject retired
+custom-backend names and other unsupported selectors before creating output.
+Django settings preserve the configured backend name without translating it.
+
+The Actions variable update changes the next bundle's input; it does not deploy
+or edit live processes, private recovery bundles or their saved environment.
+Retained bundles use their matched images/controllers. Each app owns its
+Anymail credential/timeout configuration and mocked auth/privacy acceptance.
