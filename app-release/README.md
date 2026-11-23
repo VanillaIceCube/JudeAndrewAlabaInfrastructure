@@ -58,10 +58,11 @@ app's `FAILED.json` if present and `recovery/`; an early failure may precede a
 complete recovery set. A disconnected progress stream does not interrupt the
 transaction, and acceptance is announced only after readiness and success records.
 
-Each app policy lists only its own route networks. Gateway and current-app
-endpoints remain required; unexpected members, address/trust drift and published
-ports still fail. The gateway may also serve other apps without those networks
-becoming app-release prerequisites. Infrastructure's `nginx/check_host.py`
+Each app policy describes only its own route networks in detail. Its optional
+`gateway.allowed_networks` lists all approved gateway attachments; without it,
+only the app's route networks are allowed. App routes remain required and unknown
+attachments fail, while approved companion routes may be absent. Unexpected members,
+address/trust drift and published ports still fail. Infrastructure's `nginx/check_host.py`
 retains the full-host topology audit and both-app gateway cutover acceptance.
 
 Preflight verifies running frontend bindings against the accepted release's
