@@ -8,6 +8,28 @@ Infrastructure commit SHA. This is a
 build-time dependency: the private release bundle contains the runtime script,
 `app.json`, Compose and environment files needed for offline recovery.
 
+## 💻 Application local file names
+
+Application repositories use these independent local inputs under `deploy/`:
+
+| File | Purpose |
+| --- | --- |
+| `compose.yml` | Built application images behind a local HTTPS proxy |
+| `compose.hotswap.yml` | Mounted source with automatic backend/frontend reload |
+| `.env.example` | Committed local settings example; copy to private `.env` |
+| `nginx.conf` | HTTPS proxy configuration mounted by local `compose.yml` |
+
+Production remains `deploy/production/compose.yml`, using the existing shared
+gateway and private `.backend.env` release bundle. Retained historical archives
+can still contain `docker-compose.yml` and `nginx-proxy.conf`; those files belong
+to their historical procedures. New recovery captures keep effective runtime,
+the matched previous release and SQLite data, without recopying root-stack files.
+The local renames require no shared-source pin, manifest or host changes.
+
+The naming rollout covers FullStackTemplate, MacroMapper and Notoli. Infrastructure
+already uses root `compose.yml`; its adoption is documentation only. See each
+application's `deploy/README.md` for the updated local commands.
+
 ## 🧭 Contract and ownership
 
 `deploy/production/app.json` contains the app name, service/container names,
@@ -28,22 +50,46 @@ and request uncached responses. This avoids generic Python-client signature
 blocks without impersonating a browser or weakening edge security. Expected
 status, content and authentication challenges remain mandatory.
 
-Allowed route-network members and required members are separate configuration
-fields. Gateway and current-app endpoints are required. Companion absence is
-allowed during app recovery, while unexpected members, address/trust drift and
-published-port drift fail. Both apps must pass gateway cutover acceptance.
+The transaction writes plain progress steps to stderr. Errors name the current
+step, failed commands include their exit code, and readiness timeouts distinguish
+the direct backend API from public routes. Captured command output, environment
+values and parsed exception values remain private. Failure messages point to the
+app's `FAILED.json` if present and `recovery/`; an early failure may precede a
+complete recovery set. A disconnected progress stream does not interrupt the
+transaction, and acceptance is announced only after readiness and success records.
+
+Each app policy describes only its own route networks in detail. Its optional
+`gateway.allowed_networks` lists all approved gateway attachments; without it,
+only the app's route networks are allowed. App routes remain required and unknown
+attachments fail, while approved companion routes may be absent. Unexpected members,
+address/trust drift and published ports still fail. Infrastructure's `nginx/check_host.py`
+retains the full-host topology audit and both-app gateway cutover acceptance.
 
 Preflight verifies running frontend bindings against the accepted release's
 checksummed app policy. The incoming bundle's own policy is checked against
 rendered Compose before staging images and against Docker after recreation,
 before recording success. This allows a reviewed port change while still
-rejecting drift. Notoli and MacroMapper use shared HTTPS ingress and have no
+rejecting drift. Recovered releases require their checksummed saved app policy;
+missing policy never falls back to the incoming candidate's port defaults.
+Notoli and MacroMapper use shared HTTPS ingress and have no
 host frontend publication. See [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
 for Notoli's consumer inventory and rollout evidence.
 
 The transaction stays in one file because its ordering and crash barriers form
 one recovery state machine. Separating app policy and readiness predicates removes
 unreachable code without scattering that state machine across artificial layers.
+
+The rollback CLI selects the checksummed `release.py` and `app.json` from the
+chosen recovery set's `previous-release/` directory and runs that controller's
+rollback under the existing maintenance/app locks. It never re-enters another
+CLI or reacquires the locks. The recovery ID and restore/keep-data choice remain
+explicit; readiness comes from the saved policy, including disabled MCP profiles.
+Selection is offline and rejects incomplete, altered, foreign or unrecorded saved
+controllers before mutation. Capture also checks a recorded controller before
+stopping writers or migrating. After a recovered runtime is redeployed, its
+original controller/policy is preserved again rather than lost from the next
+recovery set. Legacy/unrecorded recovery and older tools retain their separately
+reviewed manual procedures; immutable bundles are never rewritten.
 
 ## 🔀 Intentional application differences
 
@@ -92,10 +138,12 @@ During local development, `--source-root <infrastructure-checkout>` performs the
 same checks without network access. CI never uses this override. Bundle creation
 and retained host recovery never fetch shared source. Use `--sync` only with
 `--check-parity`; it validates all source downloads before replacing local files.
-After verification succeeds, synchronization removes only the retired
-`deploy/check_parity.py`; check-only and failed validation runs preserve it.
-Synchronization rejects a directory or symlink at that path, or a linked `deploy/`
-directory, before writing files. A version bump
+Synchronization replaces only common files and the rendered workflow; unrelated
+local files remain untouched. A linked `deploy/` directory is rejected before
+writes. The completed parity-checker cleanup migration is no longer run.
+All frontend builds use `VITE_API_BASE_URL=`; app-specific Actions settings remain
+in `workflow.extra_env`. The unused `root_hint` is omitted; `DEPLOY_PATH` supplies
+the actual destination. A version bump
 is required for incompatible contract semantics; coordinate adoption in all three app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
@@ -148,16 +196,16 @@ ASGI/OAuth, readiness and rollback; keep independent releases and exact proxy tr
 The shared contract suite models immutable Action upgrades: isolated consumer edits
 fail parity; approved source synchronization passes; unrelated drift remains rejected.
 
-### Backend namespace compatibility
+### Email backend selection
 
 Application configuration lives in `backend/config/` and domain modules in
-`backend/apps/`. Resend API delivery uses `anymail.backends.resend.EmailBackend`.
-New bundle creation normalizes only the three known historical custom-backend
-selectors (`authentication.email_backends.ResendApiEmailBackend`,
-`apps.authentication.email_backends.ResendApiEmailBackend`, and
-`apps.email.backends.ResendApiEmailBackend`) to that maintained backend. Existing
-approved repository variables remain compatible without a custom wrapper.
-SMTP stays unchanged; arbitrary backend classes remain rejected by the existing
-production policy. This migration does not edit retained release bundles,
-rollback data or live repository variables. Each application owns its Anymail
-credential/timeout configuration and mocked auth/privacy acceptance.
+`backend/apps/`. Set `DJANGO_EMAIL_BACKEND` explicitly to
+`anymail.backends.resend.EmailBackend` for Resend API delivery or
+`django.core.mail.backends.smtp.EmailBackend` for SMTP. New bundles reject retired
+custom-backend names and other unsupported selectors before creating output.
+Django settings preserve the configured backend name without translating it.
+
+The Actions variable update changes the next bundle's input; it does not deploy
+or edit live processes, private recovery bundles or their saved environment.
+Retained bundles use their matched images/controllers. Each app owns its
+Anymail credential/timeout configuration and mocked auth/privacy acceptance.
