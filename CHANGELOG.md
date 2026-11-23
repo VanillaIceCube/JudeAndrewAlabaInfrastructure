@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-23
+
+### Fixed
+
+- Require an explicit gateway network allowlist during app preflight; reject unreviewed attachments while retaining independent recovery when approved companion routes are absent.
+- Explain why failure-reporting stream errors preserve the original release outcome.
+
 ## 2026-11-22
 
 ### Changed
