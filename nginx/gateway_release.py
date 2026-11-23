@@ -260,7 +260,7 @@ def runtime():
 def invariants(allow_missing_proxy=False):
     # Never let a disconnected Actions pipe interrupt host mutation/recovery.
     with redirect_stdout(io.StringIO()):
-        check_host.verify("host", allow_missing_proxy=allow_missing_proxy)
+        check_host.verify(allow_missing_proxy=allow_missing_proxy)
     apps = {}
     for name in APPS:
         value = inspect("container", name)

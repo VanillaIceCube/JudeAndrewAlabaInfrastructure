@@ -285,7 +285,9 @@ authorization to reactivate retired services.
 [compose.yml](../compose.yml) owns project `host-ingress`, service `proxy`, container
 `host-ingress-proxy`, runtime `/opt/host-ingress`. `gateway_release.py` owns authorized
 transactions; `gateway_transport.py` verifies promotion before credential loading
-and transports immutable inputs; `check_host.py` validates topology without repair.
+and transports immutable inputs; `check_host.py` validates current host topology without repair. Its command is
+`python3 nginx/check_host.py`; historical `legacy`/`vacant` handoff modes are
+removed. Retained recovery generations keep their matched historical helpers.
 App-only releases never shut down/reload ingress, alter certificates/shared networks,
 use `down`/`--remove-orphans`, or prune the host. The independent website/apex route
 is not transferred here. Inventory other hostnames before changing default rejection.
@@ -376,8 +378,9 @@ activation approval. Prove independent redeploy/recovery without changing compan
 
 Each app advertises MCP only after its own reviewed ASGI lifecycle, registry/scopes,
 OAuth migrations/client policy, exact proxy trust and readiness pass. Infrastructure
-creates no accounts, grants, business tools or shared issuer. Include
-`snippets/mcp-locations.conf` at server level with reviewed app upstreams/networks.
+creates no accounts, grants, business tools or shared issuer. Each file under
+`vhosts/` shows its MCP, discovery and private-cache rules directly. Only TLS and
+forwarded-header settings use direct includes; neither includes another file.
 `/auth/mcp/authorize/`, `/token/`, `/revoke/` and `/connections/` stay within private
 `/auth/`; browser `/connections` and `/connections/authorize` remain frontend pages.
 JSON Streamable HTTP needs no WebSocket route. Bounds/lifespan/session handling are
@@ -406,27 +409,9 @@ the owner's existing connection merely to test revocation. Record scope/outcomes
 
 ### Inactive onboarding example
 
-This example is not loaded by Nginx and authorizes no new service. Review network,
-TLS/header inheritance and readiness policy before use:
-
-```nginx
-# Example only; not loaded by nginx.conf. Onboarding requires a reviewed vhost,
-# network membership, certificate and app readiness policy. No new app is enabled.
-server {
-  listen 443 ssl;
-  server_name app.example.com;
-  include /etc/nginx/snippets/tls.conf;
-  include /etc/nginx/snippets/headers.conf;
-  set $app_backend example-backend:8000;
-  set $app_frontend example-frontend:80;
-  include /etc/nginx/snippets/mcp-locations.conf;
-  location ~ ^/(auth|api|admin)/ {
-    proxy_pass http://$app_backend$request_uri;
-    include /etc/nginx/snippets/private.conf;
-  }
-  location / { proxy_pass http://$app_frontend$request_uri; }
-}
-```
+Use an existing file under `vhosts/` as a starting point. Review the app's
+upstreams, route networks, exact proxy trust, certificate and readiness policy
+before adding a vhost. This guide enables no new service.
 
 ## 🧪 Checks and acceptance
 
