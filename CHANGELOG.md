@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Add readable release and recovery progress, failing-step context, command exit codes and private-record pointers to the shared app release engine; preserve transaction order and private subprocess output.
 - Put routine gateway promotion and recovery first in the existing guide; retain topology, initial adoption, migration history, commands and section links in the same README.
 - Document application local deployment file names and their distinction from production release files and historical recovery evidence.
 

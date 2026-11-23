@@ -49,6 +49,14 @@ and request uncached responses. This avoids generic Python-client signature
 blocks without impersonating a browser or weakening edge security. Expected
 status, content and authentication challenges remain mandatory.
 
+The transaction writes plain progress steps to stderr. Errors name the current
+step, failed commands include their exit code, and readiness timeouts distinguish
+the direct backend API from public routes. Captured command output, environment
+values and parsed exception values remain private. Failure messages point to the
+app's `FAILED.json` if present and `recovery/`; an early failure may precede a
+complete recovery set. A disconnected progress stream does not interrupt the
+transaction, and acceptance is announced only after readiness and success records.
+
 Allowed route-network members and required members are separate configuration
 fields. Gateway and current-app endpoints are required. Companion absence is
 allowed during app recovery, while unexpected members, address/trust drift and

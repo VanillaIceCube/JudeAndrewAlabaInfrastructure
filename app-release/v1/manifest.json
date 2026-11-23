@@ -1,10 +1,10 @@
 {
   "contract_version": 1,
   "files": {
-    "deploy/production/release.py": "4b5f9d27bba1786a9ef49ddde367c12cc169d91401fd30bcb1998108a805c39d",
+    "deploy/production/release.py": "afe5ea5e10706373031f455ab2cf8afb8cbe2b0fa9e541a953a732d11e74d905",
     "deploy/production/build_bundle.py": "3503e8fbd8da6cd1592f229bc6217efb4b1838d03403d7b6ca9e76f005e5f8ad",
-    "deploy/tests/test_production.py": "95d9ada84d483cab66dfb4209aff6b6762f2c5131d1e8e36578696efc23e175f",
-    "deploy/tests/test_guards.py": "a4dd8fe3b9b2f0b4a55956f954799cadd97d16370ade96bf86bad2f091b9274e",
+    "deploy/tests/test_production.py": "5424155ff6bc1a3afc63d8cc0b948a3094aed0bc1bd568c004b3d928801d601b",
+    "deploy/tests/test_guards.py": "f84e5015131dec1ad4c822fe185cbedcd666841ced7aed7524a2f4609704469d",
     "deploy/tests/test_recovery_docker.py": "0b3e4bcbdfe596ebf8db5f4b184c97bc51b0b6a355dfee741969d49cd9b2addd",
     "deploy/tests/test_generation_docker.py": "88611d4f020ed9098d93fe5daf03248153718e8cc3051690823f60abdffdb8fa",
     "deploy/tests/test_contract.py": "95d3ea8c0d5f8185de57c0c5e42bba05269748b9f7fdef0e81fdc1e829704a95"
