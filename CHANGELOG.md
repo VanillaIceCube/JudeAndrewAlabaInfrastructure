@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-22
+
+### Changed
+
+- Document application local deployment file names and their distinction from production release files and historical recovery evidence.
+
 ## 2026-11-16
 
 ### Fixed
