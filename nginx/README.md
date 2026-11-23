@@ -7,6 +7,279 @@ authorizes the technical contract; each merge and production operation retains
 its separate authorization. Coordination, named operators and actual acceptance
 belong on [#4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
+| Task | Section |
+| --- | --- |
+| Release an adopted gateway | [Promotion and retry](#-promotion-and-retry) |
+| Resolve a failed or interrupted release | [Recovery](#-failure-interruption-and-explicit-rollback) |
+| Prepare a host or change credentials | [Prerequisites](#-approval-and-prerequisites) and [adoption](#-private-host-preparation-and-adoption) |
+| Inspect networks and routes | [Structure and ownership](#-structure-and-ownership) |
+
+For an adopted gateway, confirm reviewed source, owner authorization, the
+accepted host record and completed setup before promotion. Keep `DEPLOY_ENABLED`
+unset until prerequisites and initial adoption are ready. Source review and
+merging `main` do not authorize the separate `env-prod` promotion.
+
+## 🚀 Operations
+
+The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
+authorizes automatic gateway deployment when the owner promotes reviewed main
+source to `env-prod`; no second reviewer or per-release approval variable is
+required. Both the original actor and retrying actor must be the repository owner.
+Manual retries retain owner authorization; initial host preparation and explicit
+recovery have separate approved scope. Source/CI approval does not authorize promotion.
+Nginx image upgrades require native-package security assessment plus applicable TLS,
+proxy, gzip, DNS, MCP streaming and recovery evidence before promotion; retired root
+fixtures cannot establish that acceptance.
+
+Subsequent gateway releases use the procedure below. Preserve accepted recovery
+generations; legacy proxy handoff is outside the ordinary release procedure.
+
+<a id="-promotion-and-retry"></a>
+
+### Promotion and retry
+
+After source review/green CI, the authorized operator promotes that reviewed
+`main` commit to `env-prod`. The push starts **Deploy gateway** automatically;
+there is no second approval step. `main`/PRs never invoke deployment. Manual dispatch
+must select **env-prod**, operation **deploy**, empty recovery field; it uses
+the branch's exact current SHA, not a user-supplied revision. Each retry has a
+new `<sha>-<run-id>-<attempt>` identity and revalidates the current branch/source.
+
+Actions serializes runs with cancellation disabled. SSH uploads a bounded,
+checksummed Git archive into private incoming storage. A persistent systemd
+unit runs the transaction independently of the SSH session. Host commands and
+probe suites have bounded deadlines; the unit has no automatic mutation cancellation.
+Cancelling/losing the runner does not stop the host unit.
+Do not cancel an active release as a recovery mechanism. Inspect its host
+journal and systemd unit before another approved retry.
+
+The exclusive lock covers topology validation, previous-state verification,
+capacity, syntax checks, activation, bounded health, success recording and any
+rollback. Capacity requires at least 512 MiB available memory and 20% free disk
+(at least 1 GiB), rechecked after immutable image availability verification.
+Cached matching repository digests are reused; only absent images are pulled. This is a
+minimum check; representative host load and image/recovery retention budgets
+remain operator prerequisites.
+
+Candidate configuration lives in `releases/<identity>`, never overwriting live
+mounted files. Compose is restricted to one immutable Nginx service, existing
+external networks, `.2` trust address, original certificate path, listeners and
+logging. Nginx syntax runs with no network or published ports. Activation uses
+only `up --no-deps --pull never --force-recreate proxy`; no project shutdown,
+network provisioning/removal, app restart, database restore or pruning occurs.
+
+<a id="-failure-interruption-and-explicit-rollback"></a>
+
+### Failure, interruption and explicit rollback
+
+Before activation, `attempts/<identity>/journal.json` captures the previous
+matched configuration/image/source/runtime, application identities, network IDs,
+certificate identities and Actions run. `pending.json` is fsynced before any
+activation. Pre-activation rejection leaves the accepted runtime unchanged.
+Failed activation/health automatically recreates only the captured previous
+gateway, validates both apps again, and reports **failure**, even when recovery
+succeeds. An indeterminate Docker activation timeout retains the pending barrier
+instead of racing rollback against a still-running daemon request. Failed recovery
+also keeps the barrier and private evidence. Verify the original host unit and
+Docker request have finished before authorizing explicit recovery.
+
+An interrupted mutation, including SIGKILL or host reboot, leaves the pending
+barrier; a new deployment cannot bypass it. With separate recovery authorization,
+dispatch **Deploy gateway** on **env-prod**, operation **rollback**, supplying
+the exact failed/current release ID. The branch/source checks still select the
+current env-prod helper; the recovery identity selects only retained host state.
+Rollback uploads only the reviewed helpers; it neither builds nor uploads a
+candidate source archive.
+For SSH/Actions unavailability, the approved operator can invoke the same
+reviewed helper on the host:
+
+```sh
+python3 nginx/gateway_release.py rollback --source <approved-helper-full-sha> \
+  --id <retained-sha-run-attempt>
+```
+
+Only the matching pending attempt or the current accepted release's immediate
+predecessor may be restored. Rollback takes the same exclusive lock and performs
+syntax, invariant and health checks. No app database rollback is involved.
+After accepted rollback, the host record identifies the restored source, not
+the attempted promotion. Later app releases are allowed before an explicit
+gateway rollback; their current identities are captured under the lock. Pending
+recovery also refreshes app identities after reboot/restart, validates app trust
+and network policy even if the gateway is absent or partially attached, and
+rejects changed route-network IDs before recreating the gateway. The original
+attempt journal remains historical evidence; the pending record holds the new
+recovery baseline, which must remain unchanged through restoration.
+
+<a id="-health-and-relevant-changes"></a>
+
+### Health and relevant changes
+
+Both the public edge and loopback origin verify HTTPS frontend HTML, JSON API
+401 responses for both apps, Notoli issuer/resource discovery and the MCP 401
+authentication challenge. Origin connections preserve hostname verification
+and SNI with a separately provisioned CA if necessary. Redirects/challenges
+cannot silently pass. Requests use `JudeGatewayRelease/1.0` and cache bypass
+headers. Each complete suite has an 80-second process deadline, three attempts
+and two-second intervals (244 seconds maximum); each socket has a five-second
+timeout and responses are limited to 256 KiB. The former root ingress route/DNS suite has been retired; verify the
+120-second backend/MCP timeout contract under separately authorized acceptance.
+
+Restart policy compares the effective expanded Compose model, immutable image,
+all `nginx/**/*.conf` bytes and certificate mount location to the **actually
+accepted host record**, not the previous Git push. It normalizes release-directory
+paths. Changes only to docs, workflow/helpers or `app-release/v1` produce an
+`unchanged` attempt after baseline health checks; the gateway ID and running
+source stay unchanged. Compose/Nginx byte changes restart after validation.
+Unsupported payload files and Compose settings fail explicitly.
+
+<a id="-evidence-and-retention"></a>
+
+### Evidence and retention
+
+Actions run status, summary and logs record the promoted source, unique
+source/run/attempt identity, operation and explicit recovery target when present.
+Only an accepted host response adds a verified `success`, `unchanged` or
+`rolled_back` result with the actual running source. A successful unchanged
+promotion does not claim the helper's promoted source is running. Explicit
+rollback reports the restored source. No GitHub Deployment API records or
+GitHub Environments are created or required.
+
+The durable host `current.json` is authoritative for the accepted running source,
+image digest, configuration identity, Actions run and recovery reference.
+While `pending.json` exists, `current.json` describes the last accepted state;
+inspect the pending attempt and actual runtime before asserting what is running.
+Private attempt journals/results preserve promoted versus running identities.
+Failed command context and bounded output are retained as mode 0600 files in
+the private host `diagnostics` directory; Actions receives only the tool/phase
+and exit code. Inspect those files on the host, never paste their raw contents.
+Never publish full Docker inspect, journal/config contents, credentials or keys.
+Failed/cancelled runners remain failed/cancelled in Actions, even if an independent
+host unit later completes. The credential-free finalizer reports an unconfirmed
+host outcome without overwriting earlier verified evidence. A hard runner loss
+may prevent finalizer/summary delivery; Actions' conclusion and the host journal
+remain the evidence. Inspect systemd and `pending.json`/`current.json` privately,
+then record the **observed** running source under
+the approved operator plan. A green job alone is not production acceptance.
+
+Retain all incoming, release and attempt directories, previous images and
+recovery records until operator-reviewed retention cleanup. No automatic
+cleanup or off-host backup is included. Never remove a mounted/current release,
+any pending attempt or its predecessor. Monitor disk space before future releases.
+Production acceptance still requires the separately authorized first and second
+independent release plus recovery evidence recorded on #4.
+
+## ⚙️ Initial setup and historical compatibility
+
+<a id="-approval-and-prerequisites"></a>
+
+### Approval and prerequisites
+
+Source changes land through reviewed `main` first, with explicit owner approval
+for each merge; review alone does not authorize merging or the later production
+promotion. If the owner explicitly
+authorizes a narrow deployment experiment outside that path, return its changes
+and history to `main` promptly through a reviewed PR before ordinary promotion
+resumes. Compare both ancestry and file contents: promotion merge commits can
+differ without introducing production-only code. Reconcile history without
+discarding newer main changes or rewriting either protected branch. Intentionally
+unreleased main work is permitted; hold `env-prod` until its prerequisites are
+met rather than deploying unrelated features to obtain equal trees. See the
+[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases)
+and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
+
+Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
+and adoption are ready. Initial setup remains an explicit owner operation. Configure:
+
+- Protect `main` and `env-prod`, require reviewed green PRs for source changes,
+  and restrict `env-prod` promotion to the designated release operator. Promote
+  an existing reviewed `main` commit, never an independent production commit.
+  A regular promotion merge may have a different commit ID only when its entire
+  Git tree exactly matches current reviewed `main`; this includes workflows and
+  release helpers, not only Nginx configuration. Divergent file contents fail.
+- No GitHub Environment is required. The job restricts the repository, branch,
+  original actor and retrying actor before loading credentials. A separate
+  credential-free step verifies the exact promoted workflow/source through
+  GitHub's API; the transport repeats those checks immediately before SSH.
+  Its token needs only contents read; no Actions or Deployments write access.
+- No `GATEWAY_APPROVED_SHA` variable is needed. The workflow verifies its exact
+  checkout is still the current `env-prod` head and contains reviewed source.
+  Set repository `DEPLOY_ENABLED=true` after prerequisites and initial
+  baseline adoption below pass. Setting the flag does not replay a skipped run.
+- Repository Actions secret: `DEPLOY_SSH_KEY`. Repository Actions variables: `DEPLOY_HOST`,
+  `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_HOST_FINGERPRINT`. These names and the
+  secret/variable split match Notoli/MacroMapper. Supply an independently verified
+  `SHA256:...` server fingerprint. No separate known-host entry is configured.
+- Use the dedicated `judeandrewalaba-infrastructure-actions` SSH key; retain its
+  `restrict` options and separate identity from the app and desktop keys. The
+  initial supported login is root. Upload private-key secrets as exact LF bytes;
+  Windows text-mode pipes can introduce CRLF. The helper normalizes CRLF too.
+- The transport discovers public host keys with bounded `ssh-keyscan`, verifies
+  each locally against the configured fingerprint, then pins only the matching
+  key and its negotiated algorithm before any SSH authentication or SCP upload.
+  Unmatched/empty results fail closed. RSA keys use `rsa-sha2-512` signatures.
+  Discovery never establishes trust by itself; strict host checking stays enabled.
+- Repository secrets can be requested by other same-repository workflows; they
+  do not provide an environment's branch-scoped credential boundary. Protect
+  reviewed workflow/helper changes and repository write access accordingly.
+  Only the gateway workflow references the key, only its transport step receives
+  it, and its only triggers are `env-prod` push and owner manual dispatch on that
+  branch. Review/scanner jobs must never request deployment credentials; keep
+  the key outside Dependabot. Review these workflow rules explicitly; the root gateway regression suite has been retired.
+  These controls prevent other existing jobs from initiating gateway operations;
+  a writer able to install an arbitrary secret-reading workflow remains privileged.
+  The helper's context checks cannot constrain a workflow that bypasses it.
+- The Linux host needs Python 3.12+, Docker Compose, systemd and cached accepted
+  Nginx images. Verify the deployment identity can run persistent systemd units.
+  Origin TLS is always verified using the hostname/SNI. If using a private
+  origin CA, provision its reviewed trust anchor at
+  `/opt/host-ingress-deploy/origin-ca.pem`; public probes use system trust.
+
+GitHub references: [Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
+and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).
+
+<a id="-private-host-preparation-and-adoption"></a>
+
+### Private host preparation and adoption
+
+Within the approved preparation plan, provision root-owned mode 0700
+`/opt/host-ingress-deploy` and its `incoming`, `releases`, `attempts` children.
+Use the **existing** root-owned 0700 `/var/lib/jude-deploy-locks` directory and
+regular root-owned 0600 `maintenance.lock`. Never replace/unlink its inode;
+the apps take it shared and this gateway transaction takes it exclusive,
+nonblocking. Lock contention fails visibly rather than queueing inside the host.
+
+Before the first automated release, obtain an exact, clean accepted gateway
+checkout at `/opt/host-ingress`. Verify its source SHA against the running
+gateway and the recorded acceptance evidence. If its certificate path differs
+from the Compose default, supply the actual `INGRESS_CERTS_DIR` while adopting.
+Run the reviewed helper from an operator-controlled checkout:
+
+```sh
+umask 077
+python3 nginx/gateway_release.py adopt --source <accepted-full-sha> \
+  --directory /opt/host-ingress
+```
+
+Adoption takes the exclusive lock, checks source cleanliness, topology, image,
+mounts, listener/restart/logging policy and both public/origin health suites.
+It captures an immutable private baseline and `current.json` without restarting
+ingress. Existing app data and certificate/key files are neither copied into
+the release bundle nor modified. Drift or an existing baseline blocks adoption;
+resolve it privately, do not fabricate or edit release records to bypass checks.
+
+<a id="-retired-mcp-routes"></a>
+
+### Retired MCP routes
+
+The [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
+controller accepts the ordinary three-network gateway and can read the exact
+previously accepted disabled tombstones for rollback. Enabled legacy profiles,
+unmatched marker/vhost bytes and extra route networks are rejected. Contain
+retired routes with their matched historical controller before using this source.
+New source bundles contain no retired vhosts or profile selectors. Preserve
+private accepted/recovery generations; historical controllers are evidence, not
+authorization to reactivate retired services.
+
 ## 🧭 Structure and ownership
 
 [compose.yml](../compose.yml) owns project `host-ingress`, service `proxy`, container
@@ -154,265 +427,6 @@ server {
   location / { proxy_pass http://$app_frontend$request_uri; }
 }
 ```
-
-## 🚀 Operations
-
-The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
-authorizes automatic gateway deployment when the owner promotes reviewed main
-source to `env-prod`; no second reviewer or per-release approval variable is
-required. Both the original actor and retrying actor must be the repository owner.
-Manual retries retain owner authorization; initial host preparation and explicit
-recovery have separate approved scope. Source/CI approval does not authorize promotion.
-Nginx image upgrades require native-package security assessment plus applicable TLS,
-proxy, gzip, DNS, MCP streaming and recovery evidence before promotion; retired root
-fixtures cannot establish that acceptance.
-
-Subsequent gateway releases use the procedure below. Preserve accepted recovery
-generations; legacy proxy handoff is outside the ordinary release procedure.
-
-<a id="-approval-and-prerequisites"></a>
-
-### Approval and prerequisites
-
-Source changes land through reviewed `main` first, with explicit owner approval
-for each merge; review alone does not authorize merging or the later production
-promotion. If the owner explicitly
-authorizes a narrow deployment experiment outside that path, return its changes
-and history to `main` promptly through a reviewed PR before ordinary promotion
-resumes. Compare both ancestry and file contents: promotion merge commits can
-differ without introducing production-only code. Reconcile history without
-discarding newer main changes or rewriting either protected branch. Intentionally
-unreleased main work is permitted; hold `env-prod` until its prerequisites are
-met rather than deploying unrelated features to obtain equal trees. See the
-[shared policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases)
-and [parity audit #87](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/87).
-
-Keep repository variable `DEPLOY_ENABLED` unset until initial host setup
-and adoption are ready. Initial setup remains an explicit owner operation. Configure:
-
-- Protect `main` and `env-prod`, require reviewed green PRs for source changes,
-  and restrict `env-prod` promotion to the designated release operator. Promote
-  an existing reviewed `main` commit, never an independent production commit.
-  A regular promotion merge may have a different commit ID only when its entire
-  Git tree exactly matches current reviewed `main`; this includes workflows and
-  release helpers, not only Nginx configuration. Divergent file contents fail.
-- No GitHub Environment is required. The job restricts the repository, branch,
-  original actor and retrying actor before loading credentials. A separate
-  credential-free step verifies the exact promoted workflow/source through
-  GitHub's API; the transport repeats those checks immediately before SSH.
-  Its token needs only contents read; no Actions or Deployments write access.
-- No `GATEWAY_APPROVED_SHA` variable is needed. The workflow verifies its exact
-  checkout is still the current `env-prod` head and contains reviewed source.
-  Set repository `DEPLOY_ENABLED=true` after prerequisites and initial
-  baseline adoption below pass. Setting the flag does not replay a skipped run.
-- Repository Actions secret: `DEPLOY_SSH_KEY`. Repository Actions variables: `DEPLOY_HOST`,
-  `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_HOST_FINGERPRINT`. These names and the
-  secret/variable split match Notoli/MacroMapper. Supply an independently verified
-  `SHA256:...` server fingerprint. No separate known-host entry is configured.
-- Use the dedicated `judeandrewalaba-infrastructure-actions` SSH key; retain its
-  `restrict` options and separate identity from the app and desktop keys. The
-  initial supported login is root. Upload private-key secrets as exact LF bytes;
-  Windows text-mode pipes can introduce CRLF. The helper normalizes CRLF too.
-- The transport discovers public host keys with bounded `ssh-keyscan`, verifies
-  each locally against the configured fingerprint, then pins only the matching
-  key and its negotiated algorithm before any SSH authentication or SCP upload.
-  Unmatched/empty results fail closed. RSA keys use `rsa-sha2-512` signatures.
-  Discovery never establishes trust by itself; strict host checking stays enabled.
-- Repository secrets can be requested by other same-repository workflows; they
-  do not provide an environment's branch-scoped credential boundary. Protect
-  reviewed workflow/helper changes and repository write access accordingly.
-  Only the gateway workflow references the key, only its transport step receives
-  it, and its only triggers are `env-prod` push and owner manual dispatch on that
-  branch. Review/scanner jobs must never request deployment credentials; keep
-  the key outside Dependabot. Review these workflow rules explicitly; the root gateway regression suite has been retired.
-  These controls prevent other existing jobs from initiating gateway operations;
-  a writer able to install an arbitrary secret-reading workflow remains privileged.
-  The helper's context checks cannot constrain a workflow that bypasses it.
-- The Linux host needs Python 3.12+, Docker Compose, systemd and cached accepted
-  Nginx images. Verify the deployment identity can run persistent systemd units.
-  Origin TLS is always verified using the hostname/SNI. If using a private
-  origin CA, provision its reviewed trust anchor at
-  `/opt/host-ingress-deploy/origin-ca.pem`; public probes use system trust.
-
-GitHub references: [Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
-and [deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).
-
-<a id="-private-host-preparation-and-adoption"></a>
-
-### Private host preparation and adoption
-
-Within the approved preparation plan, provision root-owned mode 0700
-`/opt/host-ingress-deploy` and its `incoming`, `releases`, `attempts` children.
-Use the **existing** root-owned 0700 `/var/lib/jude-deploy-locks` directory and
-regular root-owned 0600 `maintenance.lock`. Never replace/unlink its inode;
-the apps take it shared and this gateway transaction takes it exclusive,
-nonblocking. Lock contention fails visibly rather than queueing inside the host.
-
-Before the first automated release, obtain an exact, clean accepted gateway
-checkout at `/opt/host-ingress`. Verify its source SHA against the running
-gateway and the recorded acceptance evidence. If its certificate path differs
-from the Compose default, supply the actual `INGRESS_CERTS_DIR` while adopting.
-Run the reviewed helper from an operator-controlled checkout:
-
-```sh
-umask 077
-python3 nginx/gateway_release.py adopt --source <accepted-full-sha> \
-  --directory /opt/host-ingress
-```
-
-Adoption takes the exclusive lock, checks source cleanliness, topology, image,
-mounts, listener/restart/logging policy and both public/origin health suites.
-It captures an immutable private baseline and `current.json` without restarting
-ingress. Existing app data and certificate/key files are neither copied into
-the release bundle nor modified. Drift or an existing baseline blocks adoption;
-resolve it privately, do not fabricate or edit release records to bypass checks.
-
-<a id="-promotion-and-retry"></a>
-
-### Promotion and retry
-
-After source review/green CI, the authorized operator promotes that reviewed
-`main` commit to `env-prod`. The push starts **Deploy gateway** automatically;
-there is no second approval step. `main`/PRs never invoke deployment. Manual dispatch
-must select **env-prod**, operation **deploy**, empty recovery field; it uses
-the branch's exact current SHA, not a user-supplied revision. Each retry has a
-new `<sha>-<run-id>-<attempt>` identity and revalidates the current branch/source.
-
-Actions serializes runs with cancellation disabled. SSH uploads a bounded,
-checksummed Git archive into private incoming storage. A persistent systemd
-unit runs the transaction independently of the SSH session. Host commands and
-probe suites have bounded deadlines; the unit has no automatic mutation cancellation.
-Cancelling/losing the runner does not stop the host unit.
-Do not cancel an active release as a recovery mechanism. Inspect its host
-journal and systemd unit before another approved retry.
-
-The exclusive lock covers topology validation, previous-state verification,
-capacity, syntax checks, activation, bounded health, success recording and any
-rollback. Capacity requires at least 512 MiB available memory and 20% free disk
-(at least 1 GiB), rechecked after immutable image availability verification.
-Cached matching repository digests are reused; only absent images are pulled. This is a
-minimum check; representative host load and image/recovery retention budgets
-remain operator prerequisites.
-
-Candidate configuration lives in `releases/<identity>`, never overwriting live
-mounted files. Compose is restricted to one immutable Nginx service, existing
-external networks, `.2` trust address, original certificate path, listeners and
-logging. Nginx syntax runs with no network or published ports. Activation uses
-only `up --no-deps --pull never --force-recreate proxy`; no project shutdown,
-network provisioning/removal, app restart, database restore or pruning occurs.
-
-<a id="-health-and-relevant-changes"></a>
-
-### Health and relevant changes
-
-Both the public edge and loopback origin verify HTTPS frontend HTML, JSON API
-401 responses for both apps, Notoli issuer/resource discovery and the MCP 401
-authentication challenge. Origin connections preserve hostname verification
-and SNI with a separately provisioned CA if necessary. Redirects/challenges
-cannot silently pass. Requests use `JudeGatewayRelease/1.0` and cache bypass
-headers. Each complete suite has an 80-second process deadline, three attempts
-and two-second intervals (244 seconds maximum); each socket has a five-second
-timeout and responses are limited to 256 KiB. The former root ingress route/DNS suite has been retired; verify the
-120-second backend/MCP timeout contract under separately authorized acceptance.
-
-Restart policy compares the effective expanded Compose model, immutable image,
-all `nginx/**/*.conf` bytes and certificate mount location to the **actually
-accepted host record**, not the previous Git push. It normalizes release-directory
-paths. Changes only to docs, workflow/helpers or `app-release/v1` produce an
-`unchanged` attempt after baseline health checks; the gateway ID and running
-source stay unchanged. Compose/Nginx byte changes restart after validation.
-Unsupported payload files and Compose settings fail explicitly.
-
-<a id="-failure-interruption-and-explicit-rollback"></a>
-
-### Failure, interruption and explicit rollback
-
-Before activation, `attempts/<identity>/journal.json` captures the previous
-matched configuration/image/source/runtime, application identities, network IDs,
-certificate identities and Actions run. `pending.json` is fsynced before any
-activation. Pre-activation rejection leaves the accepted runtime unchanged.
-Failed activation/health automatically recreates only the captured previous
-gateway, validates both apps again, and reports **failure**, even when recovery
-succeeds. An indeterminate Docker activation timeout retains the pending barrier
-instead of racing rollback against a still-running daemon request. Failed recovery
-also keeps the barrier and private evidence. Verify the original host unit and
-Docker request have finished before authorizing explicit recovery.
-
-An interrupted mutation, including SIGKILL or host reboot, leaves the pending
-barrier; a new deployment cannot bypass it. With separate recovery authorization,
-dispatch **Deploy gateway** on **env-prod**, operation **rollback**, supplying
-the exact failed/current release ID. The branch/source checks still select the
-current env-prod helper; the recovery identity selects only retained host state.
-Rollback uploads only the reviewed helpers; it neither builds nor uploads a
-candidate source archive.
-For SSH/Actions unavailability, the approved operator can invoke the same
-reviewed helper on the host:
-
-```sh
-python3 nginx/gateway_release.py rollback --source <approved-helper-full-sha> \
-  --id <retained-sha-run-attempt>
-```
-
-Only the matching pending attempt or the current accepted release's immediate
-predecessor may be restored. Rollback takes the same exclusive lock and performs
-syntax, invariant and health checks. No app database rollback is involved.
-After accepted rollback, the host record identifies the restored source, not
-the attempted promotion. Later app releases are allowed before an explicit
-gateway rollback; their current identities are captured under the lock. Pending
-recovery also refreshes app identities after reboot/restart, validates app trust
-and network policy even if the gateway is absent or partially attached, and
-rejects changed route-network IDs before recreating the gateway. The original
-attempt journal remains historical evidence; the pending record holds the new
-recovery baseline, which must remain unchanged through restoration.
-
-<a id="-evidence-and-retention"></a>
-
-### Evidence and retention
-
-Actions run status, summary and logs record the promoted source, unique
-source/run/attempt identity, operation and explicit recovery target when present.
-Only an accepted host response adds a verified `success`, `unchanged` or
-`rolled_back` result with the actual running source. A successful unchanged
-promotion does not claim the helper's promoted source is running. Explicit
-rollback reports the restored source. No GitHub Deployment API records or
-GitHub Environments are created or required.
-
-The durable host `current.json` is authoritative for the accepted running source,
-image digest, configuration identity, Actions run and recovery reference.
-While `pending.json` exists, `current.json` describes the last accepted state;
-inspect the pending attempt and actual runtime before asserting what is running.
-Private attempt journals/results preserve promoted versus running identities.
-Failed command context and bounded output are retained as mode 0600 files in
-the private host `diagnostics` directory; Actions receives only the tool/phase
-and exit code. Inspect those files on the host, never paste their raw contents.
-Never publish full Docker inspect, journal/config contents, credentials or keys.
-Failed/cancelled runners remain failed/cancelled in Actions, even if an independent
-host unit later completes. The credential-free finalizer reports an unconfirmed
-host outcome without overwriting earlier verified evidence. A hard runner loss
-may prevent finalizer/summary delivery; Actions' conclusion and the host journal
-remain the evidence. Inspect systemd and `pending.json`/`current.json` privately,
-then record the **observed** running source under
-the approved operator plan. A green job alone is not production acceptance.
-
-Retain all incoming, release and attempt directories, previous images and
-recovery records until operator-reviewed retention cleanup. No automatic
-cleanup or off-host backup is included. Never remove a mounted/current release,
-any pending attempt or its predecessor. Monitor disk space before future releases.
-Production acceptance still requires the separately authorized first and second
-independent release plus recovery evidence recorded on #4.
-
-<a id="-retired-mcp-routes"></a>
-
-### Retired MCP routes
-
-The [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96) governs the removal. This
-controller accepts the ordinary three-network gateway and can read the exact
-previously accepted disabled tombstones for rollback. Enabled legacy profiles,
-unmatched marker/vhost bytes and extra route networks are rejected. Contain
-retired routes with their matched historical controller before using this source.
-New source bundles contain no retired vhosts or profile selectors. Preserve
-private accepted/recovery generations; historical controllers are evidence, not
-authorization to reactivate retired services.
 
 ## 🧪 Checks and acceptance
 
