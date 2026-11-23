@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-23
+
+### Fixed
+
+- Require an explicit gateway network allowlist during app preflight; reject unreviewed attachments while retaining independent recovery when approved companion routes are absent.
+- Explain why failure-reporting stream errors preserve the original release outcome.
+
+## 2026-11-22
+
+### Changed
+
+- Automatically select the checksummed saved controller and app policy for rollback under the existing locks; preserve the matching controller through subsequent recovery/deploy cycles and reject invalid saved controllers before migration.
+- Keep app release preflight focused on app-owned route networks while the Infrastructure host checker retains full network membership, subnet, trusted-IP and backend-port validation.
+- Show MCP, discovery and private-cache rules directly in each gateway vhost; preserve the fully expanded Nginx configuration.
+- Add readable release and recovery progress, failing-step context, command exit codes and private-record pointers to the shared app release engine; preserve transaction order and private subprocess output.
+- Put routine gateway promotion and recovery first in the existing guide; retain topology, initial adoption, migration history, commands and section links in the same README.
+- Document application local deployment file names and their distinction from production release files and historical recovery evidence.
+
+### Removed
+
+- Stop copying retired app-root stack artifacts into new recovery sets and remove the missing recovered-policy fallback; preserve existing archives, runtime/SQLite recovery and gateway retirement guards confirmed by the read-only host inventory.
+- Remove translation of the three retired custom Resend backend names from new release bundles; require an explicit maintained Anymail or SMTP selection while preserving retained recovery bundles.
+- Remove nested MCP/cache snippets, unused legacy/vacant host-check modes, the repeated frontend build-argument selector and the completed consumer parity-checker cleanup migration.
+
 ## 2026-11-16
 
 ### Fixed
