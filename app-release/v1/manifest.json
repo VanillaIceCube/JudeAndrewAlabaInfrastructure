@@ -2,8 +2,8 @@
   "contract_version": 1,
   "files": {
     "deploy/production/release.py": "c5aa66d914199537aeb7af676a7eec709851cb91e19ad66ece750568f7245601",
-    "deploy/production/build_bundle.py": "ef9ebb673c9eaee67d61c40e391412785a79be660d3960a12c325ccbe7940567",
-    "deploy/tests/test_production.py": "9fea0a1ef8e286cb0ac1f6cefc7b6f6e3ea964793a5e6501bf6bb6fd7be13026",
+    "deploy/production/build_bundle.py": "26644b7788b67646f7295d6288e1c87eb3ab6a930f0354b0f07e35a747c90f3c",
+    "deploy/tests/test_production.py": "0d90854bfb5904091e4bf7d2f5af3c91756b12bdc8c44c1f3af50a06c9e5dd5e",
     "deploy/tests/test_guards.py": "bfd1b10689a80ff61e93d175cb12ab9826f595cadd90e1e5da28f4d125c9ae9a",
     "deploy/tests/test_recovery_docker.py": "0b3e4bcbdfe596ebf8db5f4b184c97bc51b0b6a355dfee741969d49cd9b2addd",
     "deploy/tests/test_generation_docker.py": "5e50448f991860a848a245d78b457dab7d922ead9a1a997c244a57f441ccc6cb",
