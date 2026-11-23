@@ -75,6 +75,18 @@ The transaction stays in one file because its ordering and crash barriers form
 one recovery state machine. Separating app policy and readiness predicates removes
 unreachable code without scattering that state machine across artificial layers.
 
+The rollback CLI selects the checksummed `release.py` and `app.json` from the
+chosen recovery set's `previous-release/` directory and runs that controller's
+rollback under the existing maintenance/app locks. It never re-enters another
+CLI or reacquires the locks. The recovery ID and restore/keep-data choice remain
+explicit; readiness comes from the saved policy, including disabled MCP profiles.
+Selection is offline and rejects incomplete, altered, foreign or unrecorded saved
+controllers before mutation. Capture also checks a recorded controller before
+stopping writers or migrating. After a recovered runtime is redeployed, its
+original controller/policy is preserved again rather than lost from the next
+recovery set. Legacy/unrecorded recovery and older tools retain their separately
+reviewed manual procedures; immutable bundles are never rewritten.
+
 ## 🔀 Intentional application differences
 
 | Contract input | Notoli | MacroMapper |
