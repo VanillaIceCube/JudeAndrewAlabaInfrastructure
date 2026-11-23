@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Put routine gateway promotion and recovery first in the existing guide; retain topology, initial adoption, migration history, commands and section links in the same README.
 - Document application local deployment file names and their distinction from production release files and historical recovery evidence.
 
 ## 2026-11-16
