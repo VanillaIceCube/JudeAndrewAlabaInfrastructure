@@ -63,9 +63,15 @@ def run(args, timeout=120):
         raise CommandTimeout("Command deadline exceeded; inspect private host evidence") from error
     if result.returncode:
         if DIAGNOSTICS is not None and DIAGNOSTICS.is_dir():
-            atomic(DIAGNOSTICS / (uuid.uuid4().hex + ".json"),
-                   {"command": list(map(str, args)), "exit": result.returncode,
-                    "stdout": result.stdout[-8192:], "stderr": result.stderr[-8192:]})
+            write_json_atomically(
+                DIAGNOSTICS / (uuid.uuid4().hex + ".json"),
+                {
+                    "command": list(map(str, args)),
+                    "exit": result.returncode,
+                    "stdout": result.stdout[-8192:],
+                    "stderr": result.stderr[-8192:],
+                },
+            )
         tool = Path(str(args[0])).name
         phase = str(args[1]) if tool == "docker" and args[1] in {"compose", "pull", "run", "image", "container", "network"} else "command"
         raise ReleaseError(f"Command failed: {tool} {phase} (exit {result.returncode}); inspect private diagnostics")
@@ -90,19 +96,20 @@ def ensure_image(image):
     require(image in inspect("image", image)["RepoDigests"], "Cached image digest mismatch")
 
 
-def private(path):
+def require_private_directory(path):
     info = path.lstat()
     require(stat.S_ISDIR(info.st_mode) and info.st_uid == os.geteuid()
             and stat.S_IMODE(info.st_mode) == 0o700, "Expected owned private directory")
 
 
-def regular(path):
+def require_regular_file(path):
     info = path.lstat()
     require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, "Expected regular file")
     return path
 
 
-def atomic(path, value):
+def write_json_atomically(path, value):
+    """Replace a JSON record and sync both the file and its directory."""
     temporary = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
     with temporary.open("x", encoding="utf-8") as stream:
         os.chmod(temporary, 0o600)
@@ -117,11 +124,11 @@ def atomic(path, value):
         os.close(fd)
 
 
-def read(path):
-    return json.loads(regular(path).read_text())
+def read_json(path):
+    return json.loads(require_regular_file(path).read_text())
 
 
-def durable_tree(directory):
+def fsync_release_tree(directory):
     for path in sorted(directory.rglob("*"), reverse=True) + [directory, directory.parent]:
         require(not path.is_symlink(), "Symlinked release evidence")
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
@@ -135,7 +142,7 @@ def durable_tree(directory):
 def maintenance(path=LOCK):
     import fcntl
 
-    private(path.parent)
+    require_private_directory(path.parent)
     fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
     try:
         info = os.fstat(fd)
@@ -179,33 +186,70 @@ def unpack(archive, destination):
     require({"compose.yml", "nginx/nginx.conf"} <= seen, "Incomplete gateway bundle")
 
 
-def validate_model(model, certs):
-    require(set(model["services"]) == {"proxy"}, "Gateway must contain only proxy")
-    proxy = model["services"]["proxy"]
+def validate_gateway_compose(model, certificate_directory):
+    services = model["services"]
+    require(set(services) == {"proxy"}, "Gateway must contain only proxy")
+    proxy = services["proxy"]
     require(DIGEST.fullmatch(proxy["image"]), "Immutable Nginx digest required")
     require(proxy["container_name"] == "host-ingress-proxy" and proxy["restart"] == "always",
             "Gateway runtime identity drift")
-    require(set(model["networks"]) == {"notoli_backend", "notoli_frontend", "macromapper"}, "Network policy drift")
-    expected = {"notoli_backend": "notoli_backend_private", "notoli_frontend": "notoli_default",
-                "macromapper": "macromapper-ingress"}
-    require(all({k: v for k, v in model["networks"][key].items() if not (k == "ipam" and v == {})}
-                == {"name": name, "external": True}
-                for key, name in expected.items()), "Networks must be existing external objects")
-    require(proxy["networks"] == {"notoli_backend": {"ipv4_address": "172.30.88.2"},
-                                     "notoli_frontend": None, "macromapper": {"ipv4_address": "172.20.0.3"}}, "Proxy trust/address drift")
-    require(len(proxy["ports"]) == 2 and
-            {(p["target"], str(p["published"]), p.get("host_ip", ""), p["protocol"])
-             for p in proxy["ports"]} == {(80, "80", "", "tcp"), (443, "443", "", "tcp")}, "Listener drift")
+
+    networks = model["networks"]
+    expected_network_names = {
+        "notoli_backend": "notoli_backend_private",
+        "notoli_frontend": "notoli_default",
+        "macromapper": "macromapper-ingress",
+    }
+    require(set(networks) == set(expected_network_names), "Network policy drift")
+    for network_key, expected_name in expected_network_names.items():
+        network = networks[network_key].copy()
+        # Compose may include an empty IPAM object for an external network.
+        if network.get("ipam") == {}:
+            del network["ipam"]
+        require(
+            network == {"name": expected_name, "external": True},
+            "Networks must be existing external objects",
+        )
+
+    expected_proxy_networks = {
+        "notoli_backend": {"ipv4_address": "172.30.88.2"},
+        "notoli_frontend": None,
+        "macromapper": {"ipv4_address": "172.20.0.3"},
+    }
+    require(proxy["networks"] == expected_proxy_networks, "Proxy trust/address drift")
+
+    ports = proxy["ports"]
+    require(len(ports) == 2, "Listener drift")
+    listeners = {
+        (port["target"], str(port["published"]), port.get("host_ip", ""), port["protocol"])
+        for port in ports
+    }
+    expected_listeners = {(80, "80", "", "tcp"), (443, "443", "", "tcp")}
+    require(listeners == expected_listeners, "Listener drift")
+
     volumes = proxy["volumes"]
-    require(len(volumes) == 4 and {v["target"] for v in volumes} == set(TARGETS) | {"/etc/nginx/certs"}
-            and all(v["type"] == "bind" and v.get("read_only") for v in volumes), "Mount policy drift")
-    require(next(v["source"] for v in volumes if v["target"] == "/etc/nginx/certs") == certs,
-            "Certificate location must remain unchanged")
-    allowed = {"image", "container_name", "restart", "ports", "volumes", "networks", "logging"}
-    require({k for k, v in proxy.items() if not (k in {"command", "entrypoint"} and v is None)} <= allowed
-            and set(model) <= {"name", "services", "networks"}, "Unsupported Compose setting")
-    require(proxy["logging"] == {"driver": "json-file", "options": {"max-file": "3", "max-size": "10m"}},
-            "Logging policy drift")
+    require(len(volumes) == 4, "Mount policy drift")
+    certificate_target = "/etc/nginx/certs"
+    expected_mount_targets = set(TARGETS) | {certificate_target}
+    mount_targets = {volume["target"] for volume in volumes}
+    require(mount_targets == expected_mount_targets, "Mount policy drift")
+    for volume in volumes:
+        require(volume["type"] == "bind" and volume.get("read_only"), "Mount policy drift")
+    certificate_source = next(
+        volume["source"] for volume in volumes if volume["target"] == certificate_target
+    )
+    require(certificate_source == certificate_directory, "Certificate location must remain unchanged")
+
+    allowed_proxy_fields = {"image", "container_name", "restart", "ports", "volumes", "networks", "logging"}
+    proxy_fields = {
+        field for field, value in proxy.items()
+        if field not in {"command", "entrypoint"} or value is not None
+    }
+    require(proxy_fields <= allowed_proxy_fields, "Unsupported Compose setting")
+    require(set(model) <= {"name", "services", "networks"}, "Unsupported Compose setting")
+
+    expected_logging = {"driver": "json-file", "options": {"max-file": "3", "max-size": "10m"}}
+    require(proxy["logging"] == expected_logging, "Logging policy drift")
 
 
 def config_identity(model):
@@ -222,7 +266,7 @@ def config_identity(model):
             require(not entry.is_symlink(), "Symlinked configuration")
             if entry.is_file():
                 key = volume["target"] + ("/" + str(entry.relative_to(path)) if entry != path else "")
-                files[key] = hashlib.sha256(regular(entry).read_bytes()).hexdigest()
+                files[key] = hashlib.sha256(require_regular_file(entry).read_bytes()).hexdigest()
         volume["source"] = volume["target"]
     return hashlib.sha256(json.dumps([normalized, files], sort_keys=True).encode()).hexdigest()
 
@@ -241,10 +285,10 @@ def retired_route_state(directory, model, record=None):
         state = "disabled" if present else "base"
         require(record is None or record.get(field, "base") == state, "Retired route is not an accepted disabled/base generation")
         if present:
-            metadata = read(marker)
+            metadata = read_json(marker)
             require(isinstance(metadata, dict) and type(metadata.get("version")) is int
                     and metadata == {"version": 1, "profile": "disabled", "vhost_sha256": digest}
-                    and hashlib.sha256(regular(vhost).read_bytes()).hexdigest() == digest,
+                    and hashlib.sha256(require_regular_file(vhost).read_bytes()).hexdigest() == digest,
                     "Retired tombstone differs from reviewed disabled configuration")
         states[field] = state
     return states
@@ -257,7 +301,8 @@ def runtime():
     return {key: value[key] for key in ("Id", "Image", "Config", "HostConfig", "Mounts")}
 
 
-def invariants(allow_missing_proxy=False):
+def capture_app_and_network_state(allow_missing_proxy=False):
+    """Verify host topology and capture app and network identities."""
     # Never let a disconnected Actions pipe interrupt host mutation/recovery.
     with redirect_stdout(io.StringIO()):
         check_host.verify(allow_missing_proxy=allow_missing_proxy)
@@ -277,7 +322,7 @@ def invariants(allow_missing_proxy=False):
 def certificate_identity(certs):
     result = {}
     for name in ("origin.pem", "origin.key"):
-        path = regular(Path(certs) / name)
+        path = require_regular_file(Path(certs) / name)
         info = path.stat()
         result[name] = [info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode),
                         hashlib.sha256(path.read_bytes()).hexdigest()]
@@ -343,29 +388,29 @@ class Gateway:
     def __init__(self, root=ROOT):
         global DIAGNOSTICS
         self.root = root
-        private(root)
+        require_private_directory(root)
         for name in ("releases", "attempts", "incoming"):
-            private(root / name)
+            require_private_directory(root / name)
         DIAGNOSTICS = root / "diagnostics"
         DIAGNOSTICS.mkdir(mode=0o700, exist_ok=True)
-        private(DIAGNOSTICS)
+        require_private_directory(DIAGNOSTICS)
 
     def compose(self, directory, *args):
         return docker("compose", "-p", "host-ingress", "-f", directory / "model.json", *args)
 
     def current(self):
-        record = read(self.root / "current.json")
+        record = read_json(self.root / "current.json")
         directory = Path(record["directory"])
         require(directory.parent == self.root / "releases", "Invalid accepted release directory")
-        private(directory)
+        require_private_directory(directory)
         require(runtime() == record["runtime"], "Live gateway differs from accepted runtime")
-        live = copy.deepcopy(read(directory / "model.json"))
+        live = copy.deepcopy(read_json(directory / "model.json"))
         mounts = {m["Destination"]: m["Source"] for m in record["runtime"]["Mounts"]}
         for volume in live["services"]["proxy"]["volumes"]:
             volume["source"] = mounts[volume["target"]]
         require(config_identity(live) == record["configuration"], "Live configuration drift")
-        require(config_identity(read(directory / "model.json")) == record["configuration"], "Recovery configuration drift")
-        retired_route_state(directory, read(directory / "model.json"), record)
+        require(config_identity(read_json(directory / "model.json")) == record["configuration"], "Recovery configuration drift")
+        retired_route_state(directory, read_json(directory / "model.json"), record)
         return record
 
     def save(self, directory, source, run_url, recovery, model, previous=None):
@@ -375,7 +420,7 @@ class Gateway:
         record.update(retired_route_state(directory, model))
         if previous:
             record["previous_source"] = previous["source"]
-        atomic(self.root / "current.json", record)
+        write_json_atomically(self.root / "current.json", record)
         return record
 
     def snapshot(self, model, directory):
@@ -391,12 +436,12 @@ class Gateway:
                 # Identity validation rejects nested symlinks before copying.
                 shutil.copytree(original, target)
             else:
-                shutil.copyfile(regular(original), target)
+                shutil.copyfile(require_regular_file(original), target)
             volume["source"] = str(target)
         for path in directory.rglob("*"):
             path.chmod(0o700 if path.is_dir() else 0o600)
-        atomic(directory / "model.json", model)
-        durable_tree(directory)
+        write_json_atomically(directory / "model.json", model)
+        fsync_release_tree(directory)
         return model
 
     def syntax(self, model):
@@ -420,7 +465,7 @@ class Gateway:
         model = json.loads(docker("compose", "-p", "host-ingress", "-f", directory / "compose.yml", "config", "--format", "json"))
         live = runtime()
         certs = next(m["Source"] for m in live["Mounts"] if m["Destination"] == "/etc/nginx/certs")
-        validate_model(model, certs)
+        validate_gateway_compose(model, certs)
         expected_mounts = {(v["target"], v["source"], False) for v in model["services"]["proxy"]["volumes"]}
         require({(m["Destination"], m["Source"], m["RW"]) for m in live["Mounts"]} == expected_mounts,
                 "Baseline mounts do not match live gateway")
@@ -434,7 +479,7 @@ class Gateway:
                                          and binding["HostIp"] in {"", "0.0.0.0", "::"} for binding in bindings)
                         for port, bindings in live["HostConfig"]["PortBindings"].items()), "Baseline port drift")
         config_identity(model)
-        invariants()
+        capture_app_and_network_state()
         healthy(ca)
         target = self.root / "releases" / (source + "-0-0")
         target.mkdir(mode=0o700)
@@ -445,45 +490,47 @@ class Gateway:
         previous = journal["previous"]
         directory = Path(previous["directory"])
         require(directory.parent == self.root / "releases", "Unsafe recovery reference")
-        model = read(directory / "model.json")
+        model = read_json(directory / "model.json")
         require(config_identity(model) == previous["configuration"], "Recovery checksum mismatch")
         retired_route_state(directory, model, previous)
         self.syntax(model)
         self.compose(directory, "up", "-d", "--no-deps", "--pull", "never", "--force-recreate", "proxy")
-        require(invariants() == journal["invariants"], "Application/network identity changed")
+        require(capture_app_and_network_state() == journal["invariants"], "Application/network identity changed")
         require(certificate_identity(journal["certs"]) == journal["certificates"], "Certificates changed")
         healthy(ca)
         record = self.save(directory, previous["source"], previous["actions_run"], previous["recovery"], model)
-        atomic(self.root / "attempts" / journal["id"] / "result.json",
-               {"status": "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]})
+        write_json_atomically(
+            self.root / "attempts" / journal["id"] / "result.json",
+            {"status": "rolled_back", "promoted_source": journal["source"], "running_source": record["source"]},
+        )
         (self.root / "pending.json").unlink(missing_ok=True)
         return record
 
     def rollback(self, identity, ca):
         require(IDENTITY.fullmatch(identity), "Invalid recovery identity")
-        journal = read(self.root / "attempts" / identity / "journal.json")
+        journal = read_json(self.root / "attempts" / identity / "journal.json")
         pending = self.root / "pending.json"
         interrupted = pending.exists()
         if interrupted:
-            require(read(pending)["id"] == identity, "Another interrupted release requires recovery")
+            require(read_json(pending)["id"] == identity, "Another interrupted release requires recovery")
         else:
             require(self.current()["recovery"] == identity, "Only the current release may be rolled back")
         # Reboot or an independent app release can change app identities while
         # an interrupted gateway journal remains. Revalidate them under the lock;
         # the gateway itself may be absent or only partially attached.
-        current = invariants(allow_missing_proxy=interrupted)
+        app_and_network_state = capture_app_and_network_state(allow_missing_proxy=interrupted)
         if interrupted:
-            require(current["networks"] == journal["invariants"]["networks"],
+            require(app_and_network_state["networks"] == journal["invariants"]["networks"],
                     "Route network IDs changed since interruption")
-        journal["invariants"] = current
-        atomic(pending, journal)
+        journal["invariants"] = app_and_network_state
+        write_json_atomically(pending, journal)
         return self.restore(journal, ca)
 
     def deploy(self, archive, identity, run_url, ca):
         require(IDENTITY.fullmatch(identity), "Invalid release identity")
         require(not (self.root / "pending.json").exists(), "Interrupted release requires explicit rollback")
         previous = self.current()
-        before = invariants()
+        app_and_network_state_before = capture_app_and_network_state()
         self.capacity()
         certs = next(m["Source"] for m in previous["runtime"]["Mounts"] if m["Destination"] == "/etc/nginx/certs")
         certificates = certificate_identity(certs)
@@ -497,43 +544,46 @@ class Gateway:
                                 env=environment, capture_output=True, text=True, timeout=30)
         require(output.returncode == 0, "Candidate Compose expansion failed")
         model = json.loads(output.stdout)
-        validate_model(model, certs)
+        validate_gateway_compose(model, certs)
         require(all(state == "base" for state in retired_route_state(directory, model).values()),
                 "New gateway candidates cannot contain retired routes")
         require(all(volume["source"] == str(directory / TARGETS[volume["target"]])
                     for volume in model["services"]["proxy"]["volumes"] if volume["target"] in TARGETS),
                 "Candidate configuration must be staged inside its release directory")
-        atomic(directory / "model.json", model)
-        durable_tree(directory)
+        write_json_atomically(directory / "model.json", model)
+        fsync_release_tree(directory)
         configuration = config_identity(model)
         attempt = self.root / "attempts" / identity
         attempt.mkdir(mode=0o700)
         journal = {"id": identity, "source": identity[:40], "previous": previous,
-                   "invariants": before, "certs": certs, "certificates": certificates,
+                   "invariants": app_and_network_state_before, "certs": certs, "certificates": certificates,
                    "actions_run": run_url, "configuration": configuration,
                    "image": model["services"]["proxy"]["image"]}
-        atomic(attempt / "journal.json", journal)
-        durable_tree(attempt)
+        write_json_atomically(attempt / "journal.json", journal)
+        fsync_release_tree(attempt)
         # Validate baseline even for a no-op: a broken gateway is never accepted by skipping it.
         healthy(ca)
         if configuration == previous["configuration"]:
-            atomic(attempt / "result.json", {"status": "unchanged", "promoted_source": identity[:40],
-                                            "running_source": previous["source"]})
+            write_json_atomically(
+                attempt / "result.json",
+                {"status": "unchanged", "promoted_source": identity[:40], "running_source": previous["source"]},
+            )
             return {"status": "unchanged", "running_source": previous["source"]}
         self.capacity()
         ensure_image(model["services"]["proxy"]["image"])
         self.capacity()
         self.syntax(model)
         self.compose(directory, "config", "--quiet")
-        atomic(self.root / "pending.json", journal)
+        write_json_atomically(self.root / "pending.json", journal)
         try:
             self.compose(directory, "up", "-d", "--no-deps", "--pull", "never", "--force-recreate", "proxy")
             require(runtime()["Image"] == inspect("image", model["services"]["proxy"]["image"])["Id"], "Image mismatch")
-            require(invariants() == before, "Application/network identity changed")
+            require(capture_app_and_network_state() == app_and_network_state_before,
+                    "Application/network identity changed")
             require(certificate_identity(certs) == certificates, "Certificates changed")
             healthy(ca)
             self.save(directory, identity[:40], run_url, identity, model, previous)
-            atomic(attempt / "result.json", {"status": "success", "running_source": identity[:40]})
+            write_json_atomically(attempt / "result.json", {"status": "success", "running_source": identity[:40]})
             (self.root / "pending.json").unlink()
             return {"status": "success", "running_source": identity[:40]}
         except CommandTimeout:
@@ -566,10 +616,10 @@ def main():
             result = {"status": "adopted", "running_source": args.source}
         elif args.operation == "rollback":
             gateway.rollback(args.id, ca)
-            result = {"status": "rolled_back", "running_source": read(ROOT / "current.json")["source"]}
+            result = {"status": "rolled_back", "running_source": read_json(ROOT / "current.json")["source"]}
         else:
             require(args.id and args.id.startswith(args.source + "-"), "Source/release identity mismatch")
-            require(hashlib.sha256(regular(args.archive).read_bytes()).hexdigest() == args.archive_sha256,
+            require(hashlib.sha256(require_regular_file(args.archive).read_bytes()).hexdigest() == args.archive_sha256,
                     "Transport checksum mismatch")
             result = gateway.deploy(args.archive, args.id, args.run_url, ca)
         print(json.dumps(result))

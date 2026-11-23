@@ -72,10 +72,18 @@ network provisioning/removal, app restart, database restore or pruning occurs.
 
 ### Failure, interruption and explicit rollback
 
-Before activation, `attempts/<identity>/journal.json` captures the previous
-matched configuration/image/source/runtime, application identities, network IDs,
-certificate identities and Actions run. `pending.json` is fsynced before any
-activation. Pre-activation rejection leaves the accepted runtime unchanged.
+The release writes its recovery records in this order.
+
+1. `attempts/<identity>/journal.json` records the previous gateway configuration,
+   image, source, and runtime. It also records the app, network, and certificate
+   identities and the Actions run.
+2. Just before Docker recreates the proxy, the release durably writes that
+   journal to `pending.json`. Its presence blocks a new release until the
+   gateway is accepted or restored.
+3. After the new gateway passes its checks, `current.json` records the accepted
+   release. The controller writes the attempt result and removes `pending.json`.
+
+Pre-activation rejection leaves the accepted runtime unchanged.
 Failed activation/health automatically recreates only the captured previous
 gateway, validates both apps again, and reports **failure**, even when recovery
 succeeds. An indeterminate Docker activation timeout retains the pending barrier
