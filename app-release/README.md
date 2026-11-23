@@ -57,10 +57,11 @@ app's `FAILED.json` if present and `recovery/`; an early failure may precede a
 complete recovery set. A disconnected progress stream does not interrupt the
 transaction, and acceptance is announced only after readiness and success records.
 
-Allowed route-network members and required members are separate configuration
-fields. Gateway and current-app endpoints are required. Companion absence is
-allowed during app recovery, while unexpected members, address/trust drift and
-published-port drift fail. Both apps must pass gateway cutover acceptance.
+Each app policy lists only its own route networks. Gateway and current-app
+endpoints remain required; unexpected members, address/trust drift and published
+ports still fail. The gateway may also serve other apps without those networks
+becoming app-release prerequisites. Infrastructure's `nginx/check_host.py`
+retains the full-host topology audit and both-app gateway cutover acceptance.
 
 Preflight verifies running frontend bindings against the accepted release's
 checksummed app policy. The incoming bundle's own policy is checked against
@@ -121,10 +122,12 @@ During local development, `--source-root <infrastructure-checkout>` performs the
 same checks without network access. CI never uses this override. Bundle creation
 and retained host recovery never fetch shared source. Use `--sync` only with
 `--check-parity`; it validates all source downloads before replacing local files.
-After verification succeeds, synchronization removes only the retired
-`deploy/check_parity.py`; check-only and failed validation runs preserve it.
-Synchronization rejects a directory or symlink at that path, or a linked `deploy/`
-directory, before writing files. A version bump
+Synchronization replaces only common files and the rendered workflow; unrelated
+local files remain untouched. A linked `deploy/` directory is rejected before
+writes. The completed parity-checker cleanup migration is no longer run.
+All frontend builds use `VITE_API_BASE_URL=`; app-specific Actions settings remain
+in `workflow.extra_env`. The unused `root_hint` is omitted; `DEPLOY_PATH` supplies
+the actual destination. A version bump
 is required for incompatible contract semantics; coordinate adoption in all three app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
