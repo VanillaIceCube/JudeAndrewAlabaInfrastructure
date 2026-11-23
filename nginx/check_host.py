@@ -26,15 +26,11 @@ def inspect(kind, name):
     return json.loads(result.stdout)[0]
 
 
-def verify(phase, allow_missing_proxy=False):
-    if allow_missing_proxy and phase != "host":
-        raise ValueError("Optional gateway is only valid during host recovery")
-    proxy = {"legacy": "notoli-proxy", "host": "host-ingress-proxy", "vacant": None}[
-        phase
-    ]
+def verify(allow_missing_proxy=False):
+    proxy = "host-ingress-proxy"
     for name, (internal, subnet, apps) in NETWORKS.items():
         network = inspect("network", name)
-        expected = apps | ({proxy} if proxy else set())
+        expected = apps | {proxy}
         if network["Internal"] != internal:
             raise ValueError("Network internal flag changed")
         if [p["Subnet"] for p in network["IPAM"]["Config"]] != [subnet]:
@@ -45,10 +41,10 @@ def verify(phase, allow_missing_proxy=False):
         if name == "notoli_backend_private":
             if members["notoli-backend"]["IPv4Address"].split("/")[0] != "172.30.88.3":
                 raise ValueError("Topology invariant failed")
-            if proxy and proxy in members:
+            if proxy in members:
                 if members[proxy]["IPv4Address"].split("/")[0] != "172.30.88.2":
                     raise ValueError("Topology invariant failed")
-        if name == "macromapper-ingress" and phase == "host" and proxy in members:
+        if name == "macromapper-ingress" and proxy in members:
             if members[proxy]["IPv4Address"].split("/")[0] != "172.20.0.3":
                 raise ValueError("MacroMapper proxy trust address changed")
     backend = inspect("container", "notoli-backend")
@@ -58,25 +54,20 @@ def verify(phase, allow_missing_proxy=False):
         raise ValueError("Notoli backend exposed")
     if inspect("container", "macromapper-backend")["HostConfig"]["PortBindings"]:
         raise ValueError("MacroMapper backend exposed")
-    if proxy and not allow_missing_proxy:
+    if not allow_missing_proxy:
         ingress = inspect("container", proxy)
         if not ingress["State"]["Running"]:
             raise ValueError("Ingress is not running")
         if set(ingress["NetworkSettings"]["Networks"]) != set(NETWORKS):
             raise ValueError("Unexpected ingress network")
-    print(
-        "PASS: network membership, fixed trust and backend port invariants ("
-        + phase
-        + ")"
-    )
+    print("PASS: network membership, fixed trust and backend port invariants (host)")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=["legacy", "vacant", "host"])
-    args = parser.parse_args()
+    parser.parse_args()
     try:
-        verify(args.phase)
+        verify()
     except (
         ValueError,
         KeyError,
