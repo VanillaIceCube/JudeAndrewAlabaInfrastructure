@@ -15,6 +15,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Stop copying retired app-root stack artifacts into new recovery sets and remove the missing recovered-policy fallback; preserve existing archives, runtime/SQLite recovery and gateway retirement guards confirmed by the read-only host inventory.
 - Remove translation of the three retired custom Resend backend names from new release bundles; require an explicit maintained Anymail or SMTP selection while preserving retained recovery bundles.
 - Remove nested MCP/cache snippets, unused legacy/vacant host-check modes, the repeated frontend build-argument selector and the completed consumer parity-checker cleanup migration.
 

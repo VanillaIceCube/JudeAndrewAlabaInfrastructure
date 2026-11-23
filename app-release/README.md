@@ -20,9 +20,10 @@ Application repositories use these independent local inputs under `deploy/`:
 | `nginx.conf` | HTTPS proxy configuration mounted by local `compose.yml` |
 
 Production remains `deploy/production/compose.yml`, using the existing shared
-gateway and private `.backend.env` release bundle. Historical recovery evidence
-can still contain `docker-compose.yml` and `nginx-proxy.conf`; those names in
-`v1/release.py` and its tests intentionally retain their historical meaning.
+gateway and private `.backend.env` release bundle. Retained historical archives
+can still contain `docker-compose.yml` and `nginx-proxy.conf`; those files belong
+to their historical procedures. New recovery captures keep effective runtime,
+the matched previous release and SQLite data, without recopying root-stack files.
 The local renames require no shared-source pin, manifest or host changes.
 
 The naming rollout covers FullStackTemplate, MacroMapper and Notoli. Infrastructure
@@ -67,7 +68,9 @@ Preflight verifies running frontend bindings against the accepted release's
 checksummed app policy. The incoming bundle's own policy is checked against
 rendered Compose before staging images and against Docker after recreation,
 before recording success. This allows a reviewed port change while still
-rejecting drift. Notoli and MacroMapper use shared HTTPS ingress and have no
+rejecting drift. Recovered releases require their checksummed saved app policy;
+missing policy never falls back to the incoming candidate's port defaults.
+Notoli and MacroMapper use shared HTTPS ingress and have no
 host frontend publication. See [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23)
 for Notoli's consumer inventory and rollout evidence.
 

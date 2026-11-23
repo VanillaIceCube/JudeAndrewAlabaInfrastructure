@@ -280,6 +280,11 @@ New source bundles contain no retired vhosts or profile selectors. Preserve
 private accepted/recovery generations; historical controllers are evidence, not
 authorization to reactivate retired services.
 
+The read-only 2026-11-22 inventory found seven retained gateway generations with
+retired route files, including three with both profiles disabled. Keep the exact
+disabled-tombstone checks and rejection of enabled profiles while those recovery
+generations remain. The live accepted gateway has both profiles at `base`.
+
 ## 🧭 Structure and ownership
 
 [compose.yml](../compose.yml) owns project `host-ingress`, service `proxy`, container
