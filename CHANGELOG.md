@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Automatically select the checksummed saved controller and app policy for rollback under the existing locks; preserve the matching controller through subsequent recovery/deploy cycles and reject invalid saved controllers before migration.
 - Keep app release preflight focused on app-owned route networks while the Infrastructure host checker retains full network membership, subnet, trusted-IP and backend-port validation.
 - Show MCP, discovery and private-cache rules directly in each gateway vhost; preserve the fully expanded Nginx configuration.
 - Add readable release and recovery progress, failing-step context, command exit codes and private-record pointers to the shared app release engine; preserve transaction order and private subprocess output.
