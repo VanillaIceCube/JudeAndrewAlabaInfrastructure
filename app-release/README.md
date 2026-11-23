@@ -8,6 +8,27 @@ Infrastructure commit SHA. This is a
 build-time dependency: the private release bundle contains the runtime script,
 `app.json`, Compose and environment files needed for offline recovery.
 
+## 💻 Application local file names
+
+Application repositories use these independent local inputs under `deploy/`:
+
+| File | Purpose |
+| --- | --- |
+| `compose.yml` | Built application images behind a local HTTPS proxy |
+| `compose.hotswap.yml` | Mounted source with automatic backend/frontend reload |
+| `.env.example` | Committed local settings example; copy to private `.env` |
+| `nginx.conf` | HTTPS proxy configuration mounted by local `compose.yml` |
+
+Production remains `deploy/production/compose.yml`, using the existing shared
+gateway and private `.backend.env` release bundle. Historical recovery evidence
+can still contain `docker-compose.yml` and `nginx-proxy.conf`; those names in
+`v1/release.py` and its tests intentionally retain their historical meaning.
+The local renames require no shared-source pin, manifest or host changes.
+
+The naming rollout covers FullStackTemplate, MacroMapper and Notoli. Infrastructure
+already uses root `compose.yml`; its adoption is documentation only. See each
+application's `deploy/README.md` for the updated local commands.
+
 ## 🧭 Contract and ownership
 
 `deploy/production/app.json` contains the app name, service/container names,
