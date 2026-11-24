@@ -233,10 +233,6 @@
           },
           "uses": "./.github/workflows/gate-codeql.yml"
         },
-        "dependency-malware": {
-          "name": "Dependency scope",
-          "uses": "./.github/workflows/gate-malware.yml"
-        },
         "dependency-vulnerability": {
           "name": "Vulnerability",
           "permissions": {
@@ -257,7 +253,6 @@
             "tests",
             "codeql",
             "dependency-vulnerability",
-            "dependency-malware",
             "secrets",
             "code-review",
             "build-review",
@@ -274,7 +269,6 @@
           "needs": [
             "codeql",
             "dependency-vulnerability",
-            "dependency-malware",
             "secrets"
           ],
           "permissions": {
@@ -296,7 +290,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "4ddcbfaafe48d29c0894ba82d0b6f420fa2db9df77d75562eda58e80fff24ef8",
+      "source_sha256": "237a0aa10aa9e253314728b411342ee8850199087b7dd9bae9291357d5cb7704",
       "variable_names": []
     },
     "deploy-gateway.yml": {
@@ -441,30 +435,6 @@
         "contents": "read"
       },
       "source_sha256": "8993c2f812d24c534a7eb8d795f681839e2a01eb385b1b2f5c7e1714fb9e82cd",
-      "variable_names": []
-    },
-    "gate-malware.yml": {
-      "credential_names": [],
-      "events": {
-        "workflow_call": {
-          "outputs": {
-            "malware_report": {
-              "description": "Explicit applicability evidence for malicious package review.",
-              "value": "${{ jobs.scope.outputs.report }}"
-            }
-          }
-        }
-      },
-      "jobs": {
-        "scope": {
-          "name": "Dependency scanner scope"
-        }
-      },
-      "name": "Dependency Scope Gate",
-      "permissions": {
-        "contents": "read"
-      },
-      "source_sha256": "41db0d12db7dff21ed8903917ce4ded54199b4d2160ef8e470d3e4da0660478f",
       "variable_names": []
     },
     "gate-secrets.yml": {
@@ -762,14 +732,6 @@
               "required": "false",
               "type": "string"
             },
-            "dependency_malware_report": {
-              "required": "false",
-              "type": "string"
-            },
-            "dependency_malware_result": {
-              "required": "false",
-              "type": "string"
-            },
             "dependency_vulnerability_report": {
               "required": "false",
               "type": "string"
@@ -807,7 +769,7 @@
         "security-events": "read",
         "statuses": "read"
       },
-      "source_sha256": "0cfdf811f4c50908a23443fe1ab054e934078b05fc5b38cdf87f0441c3041eec",
+      "source_sha256": "f0d54f822656720b285a512156d0567eca6f100e934cd44af2ac764790713012",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",

@@ -16,6 +16,10 @@ All notable changes to this project are documented in this file.
 
 - Reserve job-scoped permissions for the protected Dependabot workflow. Eligible updates may request native auto-merge after the owner installs and verifies the workflow. The owner continues to decide other merges and production promotions.
 
+### Removed
+
+- Remove the Infrastructure PR dependency-scope guard that blocked new package manifests and changes expanding the root tooling dependency graph. Required CI and the protected Dependabot policy continue to check Dependency Review, CodeQL, Gitleaks, lint, tests and all applicable reviewers.
+
 ## 2026-11-23
 
 ### Fixed

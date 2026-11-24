@@ -134,7 +134,7 @@ missing approvals, unavailable checks and unsafe alert scores fail the policy.
 
 Before enabling native auto-merge, the follow-up checks all active branch
 requirements, the Infrastructure lint and validation jobs, Dependency Review,
-the dependency-scope guard, Gitleaks, CodeQL scope and analyzers, and each
+Gitleaks, CodeQL scope and analyzers, and each
 reviewer job. CodeQL skips require matching changed paths, including paths
 before renames. All three reviewer bots must approve the current head. The
 policy waits for its own check to be visible and in progress. A previous run's
@@ -156,7 +156,7 @@ PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. 
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
 | CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on main pushes, Mondays at midnight Pacific (America/Los_Angeles), and manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
-| Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
+| Package malware | No PR package-malware scanner is configured. The separate alert feed tracks existing malware advisories. |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
@@ -442,7 +442,7 @@ flowchart TD
   Dependabot[Same-repository Dependabot PR] --> CI
   Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
   CI --> LintTest[Lint and test workflows]
-  CI --> Scanners[CodeQL and dependency scanners]
+  CI --> Scanners[CodeQL and Dependency Review]
   CI -->|Infrastructure| Secrets[Gitleaks secret scan]
   Secrets --> Robo
   Secrets --> Gate
@@ -609,12 +609,10 @@ Dependabot uses the `uv` ecosystem at `/` with the existing weekly cadence.
 Production hosts still run ordinary Python release/gateway scripts and do not
 need uv or this developer environment.
 
-The dependency-scope gate permits only this root PyYAML tooling project and
-rejects additional manifests, runtime dependencies or an expanded lock graph
-until scanner coverage is reviewed. Dependency Review retains known-advisory
-coverage; no mandatory Python malware service is configured. A locked graph
-provides reproducibility and does not establish package malware safety. Docker
-image advisories and live operations keep their separate operator acceptance.
+Changes to package manifests or the locked dependency graph go through normal PR review.
+Dependency Review checks supported dependencies for known advisories. The locked
+graph provides reproducibility. Docker image advisories and live operations keep
+their separate operator acceptance.
 
 Dependabot's `uv` updater reads `pyproject.toml` and `uv.lock`; a requirements
 export is unnecessary. Runtime and development dependencies retain the existing

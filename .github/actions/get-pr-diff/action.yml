@@ -45,8 +45,8 @@ runs:
         echo "Base: $BASE_SHA"
         echo "Head: $HEAD_SHA"
 
-        # Generated dependency lockfiles are covered by the dedicated dependency
-        # and malware gates. Keep their raw payloads out of AI prompts so a
+        # Dependency Review assesses supported dependency changes.
+        # Keep generated lockfile payloads out of AI prompts so a
         # mechanical lockfile rewrite cannot crowd out reviewable source changes.
         git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" -- . \
           ':(exclude)**/package-lock.json' \

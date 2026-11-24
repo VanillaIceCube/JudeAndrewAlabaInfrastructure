@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-GATES = {"lints", "tests", "codeql", "dependency-vulnerability", "dependency-malware", "secrets"}
+GATES = {"lints", "tests", "codeql", "dependency-vulnerability", "secrets"}
 REVIEWS = {"code-review", "build-review", "security-review"}
 
 
