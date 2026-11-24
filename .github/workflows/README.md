@@ -76,10 +76,9 @@ constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
-Mapping-form writes are checked against `.github/workflow-write-grants.json`,
-which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
-new writes fail. Changes to that policy require review with the workflow; it does
-not grant GitHub permissions itself or replace branch protection.
+Declare permissions explicitly in the workflow or job. The checker rejects broad
+grants such as `write-all` and unknown permission scopes or levels. Review changes
+to write permissions in the pull request that changes the workflow.
 
 ## 🔒 Merge and dependency controls
 
@@ -365,11 +364,8 @@ to 16,000 characters and artifacts to about 1 MiB per log for seven days; its ro
 regression test has been retired. Complete output remains in the job log.
 Preprocessing feeds the existing `ci_report.py` interface.
 
-Workflow grant authority in PR audits now comes from the platform base commit.
-Bootstrap derives that base's existing writes if it lacks a manifest; a proposed
-policy cannot approve simultaneous workflow permission expansion. New grants
-first require a reviewed policy-only merge under the current protected gates.
-The shared alias/flow/mapping/base-policy regression suite matches the applications.
+The shared YAML regression suite checks aliases, flow syntax, and explicit
+permission mappings.
 Repository writers remain privileged; this linter is not a security sandbox.
 Infrastructure retains its existing shellcheck, Compose, secret scan, manifest,
 RequiredCI and independent gateway controls. Application browser tests and npm
@@ -477,9 +473,8 @@ permissions. Dependabot receives required reviewer OpenAI keys/App private keys,
 never production/Project credentials. RoboCop owns security-alert issue writes;
 the separate Project token only synchronizes Project fields. Repository Actions
 secrets are not branch-scoped: arbitrary workflow writers remain privileged.
-Immutable external Action pins and the platform-selected base permission policy
-prevent proposed workflows from approving their own new write grants. A grant
-must merge through review before a consumer requests it.
+External Actions use immutable pins. Workflow reviews cover changes to write
+permissions in the workflow or job that requests them.
 
 ### Scheduled source-alert maintenance
 
