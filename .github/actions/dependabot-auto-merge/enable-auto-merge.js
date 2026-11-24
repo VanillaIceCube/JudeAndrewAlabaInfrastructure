@@ -14,7 +14,7 @@ const scopedChecks = new Set([
 ]);
 const independentChecks = [
   "Required CI", "Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope",
-  ...scopedChecks, "Vulnerability / Vulnerability", "Dependency scope / Dependency scanner scope",
+  ...scopedChecks, "Vulnerability / Vulnerability",
   "Secret scan / Gitleaks", ...Object.values(reviewers),
 ];
 

@@ -8,7 +8,7 @@ CI, reviews, dependency/security checks, and release behavior for JudeAndrewAlab
 | --- | --- |
 | Pull requests | [CI orchestrator](ci-orchestrator.yml), independent gates, and the three reviewer workflows. |
 | Dependabot | [Protected auto-merge follow-up](ci-auto-merge.yml) after successful PR CI. |
-| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) schedules/manual dispatches. |
+| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) aggregation after the nightly scan or on a daily schedule, with manual dispatch for every feed. |
 | Releases | [Release workflow](deploy-gateway.yml). |
 
 Workflow YAML is authoritative for triggers, permissions and job dependencies.
@@ -133,7 +133,7 @@ missing approvals, unavailable checks and unsafe alert scores fail the policy.
 
 Before enabling native auto-merge, the follow-up checks all active branch
 requirements, the Infrastructure lint and validation jobs, Dependency Review,
-the dependency-scope guard, Gitleaks, CodeQL scope and analyzers, and each
+Gitleaks, CodeQL scope and analyzers, and each
 reviewer job. CodeQL skips require matching changed paths, including paths
 before renames. All three reviewer bots must approve the current head. The
 policy waits for its own check to be visible and in progress. A previous run's
@@ -148,12 +148,20 @@ See [repository setup](../README.md#-branch-protection) for activation.
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |
 | Lint Eastwood | Interprets actionlint/ShellCheck, Compose, ingress/reversal, SQLite recovery and automation diagnostics; never edits source |
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
-| CodeQL | Changed paths select PR languages. Main pushes and weekly/manual runs scan all three languages. |
+| CodeQL | Changed paths select PR languages. Daily runs at midnight Pacific (America/Los_Angeles) and manual runs scan all three languages. |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
-| Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
+| Package malware | No PR package-malware scanner is configured. The separate alert feed tracks existing malware advisories. |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
+
+Daily CodeQL scans refresh the default-branch baseline. Required PR
+checks continue to scan changed languages before merge. Security-tab findings
+for newly merged code can lag until the next full scan completes. Daily alert
+tracking runs after the scheduled scan succeeds. To refresh all three languages
+sooner, select **Actions → CodeQL Gate → Run workflow → main**, or run
+`gh workflow run gate-codeql.yml --ref main`. Check the run and its analyzed
+commit before relying on the updated default-branch baseline.
 
 CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
@@ -196,7 +204,7 @@ Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
 feeds do not establish that a live close race occurred.
 
 Infrastructure deliberately retains weekly grouped Actions and separate Compose
-Dependabot updates, all-language CodeQL on main pushes and scheduled/manual runs, `pull-requests: read` for
+Dependabot updates, all-language CodeQL on scheduled and manual runs, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
@@ -442,7 +450,7 @@ flowchart TD
   Dependabot[Same-repository Dependabot PR] --> CI
   Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
   CI --> LintTest[Lint and test workflows]
-  CI --> Scanners[CodeQL and dependency scanners]
+  CI --> Scanners[CodeQL and Dependency Review]
   CI --> Secrets[Gitleaks secret scan]
   Secrets --> Robo
   Secrets --> Gate
@@ -513,7 +521,10 @@ permissions in the workflow or job that requests them.
 
 ```mermaid
 flowchart LR
-  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
+  Scan[Successful scheduled CodeQL scan on main] --> CodeQLFeed[CodeQL alert workflow]
+  Schedule[Midnight Pacific] --> DependencyFeeds[Vulnerability and malware alert workflows]
+  Manual[Manual dispatch] --> CodeQLFeed & DependencyFeeds
+  CodeQLFeed & DependencyFeeds --> Feeds[Alert aggregation]
   Feeds --> Preflight[Verify Project access and fields]
   Preflight --> Source[All open source alerts and bounded malware classification]
   Source --> Robo[RoboCop grouping with validated Responses policy]
@@ -522,12 +533,15 @@ flowchart LR
   Issues --> Project[Separately credentialed Project synchronization and recovery]
 ```
 
-[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+The [vulnerability](alert-vulnerability.yml) and [malware](alert-malware.yml)
+alert workflows run daily at midnight Pacific (America/Los_Angeles). The
+[CodeQL alert workflow](alert-codeql.yml) follows a successful scheduled CodeQL
+scan on main. All three alert workflows support manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs, the weekly schedule and manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries. These three workflows read existing findings.
+
+The separate CodeQL Gate scans changed languages in PR CI. Its daily and manual
+runs perform full analysis.
 
 ### Promotion, release and manual operations
 
@@ -591,12 +605,10 @@ Dependabot uses the `uv` ecosystem at `/` with the existing weekly cadence.
 Production hosts still run ordinary Python release/gateway scripts and do not
 need uv or this developer environment.
 
-The dependency-scope gate permits only this root PyYAML tooling project and
-rejects additional manifests, runtime dependencies or an expanded lock graph
-until scanner coverage is reviewed. Dependency Review retains known-advisory
-coverage; no mandatory Python malware service is configured. A locked graph
-provides reproducibility and does not establish package malware safety. Docker
-image advisories and live operations keep their separate operator acceptance.
+Changes to package manifests or the locked dependency graph go through normal PR review.
+Dependency Review checks supported dependencies for known advisories. The locked
+graph provides reproducibility. Docker image advisories and live operations keep
+their separate operator acceptance.
 
 Dependabot's `uv` updater reads `pyproject.toml` and `uv.lock`; a requirements
 export is unnecessary. Runtime and development dependencies retain the existing
