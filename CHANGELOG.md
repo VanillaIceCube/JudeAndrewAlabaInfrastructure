@@ -10,13 +10,18 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds. The schedules follow America/Los_Angeles through daylight-saving transitions.
 - Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.
-- Scope CodeQL by changed paths on pull requests, run lint only through PR CI, and include every lockfile in reviewer diffs.
+- Scope CodeQL by changed paths on pull requests and run full scans daily and on manual dispatch. Remove the separate scan after each merge to main. Run lint only through PR CI and include every lockfile in reviewer diffs.
 - Rename the Infrastructure validation workflow to gate-test.yml.
 - Align Infrastructure's JavaScript action test discovery with the app test gates.
 - Run the Infrastructure test gate only through pull request CI.
 - Validate Compose before checking the release manifest and running action regressions.
 - Run CI for pull requests targeting any branch except env-prod and select Infrastructure test checks by changed files.
+
+### Removed
+
+- Remove the Infrastructure PR dependency-scope guard that blocked new package manifests and changes expanding the root tooling dependency graph. Required CI and the protected Dependabot policy continue to check Dependency Review, CodeQL, Gitleaks, lint, tests and all applicable reviewers.
 
 ## 2026-11-23
 

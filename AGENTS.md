@@ -161,8 +161,7 @@ setup documented in `.github/README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
 and token inputs. Run `.github/actions/custom-regressions/security-alert-contract.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
-corrected main. Preserve applicable bounded malware review and documented
-coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.
+corrected main. Keep advisory-based malware alert tracking and document PR scanner coverage. Keep the CI architecture diagrams aligned with workflow edits.
 
 Require `Required CI`, preserve independent gates and applicable reviewer failures,
 and use the protected Dependabot Policy follow-up for eligible patch/minor updates.

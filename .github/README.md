@@ -17,8 +17,7 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 Install uv and run `uv sync --locked` from the repository root. Run local checks
 with `uv run --locked` so Python and Node subprocesses use the locked environment.
-The workflows define lint checks, bounded review logs, the dependency scope
-check, and the Required CI result. See the
+The workflows define lint checks, bounded review logs and the Required CI result. See the
 [workflow checks](workflows/README.md#-checks-and-diagnostics) for local commands.
 
 ## 🚦 Before your first pull request
