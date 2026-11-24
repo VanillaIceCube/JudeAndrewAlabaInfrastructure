@@ -309,7 +309,7 @@ async function publishUnavailableReview({
           "",
           "**Review unavailable.** OpenAI could not produce a usable review for this commit.",
           "",
-          "This is not an approval or a finding. Independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative. Restore OpenAI access, then rerun this review.",
+          "This is not an approval or a finding. Independent lint, test, CodeQL, dependency review and secret-scan gates remain authoritative. Restore OpenAI access, then rerun this review.",
         ].join("\n"),
       });
     } else {

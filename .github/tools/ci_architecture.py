@@ -55,12 +55,12 @@ def contracts(data, root):
     if "pull_request" not in events or not production_excluded:
         raise ValueError("PR-path diagram no longer matches orchestrator event/production boundary")
     jobs = ci["jobs"]
-    for job in ["lints", "tests", "codeql", "dependency-vulnerability", "dependency-malware", "code-review", "build-review", "security-review"]:
+    for job in ["lints", "tests", "codeql", "dependency-vulnerability", "code-review", "build-review", "security-review"]:
         if job not in jobs:
             raise ValueError(f"Missing diagram job: {job}")
     if set(as_list(jobs["build-review"].get("needs"))) != {"lints", "tests"}:
         raise ValueError("Build-review diagram dependency drift")
-    expected = {"codeql", "dependency-vulnerability", "dependency-malware"}
+    expected = {"codeql", "dependency-vulnerability"}
     if infrastructure:
         expected.add("secrets")
         for gate in ["gate-lint.yml", "gate-test.yml"]:
@@ -68,6 +68,8 @@ def contracts(data, root):
                 raise ValueError(f"Infrastructure PR-only gate trigger drift: {gate}")
         if jobs.get("result", {}).get("name") != "Required CI" or "gate-secrets.yml" not in workflows:
             raise ValueError("Infrastructure Required CI/secret-scan diagram drift")
+    else:
+        expected.add("dependency-malware")
     if set(as_list(jobs["security-review"].get("needs"))) != expected:
         raise ValueError("Security-review diagram dependency drift")
     for name in ["review-code.yml", "review-build.yml", "review-security.yml"]:

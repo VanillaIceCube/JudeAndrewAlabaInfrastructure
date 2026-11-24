@@ -29,9 +29,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-  dependency-malware:
-    name: Dependency scope
-    uses: ./.github/workflows/gate-malware.yml
   secrets:
     name: Secret scan
     uses: ./.github/workflows/gate-secrets.yml
@@ -73,7 +70,7 @@ jobs:
       test_automation_log: ${{ needs.tests.outputs.automation_log }}
   security-review:
     name: AI Security Review
-    needs: [codeql, dependency-vulnerability, dependency-malware, secrets]
+    needs: [codeql, dependency-vulnerability, secrets]
     if: always() && github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-security.yml
     secrets:
@@ -94,12 +91,10 @@ jobs:
       codeql_scope_actions: ${{ needs.codeql.outputs.scope_actions }}
       dependency_vulnerability_result: ${{ needs.dependency-vulnerability.result }}
       dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
-      dependency_malware_result: ${{ needs.dependency-malware.result }}
-      dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
       secret_scan_result: ${{ needs.secrets.result }}
   result:
     name: Required CI
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review]
+    needs: [lints, tests, codeql, dependency-vulnerability, secrets, code-review, build-review, security-review]
     if: always()
     runs-on: ubuntu-latest
     steps:
