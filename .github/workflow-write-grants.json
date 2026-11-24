@@ -1,4 +1,11 @@
 {
+  ".github/workflows/ci-auto-merge.yml": {
+    "jobs.dependabot-auto-merge.permissions": [
+      "checks",
+      "contents",
+      "pull-requests"
+    ]
+  },
   ".github/workflows/ci-orchestrator.yml": {
     "jobs.codeql.permissions": [
       "security-events"
