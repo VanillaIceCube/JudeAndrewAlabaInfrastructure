@@ -9,10 +9,10 @@ on:
         description: Retired ingress suite description.
         value: ${{ jobs.validate.outputs.ingress_log }}
       recovery_status:
-        description: Retired recovery test suites (not-applicable).
+        description: Canonical release and recovery regression status.
         value: ${{ jobs.validate.outputs.recovery_status }}
       recovery_log:
-        description: Retired recovery suites description.
+        description: Bounded release and recovery diagnostics.
         value: ${{ jobs.validate.outputs.recovery_log }}
       automation_status:
         description: Automation regression status.
@@ -155,6 +155,26 @@ jobs:
         if: steps.filter.outputs.manifest == 'true'
         run: python3 app-release/update_release_manifest.py --check
 
+      - name: Check out the pinned consumer test fixture
+        if: steps.filter.outputs.manifest == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: VanillaIceCube/FullStackTemplate
+          ref: 5556bcbc032fe8201ffb2826e921b70a6a2767df
+          path: release-consumer-fixture
+          persist-credentials: false
+
+      - name: Run canonical release and recovery tests with the consumer policy
+        id: release-tests
+        if: steps.filter.outputs.manifest == 'true'
+        continue-on-error: true
+        working-directory: release-consumer-fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 deploy/production/build_bundle.py --check-parity --source-root "$GITHUB_WORKSPACE" --sync
+          python3 -m unittest discover -s deploy/tests -v 2>&1 | tee "$RUNNER_TEMP/release-tests.log"
+
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.filter.outputs.automation == 'true'
         with:
@@ -186,9 +206,21 @@ jobs:
           echo 'ingress=Root ingress routing and reversal tests were retired; no runtime acceptance was performed.' >> "$GITHUB_OUTPUT"
       - id: recovery-report
         if: always()
+        env:
+          SCOPE: ${{ steps.scope.outcome }}
+          APPLICABLE: ${{ steps.filter.outputs.manifest }}
+          OUTCOME: ${{ steps.release-tests.outcome }}
+        shell: bash
         run: |
-          echo 'recovery_status=not-applicable' >> "$GITHUB_OUTPUT"
-          echo 'recovery=Root snapshot, gateway transaction and release-profile tests were retired; no recovery acceptance was performed.' >> "$GITHUB_OUTPUT"
+          if [[ "$SCOPE" == success && "$APPLICABLE" == false ]]; then
+            echo 'recovery_status=not-applicable' >> "$GITHUB_OUTPUT"
+            echo 'recovery=No release source or test gate changes.' >> "$GITHUB_OUTPUT"
+          elif [[ "$OUTCOME" == success || "$OUTCOME" == failure ]]; then
+            python3 - "$RUNNER_TEMP/release-tests.log" "$GITHUB_OUTPUT" recovery "$OUTCOME" <<< "$BOUNDED_LOG_PYTHON"
+          else
+            echo 'recovery_status=failure' >> "$GITHUB_OUTPUT"
+            echo 'recovery=Release and recovery tests did not run. Check scope and prerequisites.' >> "$GITHUB_OUTPUT"
+          fi
       - id: automation-report
         if: always()
         env:
@@ -210,7 +242,10 @@ jobs:
             echo 'automation=Action regressions did not run. Check the preceding validation and setup steps.' >> "$GITHUB_OUTPUT"
           fi
       - name: Require every applicable validation suite
-        if: always() && (steps.automation-report.outcome != 'success' || (steps.filter.outputs.automation == 'true' && steps.automation.outcome != 'success'))
+        if: >-
+          always() && (steps.recovery-report.outputs.recovery_status == 'failure' ||
+          steps.automation-report.outcome != 'success' ||
+          (steps.filter.outputs.automation == 'true' && steps.automation.outcome != 'success'))
         run: exit 1
       - name: Retain bounded failure diagnostics
         if: failure()
