@@ -43,7 +43,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "10 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -59,7 +60,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "7775221233e043b02d201df3f6683e901fd12374a9d25dfd4b606ecd7d998af8",
+      "source_sha256": "df3f1235838b5d5755a3a0dc7df9225afe67f88421d87ea4827d6db2830c501c",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -78,7 +79,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "30 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -90,7 +92,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "386ff5300e11833a687e073729fc3f5e3b4cd3363bad9137723223e27b1355ee",
+      "source_sha256": "716555ee4f0b7ef5c6c13324222180275c505a391e87009c5cd903c4c3f34b1e",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -109,7 +111,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "20 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -125,7 +128,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "6f43d14e6854a9a7fd2e96f7cb660842d3aef2f3707beb69dba486b44a4d2c1d",
+      "source_sha256": "ca512484fa8a48c269c9e82da83a4dc14277ce7f6ef1852c5f1236f1359dbd05",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -356,7 +359,8 @@
         },
         "schedule": [
           {
-            "cron": "24 10 * * 1"
+            "cron": "0 0 * * 1",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_call": {
@@ -412,7 +416,7 @@
         "pull-requests": "read",
         "security-events": "write"
       },
-      "source_sha256": "cf7fd2fa5d6974e256c3b433d39ce2b7e12f82c4684a79936600c782dabfa6eb",
+      "source_sha256": "a87aca8a4bb0acbc9deaf7ad178c3ad8001df04334c1e3976cab25db2dd57656",
       "variable_names": []
     },
     "gate-lint.yml": {
