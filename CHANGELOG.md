@@ -4,7 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-24
 
+### Added
+
+- Validate eligible Dependabot updates on their exact PR head after successful CI. The protected workflow verifies signed metadata, scanner results, reviewer approvals and native branch rules before requesting auto-merge.
+
 ### Changed
+
+- Select CodeQL analyzers from changed PR files, fail closed on incomplete detection, and keep full main, weekly and manual scans.
 
 - Reserve job-scoped permissions for the protected Dependabot workflow. Eligible updates may request native auto-merge after the owner installs and verifies the workflow. The owner continues to decide other merges and production promotions.
 
