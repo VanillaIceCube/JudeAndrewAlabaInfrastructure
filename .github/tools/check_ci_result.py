@@ -29,4 +29,4 @@ if __name__ == "__main__":
     problems = failures(json.loads(os.environ["RESULTS"]), applicable)
     if problems:
         raise SystemExit("\n".join(problems))
-    print("All independent gates and applicable reviews passed. Owner merge approval remains required.")
+    print("All independent gates and applicable reviews passed.")

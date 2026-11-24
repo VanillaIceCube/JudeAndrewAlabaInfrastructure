@@ -27,6 +27,7 @@
       ".github/workflows/alert-vulnerability.yml"
     ],
     "./.github/actions/setup-uv": [
+      ".github/workflows/ci-auto-merge.yml",
       ".github/workflows/gate-codeql.yml",
       ".github/workflows/gate-lint.yml",
       ".github/workflows/validate.yml"
@@ -134,6 +135,42 @@
         "SECURITY_ALERTS_PROJECT_ID"
       ]
     },
+    "ci-auto-merge.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_run": {
+          "types": [
+            "completed"
+          ],
+          "workflows": [
+            "CI"
+          ]
+        }
+      },
+      "jobs": {
+        "dependabot-auto-merge": {
+          "if": "github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'",
+          "name": "Dependabot Auto Merge",
+          "permissions": {
+            "actions": "read",
+            "checks": "write",
+            "contents": "write",
+            "pull-requests": "write",
+            "vulnerability-alerts": "read"
+          }
+        }
+      },
+      "name": "Dependabot Auto Merge",
+      "permissions": {
+        "contents": "read"
+      },
+      "source_sha256": "dd1f5f4b70fc667ea4db048342a2967ba2f4529d63d8a50e431df35ab069b969",
+      "variable_names": [
+        "LINT_EASTWOOD_REVIEWER_LOGIN",
+        "OBI_WAN_REVIEWER_LOGIN",
+        "ROBOCOP_REVIEWER_LOGIN"
+      ]
+    },
     "ci-orchestrator.yml": {
       "credential_names": [
         "LINT_EASTWOOD_OPENAI_API_KEY",
@@ -188,6 +225,7 @@
           "permissions": {
             "actions": "read",
             "contents": "read",
+            "pull-requests": "read",
             "security-events": "write"
           },
           "uses": "./.github/workflows/gate-codeql.yml"
@@ -255,7 +293,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "4993e090e95ff1d1cf0109ba2946c4742ac2e9161c06be55a3a05eab89a86625",
+      "source_sha256": "c98ba3f735de9c566b5fbb2c3f2d9365adb3a7b22b4787e8b8fbf4f5adf5a2fd",
       "variable_names": []
     },
     "deploy-gateway.yml": {
@@ -324,41 +362,57 @@
         "workflow_call": {
           "outputs": {
             "scope_actions": {
-              "description": "Workflow and composite Actions scope.",
-              "value": "${{ jobs.scope.outputs.actions }}"
+              "description": "Whether the pull request requires GitHub Actions analysis.",
+              "value": "${{ jobs.changes.outputs.actions }}"
             },
             "scope_javascript": {
-              "description": "Automation JavaScript scope.",
-              "value": "${{ jobs.scope.outputs.javascript }}"
+              "description": "Whether the pull request requires JavaScript/TypeScript analysis.",
+              "value": "${{ jobs.changes.outputs.javascript }}"
             },
             "scope_python": {
-              "description": "Python scope.",
-              "value": "${{ jobs.scope.outputs.python }}"
+              "description": "Whether the pull request requires Python analysis.",
+              "value": "${{ jobs.changes.outputs.python }}"
             },
             "scope_status": {
-              "description": "All three present languages are always analyzed.",
-              "value": "${{ jobs.scope.outputs.status }}"
+              "description": "Whether path-aware CodeQL scope detection succeeded.",
+              "value": "${{ jobs.changes.outputs.scope_status }}"
             }
           }
         },
         "workflow_dispatch": ""
       },
       "jobs": {
-        "analyze": {
-          "name": "${{ matrix.name }}",
-          "needs": "scope"
+        "analyze-actions": {
+          "if": "needs.changes.outputs.actions == 'true'",
+          "name": "Analyze GitHub Actions",
+          "needs": "changes"
         },
-        "scope": {
-          "name": "Detect CodeQL Scope"
+        "analyze-javascript": {
+          "if": "needs.changes.outputs.javascript == 'true'",
+          "name": "Analyze JavaScript/TypeScript",
+          "needs": "changes"
+        },
+        "analyze-python": {
+          "if": "needs.changes.outputs.python == 'true'",
+          "name": "Analyze Python",
+          "needs": "changes"
+        },
+        "changes": {
+          "name": "Detect CodeQL Scope",
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
         }
       },
       "name": "CodeQL Gate",
       "permissions": {
         "actions": "read",
         "contents": "read",
+        "pull-requests": "read",
         "security-events": "write"
       },
-      "source_sha256": "8f2a9e5182a4a440e297c8ab9358620fe24ffc6058d8364e00f901c7104608a1",
+      "source_sha256": "cf7fd2fa5d6974e256c3b433d39ce2b7e12f82c4684a79936600c782dabfa6eb",
       "variable_names": []
     },
     "gate-lint.yml": {

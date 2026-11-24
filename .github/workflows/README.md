@@ -7,6 +7,7 @@ CI, reviews, dependency/security checks, and release behavior for JudeAndrewAlab
 | Area | Entry points |
 | --- | --- |
 | Pull requests | [CI orchestrator](ci-orchestrator.yml), independent gates, and the three reviewer workflows. |
+| Dependabot | [Protected auto-merge follow-up](ci-auto-merge.yml) after successful PR CI. |
 | Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) schedules/manual dispatches. |
 | Promotion evidence | [Read-only request](promotion-summary-request.yml) and [trusted summary](promotion-summary.yml). |
 | Releases | [Release workflow](deploy-gateway.yml). |
@@ -119,7 +120,7 @@ remain; secret and private host/recovery contents are excluded.
 
 ### Protected Dependabot auto-merge
 
-The owner approved the following policy for staged adoption. Continue manual owner merges until the implementation and activation steps in [repository setup](../README.md#-branch-protection) are complete.
+The trusted workflow implements the following policy. Continue manual owner merges until the activation steps in [repository setup](../README.md#-branch-protection) are complete.
 
 After a successful PR CI run, the follow-up checks out reviewed `main` and resolves
 the run to the exact open PR head. It publishes a fresh `Dependabot Policy` check.
@@ -148,7 +149,7 @@ See [repository setup](../README.md#-branch-protection) for activation.
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |
 | Lint Eastwood | Interprets actionlint/ShellCheck, Compose, ingress/reversal, SQLite recovery and automation diagnostics; never edits source |
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
-| CodeQL | All present Python, automation JavaScript and Actions sources on every PR, main push and weekly/manual runs |
+| CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on main pushes, weekly runs and manual scans |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
 | Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
@@ -196,7 +197,7 @@ Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
 feeds do not establish that a live close race occurred.
 
 Infrastructure deliberately retains weekly grouped Actions and separate Compose
-Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
+Dependabot updates, full CodeQL scans on main, scheduled and manual runs, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
