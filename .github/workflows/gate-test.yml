@@ -20,8 +20,6 @@ on:
       automation_log:
         description: Automation diagnostics.
         value: ${{ jobs.validate.outputs.automation_log }}
-  push:
-    branches: [main]
 permissions:
   contents: read
 jobs:

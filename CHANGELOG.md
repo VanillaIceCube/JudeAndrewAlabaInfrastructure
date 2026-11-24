@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Run lint and validation in required PR CI, moving its validation workflow to `gate-test.yml` and preserving the `Tests / validate` check name. Verify access to branch rules and GitHub’s expected-head guard for same-repository PRs. Full CodeQL scans continue after merges to main.
 - Select CodeQL analyzers from changed PR files, fail closed on incomplete detection, and keep full main, weekly and manual scans.
 
 - Reserve job-scoped permissions for the protected Dependabot workflow. Eligible updates may request native auto-merge after the owner installs and verifies the workflow. The owner continues to decide other merges and production promotions.
