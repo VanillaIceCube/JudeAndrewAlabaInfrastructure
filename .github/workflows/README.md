@@ -524,7 +524,7 @@ flowchart LR
 ```
 
 [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+[malware](alert-malware.yml) aggregation each run at midnight Pacific (America/Los_Angeles) or by manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
 recovery preserve their independent credential boundaries. CodeQL analysis also
 runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
