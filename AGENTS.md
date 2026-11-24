@@ -171,8 +171,8 @@ Dependabot. Preserve non-mutating reviews. Dependabot security-update PRs do not
 authorize merging, and a human PR smoke test does not prove Dependabot access.
 Infrastructure has one publisher test file and no npm dependency graph; application
 publisher/branch-gating tests and npm malware scanning are not automatic parity
-requirements here. Keep the Infrastructure-specific Required CI and extra secrets
-gate documented in the workflow guide.
+requirements here. Keep Infrastructure's Required CI aggregation documented in
+the workflow guide. It includes the shared secret scan.
 
 ## 🔑 OpenAI reviewer isolation
 
