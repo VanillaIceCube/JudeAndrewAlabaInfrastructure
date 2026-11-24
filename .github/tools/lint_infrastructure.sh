@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
-actionlint
+# Actionlint does not recognize the GitHub Dependabot alerts permission.
+actionlint -ignore 'unknown permission scope "vulnerability-alerts"'
 node .github/actions/check-workflow-security/check-workflow-security.js
 mapfile -t shell_files < <(git ls-files --cached --others --exclude-standard '*.sh')
 if [ "${#shell_files[@]}" -gt 0 ]; then
