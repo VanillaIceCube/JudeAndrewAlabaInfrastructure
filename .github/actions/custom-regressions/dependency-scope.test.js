@@ -3,12 +3,20 @@ const test = require("node:test");
 
 test("uv tooling scope allows the reviewed parser graph and rejects expanded dependency graphs", () => {
   const program = String.raw`
-import importlib.util
 from pathlib import Path
 import tempfile
-spec = importlib.util.spec_from_file_location("scope", ".github/tools/check_dependency_scope.py")
-scope = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(scope)
+from types import SimpleNamespace
+import yaml
+
+workflow = Path(".github/workflows/gate-malware.yml")
+definition = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+steps = definition["jobs"]["scope"]["steps"]
+scope_step = next(step for step in steps if step.get("id") == "scope")
+command, source = scope_step["run"].split("\n", 1)
+assert command == "python3 - <<'PY'" and source.endswith("\nPY\n")
+namespace = {"__name__": "scope"}
+exec(compile(source.removesuffix("\nPY\n"), str(workflow), "exec"), namespace)
+scope = SimpleNamespace(**namespace)
 assert scope.unsupported_manifests(["pyproject.toml", "uv.lock"]) == []
 assert scope.unsupported_manifests(["app/uv.lock", "package.json", "requirements.txt"]) == ["app/uv.lock", "package.json", "requirements.txt"]
 scope.validate_tooling_project(Path.cwd())
