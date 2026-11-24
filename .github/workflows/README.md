@@ -125,7 +125,7 @@ remain; secret and private host/recovery contents are excluded.
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |
 | Lint Eastwood | Interprets actionlint/ShellCheck, Compose, ingress/reversal, SQLite recovery and automation diagnostics; never edits source |
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
-| CodeQL | All present Python, automation JavaScript and Actions sources on every PR, main push and weekly/manual runs |
+| CodeQL | Changed paths select PR languages. Main pushes and weekly/manual runs scan all three languages. |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
 | Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
@@ -173,7 +173,7 @@ Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
 feeds do not establish that a live close race occurred.
 
 Infrastructure deliberately retains weekly grouped Actions and separate Compose
-Dependabot updates, all-language CodeQL on every run, `pull-requests: read` for
+Dependabot updates, all-language CodeQL on main pushes and scheduled/manual runs, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
@@ -232,8 +232,11 @@ Existing managed source refs select the canonical issue even when wording change
 
 Project attachment retries transient failures at most three times, reading back
 possibly committed writes before retrying. Unresolved attachments identify the
-saved issue; rerun the same feed to reuse it. Interrupted field initialization fills
-only missing fields, preserving human planning. All active groups synchronize before
+saved issue; rerun the same feed to reuse it. Reconciliation fills missing fields.
+A group containing a critical alert receives P0. High alerts receive at least P1.
+Other vulnerability groups default to P2, or P1 when severity is unknown. CodeQL and
+malware groups default to P1. An urgent alert can raise an existing group's priority.
+Higher priorities and other populated planning fields are preserved. All active groups synchronize before
 superseded issues can close. Closure saves source history and End date before Done.
 Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 may
 recover, and only after readback proves closed/completed with the exact saved body.
@@ -256,9 +259,9 @@ Absent or empty values deliberately preserve `gpt-6-luna`, `medium`, and `16000`
 Nonempty overrides pass through the existing Responses policy. Configuration is
 validated before source reads or issue/Project writes, including empty feeds;
 invalid models, efforts or token limits fail visibly without a provider call.
-No model migration, credential/project consolidation, retry or spending policy
-change is implied. Infrastructure retains its additional Project-schema preflight,
-all-severity vulnerability feed and distinct token/Project permissions.
+All three feeds check the Project token and field schema before reading alerts.
+RoboCop receives issue write access and read access to the selected feed.
+Only the Project client receives the personal Project token.
 
 `node --test .github/actions/custom-regressions/security-alert-contract.test.js`
 checks actual YAML inputs/callers, audits local composites for unsupported `vars`,
@@ -310,6 +313,7 @@ main-to-env-prod/manual release paths and credential trust boundaries to source.
 
 ### Validation and activation
 
+The [lint gate](gate-lint.yml) runs only through pull-request CI.
 The [test gate](gate-test.yml) runs through the CI orchestrator and selects checks
 from the pull request's changed files. It runs applicable checks in this order.
 
@@ -436,8 +440,7 @@ flowchart TD
   Auto --> Platform[GitHub protected auto-merge]
 ```
 
-[The orchestrator](ci-orchestrator.yml) excludes application `env-prod` PRs;
-Infrastructure restricts it to `main`. Same-repository human and Dependabot PRs
+[The orchestrator](ci-orchestrator.yml) runs on pull requests targeting any branch except `env-prod`. Same-repository human and Dependabot PRs
 receive the configured reviewers. Forks receive no reviewer credentials: never
 execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
@@ -488,7 +491,8 @@ permissions in the workflow or job that requests them.
 ```mermaid
 flowchart LR
   Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
-  Feeds --> Source[Authoritative source alerts and bounded classification]
+  Feeds --> Preflight[Verify Project access and fields]
+  Preflight --> Source[All open source alerts and bounded malware classification]
   Source --> Robo[RoboCop grouping with validated Responses policy]
   Robo --> Validate[Complete source coverage and lifecycle validation]
   Validate --> Issues[App-owned issue updates and verified closure]
@@ -499,7 +503,7 @@ flowchart LR
 [malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
 recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
+runs on applicable main pushes, scoped PRs, the weekly schedule and manual dispatch. Alert maintenance
 neither merges code nor deploys.
 
 ### Promotion, release and manual operations
@@ -573,7 +577,7 @@ image advisories and live operations keep their separate operator acceptance.
 
 Dependabot's `uv` updater reads `pyproject.toml` and `uv.lock`; a requirements
 export is unnecessary. Runtime and development dependencies retain the existing
-reviewer and independent-check policy. The source diff keeps `uv.lock` reviewable;
+reviewer and independent-check policy. The source diff includes every lockfile;
 only the separate dependency-usage search omits generated lockfile matches.
 The uv executable is a deliberately pinned toolchain bootstrap in `setup-uv`
 and application Dockerfiles; package dependency PRs do not change that bootstrap.

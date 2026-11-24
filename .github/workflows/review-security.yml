@@ -342,7 +342,7 @@ jobs:
               "summary": "**REVIEW INCOMPLETE. DIRECTIVE: CHECK FAILED. SECURITY VERDICT: WITHHELD.** DIFF SIZE EXCEEDS AUTHORIZED REVIEW PARAMETERS. PARTIAL EVIDENCE DOES NOT CONSTITUTE SECURITY CLEARANCE.",
               "unchanged": false,
               "findings": [],
-              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "evidence": ["The reviewable source diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
               "actions": ["REDUCE DIFF SCOPE OR AUTHORIZE A HIGHER REVIEW BUDGET, THEN RESUBMIT FOR SECURITY SCAN."],
               "comments": []
             }

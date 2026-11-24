@@ -72,8 +72,8 @@ advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
 Project #13 uses Status (Backlog/Done), Domain (CI/CD), Work type (Security),
-Priority (P0/P1/P2), Size (M) and numeric Estimate. End date is optional. Reused
-items retain human planning fields. Existing labels: `codeql`, `vulnerability`,
+Priority (P0/P1/P2), Size (M), numeric Estimate and a date field for End date.
+Urgent alerts raise the group priority when needed. Reused items retain other human planning fields. Existing labels: `codeql`, `vulnerability`,
 `malware`, `dependencies`, `github_actions`, `docker`. Validate Project
 access/schema before issue writes; RoboCop alone mutates issues.
 

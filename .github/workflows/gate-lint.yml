@@ -5,8 +5,11 @@ on:
       log:
         description: Bounded diagnostic log for Lint Eastwood.
         value: ${{ jobs.lint.outputs.log }}
-  push:
-    branches: [main]
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:

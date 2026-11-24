@@ -23,11 +23,11 @@ function isTrue(value) {
 }
 
 function findAnalyzerCheck(checkRuns, analyzerName) {
-  return checkRuns.find((check) =>
+  return checkRuns.filter((check) =>
     String(check.name || "")
       .toLowerCase()
       .endsWith(analyzerName.toLowerCase()),
-  );
+  ).sort((left, right) => Number(right.id) - Number(left.id))[0];
 }
 
 function hasDefaultBranchBaseline(analyses, definition) {
@@ -123,9 +123,12 @@ function collectCodeqlEvidence({
           ? `The required analyzer concluded ${analyzerCheck.conclusion || analyzerCheck.status || "unknown"}.`
           : "The required analyzer check was not found.";
       }
+    } else if (analyzerCheck && !["success", "skipped"].includes(analyzerCheck.conclusion)) {
+      status = "evidence_gap";
+      reason = "An out-of-scope analyzer ran but did not complete successfully.";
     } else if (baselineQueryError) {
       status = "evidence_gap";
-      reason = `The analyzer was intentionally omitted, but the default-branch baseline could not be verified: ${baselineQueryError}`;
+      reason = `The analyzer was intentionally omitted, but the default-branch baseline could not be verified: ${String(baselineQueryError).slice(0, 500)}`;
     } else if (baselinePresent) {
       status = "expected_skip";
       reason =
@@ -153,11 +156,12 @@ function collectCodeqlEvidence({
 
   const syntheticCodeqlSummaries = checkRuns
     .filter(isSyntheticCodeqlSummary)
+    .slice(0, 10)
     .map((check) => ({
       id: check.id,
       name: check.name,
       conclusion: check.conclusion,
-      output: check.output?.summary || "",
+      output: String(check.output?.summary || "").slice(0, 1000),
       interpretation:
         blockingReasons.length === 0
           ? "informational_expected_scope_omission"
