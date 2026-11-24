@@ -22,7 +22,7 @@ function fixture(run, env, stubs, check) {
     fs.writeFileSync(path.join(dir, 'run.sh'), run);
     fs.writeFileSync(path.join(dir, 'diff.txt'), 'quoted "change"\nsecond line');
     fs.writeFileSync(path.join(dir, 'response.json'), JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'fixture response' }] }] }));
-    const values = { ...process.env, GITHUB_OUTPUT: posix(path.join(dir, 'output')), GITHUB_STEP_SUMMARY: posix(path.join(dir, 'summary')), MOCK_BIN: posix(path.join(dir, 'bin')), MOCK_CWD: posix(dir), MOCK_RESPONSE: posix(path.join(dir, 'response.json')), DIFF_PATH: posix(path.join(dir, 'diff.txt')), GIT_LOG: posix(path.join(dir, 'git.log')), ...env };
+    const values = { ...process.env, RUNNER_TEMP: dir.replaceAll('\\', '/'), GITHUB_OUTPUT: posix(path.join(dir, 'output')), GITHUB_STEP_SUMMARY: posix(path.join(dir, 'summary')), MOCK_BIN: posix(path.join(dir, 'bin')), MOCK_CWD: posix(dir), MOCK_RESPONSE: posix(path.join(dir, 'response.json')), DIFF_PATH: posix(path.join(dir, 'diff.txt')), GIT_LOG: posix(path.join(dir, 'git.log')), ...env };
     const result = spawnSync(bash, ['-c', 'export PATH="$MOCK_BIN:$PATH"; cd "$MOCK_CWD"; bash run.sh'], { env: values, encoding: 'utf8', timeout: 15000 });
     check(result, dir);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
@@ -180,23 +180,71 @@ test('complete source diffs are accepted through 2 MB and marked incomplete abov
   const action = fs.readFileSync(path.join(root, '.github/actions/get-pr-diff/action.yml'), 'utf8');
   const budget = Number(action.match(/max_bytes:[\s\S]*?default: "(\d+)"/)[1]);
   assert.equal(budget, 2000000);
-  const run = steps('get-pr-diff')[0].run
-    .replaceAll('${{ inputs.base_sha }}', 'a'.repeat(40))
-    .replaceAll('${{ inputs.head_sha }}', 'b'.repeat(40))
-    .replaceAll('${{ inputs.max_bytes }}', String(budget));
+  const run = steps('get-pr-diff')[0].run;
   const stubs = {
     git: `if [ "$1" = "ls-tree" ] || [ "\${2:-}" = "--name-only" ]; then exit 0; fi
 python -c 'import os,sys; sys.stdout.buffer.write(b"+" + b"x" * (int(os.environ["DIFF_SIZE"]) - 2) + bytes([10]))'`,
     python3: 'exec python "$@"',
   };
-  for (const bytes of [budget - 1, budget, budget + 1]) fixture(run, { DIFF_SIZE: String(bytes), BASE_SHA: 'a'.repeat(40), HEAD_SHA: 'b'.repeat(40), MAX_BYTES: String(budget) }, stubs, (result, dir) => {
+  for (const bytes of [budget - 1, budget, budget + 1]) fixture(run, { DIFF_SIZE: String(bytes), BASE_SHA: 'a'.repeat(40), HEAD_SHA: 'b'.repeat(40), MAX_BYTES: String(budget), OMIT_FRONTEND_NPM_LOCKFILE: 'false' }, stubs, (result, dir) => {
     assert.equal(result.status, 0, result.stderr);
     const outputs = Object.fromEntries(fs.readFileSync(path.join(dir, 'output'), 'utf8').trim().split('\n').map(line => line.split('=')));
     assert.equal(Number(outputs.max_bytes), budget);
     assert.equal(Number(outputs.diff_bytes), bytes);
     assert.equal(outputs.truncated, String(bytes > budget));
-    assert.equal(fs.statSync(path.join(dir, 'pr.diff')).size, Math.min(bytes, budget));
+    assert.equal(fs.statSync(outputs.diff_path).size, Math.min(bytes, budget));
     if (bytes > budget) assert.match(result.stdout, /Truncated to 2000000 bytes/);
     else assert.doesNotMatch(result.stdout, /Truncated/);
   });
+});
+
+test("test gate scopes checks independently and fails closed if detection is incomplete", () => {
+  const program = String.raw`
+from fnmatch import fnmatchcase
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import yaml
+
+path = Path(".github/workflows/gate-test.yml")
+definition = yaml.safe_load(path.read_text(encoding="utf-8"))
+steps = definition["jobs"]["validate"]["steps"]
+by_id = {step["id"]: step for step in steps if "id" in step}
+filters = yaml.safe_load(by_id["filter"]["with"]["filters"])
+for filename, expected in {
+    "CHANGELOG.md": set(),
+    "compose.yml": {"compose"},
+    "nginx/vhosts/example.conf": {"compose"},
+    "app-release/v1/workflow.yml": {"manifest"},
+    ".github/actions/example/action.yml": {"automation"},
+    "uv.lock": {"manifest", "automation"},
+    ".github/workflows/gate-test.yml": {"compose", "manifest", "automation"},
+    ".github/workflows/ci-orchestrator.yml": {"compose", "manifest", "automation"},
+}.items():
+    actual = {name for name, patterns in filters.items() if any(fnmatchcase(filename, pattern) for pattern in patterns)}
+    assert actual == expected, (filename, actual, expected)
+
+bash = "C:/Program Files/Git/bin/bash.exe" if os.name == "nt" else "bash"
+with tempfile.TemporaryDirectory() as directory:
+    output = Path(directory) / "output"
+    env = {**os.environ, "GITHUB_OUTPUT": output.as_posix(), "GITHUB_STEP_SUMMARY": output.as_posix()}
+    def run(step, **values):
+        return subprocess.run([bash, "-e", "-s"], input=by_id[step]["run"],
+                              text=True, capture_output=True, env={**env, **values})
+
+    assert run("scope", OUTCOME="success", COMPOSE="false", MANIFEST="false", AUTOMATION="false").returncode == 0
+    assert run("scope", OUTCOME="failure", COMPOSE="false", MANIFEST="false", AUTOMATION="false").returncode != 0
+    assert run("scope", OUTCOME="success", COMPOSE="false", MANIFEST="", AUTOMATION="false").returncode != 0
+
+    for scope, applicable, outcome, expected in [
+        ("success", "false", "skipped", "not-applicable"),
+        ("failure", "", "skipped", "failure"),
+        ("success", "true", "skipped", "failure"),
+    ]:
+        output.write_text("", encoding="utf-8")
+        run("automation-report", SCOPE=scope, AUTOMATION=applicable, OUTCOME=outcome).check_returncode()
+        assert output.read_text(encoding="utf-8").startswith(f"automation_status={expected}\n")
+`;
+  execFileSync(process.platform === "win32" ? "python" : "python3", ["-c", program], { stdio: "pipe" });
 });

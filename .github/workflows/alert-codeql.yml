@@ -1,18 +1,26 @@
 name: CodeQL Alert
 
 on:
-  schedule:
-    - cron: "0 0 * * *"
-      timezone: "America/Los_Angeles"
+  workflow_run:
+    workflows: [CodeQL Gate]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
 concurrency:
   group: security-alerts-codeql
   cancel-in-progress: false
+
 jobs:
   aggregate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'schedule' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -31,7 +39,6 @@ jobs:
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-contents: read
           permission-issues: write
           permission-security-events: read
 
