@@ -6,15 +6,26 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- Validate eligible Dependabot updates on their exact PR head after successful CI. The protected workflow verifies signed metadata, scanner results, reviewer approvals and native branch rules before requesting auto-merge.
+- Add protected Dependabot auto-merge for verified patch and minor updates after Infrastructure CI and three current-head approvals.
 
 ### Changed
 
-- Run the full weekly CodeQL analysis on Mondays at midnight Pacific. Schedule CodeQL, vulnerability and malware alert tracking at midnight Pacific every day. These schedules follow America/Los_Angeles through daylight-saving transitions.
-- Run lint and validation in required PR CI, moving its validation workflow to `gate-test.yml` and preserving the `Tests / validate` check name. Verify access to branch rules and GitHub’s expected-head guard for same-repository PRs. Full CodeQL scans continue after merges to main.
-- Select CodeQL analyzers from changed PR files, fail closed on incomplete detection, and keep full main, weekly and manual scans.
+- Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
+- Run canonical release and recovery tests in a pinned consumer fixture when the shared release scope changes.
+- Test the pinned gateway in disposable networks for routing, the exact Notoli proxy address, forwarded-header handling, and retired-route recovery state.
+- Raise existing security groups to at least P1 for unknown source severity.
+- Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds. The schedules follow America/Los_Angeles through daylight-saving transitions.
+- Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.
+- Scope CodeQL by changed paths on pull requests and run full scans daily and on manual dispatch. Remove the separate scan after each merge to main. Run lint only through PR CI and include every lockfile in reviewer diffs.
+- Preserve the `Tests / validate` requirement when renaming the validation workflow to `gate-test.yml`. Same-repository PR CI verifies that GitHub exposes the expected-head guard and main’s required checks.
+- Align Infrastructure's JavaScript action test discovery with the app test gates.
+- Run the Infrastructure test gate only through pull request CI.
+- Validate Compose before checking the release manifest and running action regressions.
+- Run CI for pull requests targeting any branch except env-prod and select Infrastructure test checks by changed files.
 
-- Reserve job-scoped permissions for the protected Dependabot workflow. Eligible updates may request native auto-merge after the owner installs and verifies the workflow. The owner continues to decide other merges and production promotions.
+### Removed
+
+- Remove the Infrastructure PR dependency-scope guard that blocked new package manifests and changes expanding the root tooling dependency graph. Required CI and the protected Dependabot policy continue to check Dependency Review, CodeQL, Gitleaks, lint, tests and all applicable reviewers.
 
 ## 2026-11-23
 
@@ -22,6 +33,15 @@ All notable changes to this project are documented in this file.
 
 - Require an explicit gateway network allowlist during app preflight; reject unreviewed attachments while retaining independent recovery when approved companion routes are absent.
 - Explain why failure-reporting stream errors preserve the original release outcome.
+
+### Changed
+
+- Cancel older CI runs when a new run starts for the same pull request.
+- Install the pinned Actionlint release directly in the CI workflow.
+- Inline CI validation and reporting in the workflows that use them.
+- Remove the automated production promotion comment workflows.
+- Remove the generated CI workflow inventory and its architecture drift check.
+- Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
 
 ## 2026-11-22
 

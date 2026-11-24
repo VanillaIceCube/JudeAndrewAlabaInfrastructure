@@ -378,6 +378,8 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \[CI\]/);
   assert.match(workflow, /ref: main/);
+  assert.match(workflow, /Compare workflow write grants using reviewed main code\s+if: steps\.pr\.outputs\.policy_id != ''/);
+  assert.match(workflow, /--compare-workflow-grants "\$BASE_SHA" "\$HEAD_SHA"/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /context: \{ repo: context.repo, eventName: 'pull_request', payload \}/);
   assert.doesNotMatch(workflow, /pull_request_target|workflow_dispatch|secrets\.|download-artifact|actions\/cache|skip-verification|skip-commit-verification/);
@@ -388,10 +390,11 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.doesNotMatch(orchestrator, /uses: .*ci-auto-merge.yml/);
   assert.match(orchestrator, /Verify branch rules are readable with the workflow token/);
   assert.match(orchestrator, /expectedHeadOid/);
-  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review\]/);
+  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, secrets, code-review, build-review, security-review\]/);
   const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
-  assert.match(gate, /find \.github\/actions -name '\*\.test\.js'/);
+  assert.match(gate, /automation_tests=\(\.github\/actions\/\*\*\/\*\.test.js\)/);
   assert.match(gate, /node --test "\$\{automation_tests\[@\]\}"/);
+  assert.match(gate, /automation:\s*\n\s*- '\.github\/\*\*'/);
   for (const file of [".github/workflows/ci-auto-merge.yml", ".github/workflows/ci-orchestrator.yml"]) {
     assert.equal(scopeAllowsSkip("CodeQL / Analyze GitHub Actions", [file]), false, file);
   }

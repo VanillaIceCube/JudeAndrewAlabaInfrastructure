@@ -5,7 +5,7 @@ inputs:
     description: Alert feed to aggregate.
     required: true
   robocop-token:
-    description: RoboCop installation token with security-events read and issues write access.
+    description: RoboCop installation token with issue write access and read access to the selected alert feed.
     required: true
   project-token:
     description: Token used only for GitHub Project v2 reads and writes.
@@ -50,7 +50,7 @@ runs:
       run: |
         if [ -z "$ROBOCOP_TOKEN" ]; then
           echo "RoboCop did not produce an installation token." >&2
-          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues/Security events permissions." >&2
+          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues and feed-specific alert permissions." >&2
           exit 1
         fi
         if [ -z "$PROJECT_TOKEN" ]; then
@@ -115,6 +115,7 @@ runs:
             }
           }
           if (fields.get('Estimate')?.dataType !== 'NUMBER') throw new Error('Project numeric Estimate field unavailable.');
+          if (fields.get('End date')?.dataType !== 'DATE') throw new Error('Project End date field unavailable.');
           core.info(`Validated Project access and schema: ${result.node.title}`);
 
     - name: Fetch open structured alerts

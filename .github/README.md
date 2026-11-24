@@ -17,17 +17,8 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 Install uv and run `uv sync --locked` from the repository root. Run local checks
 with `uv run --locked` so Python and Node subprocesses use the locked environment.
-`tools/` owns `bounded_log.py` and
-`ci_report.py` for bounded review evidence, `check_ci_result.py` for required
-results, and `check_dependency_scope.py` for scanner applicability. Preserve
-existing failure gates when changing these helpers.
-
-Install the pinned, checksum-verified workflow validator with
-`bash .github/tools/install_actionlint.sh`, then run
-`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" uv run --locked bash .github/tools/lint_infrastructure.sh`.
-After workflow edits, regenerate `.github/workflows/ci-source-inventory.json` using
-`uv run --locked python .github/tools/ci_architecture.py` and verify with `--check`.
-See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
+The workflows define lint checks, bounded review logs and the Required CI result. See the
+[workflow checks](workflows/README.md#-checks-and-diagnostics) for local commands.
 
 ## 🚦 Before your first pull request
 
@@ -80,8 +71,8 @@ advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
 Project #13 uses Status (Backlog/Done), Domain (CI/CD), Work type (Security),
-Priority (P0/P1/P2), Size (M) and numeric Estimate. End date is optional. Reused
-items retain human planning fields. Existing labels: `codeql`, `vulnerability`,
+Priority (P0/P1/P2), Size (M), numeric Estimate and a date field for End date.
+Urgent alerts raise the group priority when needed. Reused items retain other human planning fields. Existing labels: `codeql`, `vulnerability`,
 `malware`, `dependencies`, `github_actions`, `docker`. Validate Project
 access/schema before issue writes; RoboCop alone mutates issues.
 
@@ -165,9 +156,14 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 ## 🔒 Branch protection
 
-The base-commit permission auditor requires separate PRs. The owner-approved first PR reserves checks, contents and pull requests write for the single `dependabot-auto-merge` job in `.github/workflows/ci-auto-merge.yml`. The entry grants no token on its own. The implementation PR supplies the trusted workflow after the ledger entry reaches `main`.
+VanillaIceCube owns this personal repository and is its sole collaborator with
+merge access as verified on November 24, 2026. Both `main` and `env-prod` require
+pull requests. Human source merges and production promotions use the owner
+account. The main ruleset requires resolved review threads, Required CI, and
+Dependabot Policy. Code-owner review is disabled in that ruleset. Recheck these
+settings and collaborator access when granting repository roles.
 
-With native auto-merge disabled, land the reviewed follow-up on `main` using
+With native auto-merge disabled, first land the reviewed follow-up on `main` using
 the existing owner process. Verify that a successful ordinary PR CI run emits a
 successful `Dependabot Policy` check on its exact head under GitHub Actions.
 Keep `Required CI` required from GitHub Actions (integration 15368) and add

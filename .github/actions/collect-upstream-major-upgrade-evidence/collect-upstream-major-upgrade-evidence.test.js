@@ -142,29 +142,35 @@ test("discovers a GitHub release from PyPI project metadata", async () => {
   assert.equal(evidence.release_sources[0].repository, "benoitc/gunicorn");
 });
 
-test("uv major updates collect the same PyPI upstream release evidence", async () => {
+test("collects uv major-upgrade evidence from PyPI and the upstream release", async () => {
+  const registryCalls = [];
   const releaseCalls = [];
   const evidence = await collectUpstreamMajorUpgradeEvidence({
     updatedDependenciesJson: JSON.stringify([dependency("gunicorn", "uv", "22.0.0", "23.0.0")]),
-    fetchJson: async () => ({
-      info: {
-        project_urls: {
-          Documentation: "https://docs.example.test",
-          Source: "https://github.com/benoitc/gunicorn",
-        },
-      },
-    }),
+    fetchJson: async (url) => {
+      registryCalls.push(url);
+      return { info: { project_urls: {
+        Documentation: "https://docs.example.test",
+        Source: "https://github.com/benoitc/gunicorn",
+      } } };
+    },
     getReleaseByTag: async (request) => {
       releaseCalls.push(request);
-      return { tag_name: "23.0.0", html_url: "https://github.com/benoitc/gunicorn/releases/tag/23.0.0" };
+      return {
+        tag_name: "23.0.0", html_url: "https://github.com/benoitc/gunicorn/releases/tag/23.0.0",
+        body: "Upstream major release notes.",
+      };
     },
   });
-
+  assert.deepEqual(registryCalls, ["https://pypi.org/pypi/gunicorn/23.0.0/json"]);
   assert.deepEqual(releaseCalls, [
     { owner: "benoitc", repo: "gunicorn", tag: "23.0.0" },
     { owner: "benoitc", repo: "gunicorn", tag: "v23.0.0" },
   ]);
+  assert.equal(evidence.dependencies[0].package_ecosystem, "uv");
   assert.equal(evidence.release_sources[0].repository, "benoitc/gunicorn");
+  assert.equal(evidence.release_sources[0].release_notes, "Upstream major release notes.");
+  assert.deepEqual(evidence.retrieval_notes, []);
 });
 
 test("records missing GitHub Action releases without failing the collector", async () => {
