@@ -9,6 +9,10 @@ All notable changes to this project are documented in this file.
 - Require an explicit gateway network allowlist during app preflight; reject unreviewed attachments while retaining independent recovery when approved companion routes are absent.
 - Explain why failure-reporting stream errors preserve the original release outcome.
 
+### Changed
+
+- Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
+
 ## 2026-11-22
 
 ### Changed
