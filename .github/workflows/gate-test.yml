@@ -20,10 +20,9 @@ on:
       automation_log:
         description: Automation diagnostics.
         value: ${{ jobs.validate.outputs.automation_log }}
-  push:
-    branches: [main]
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -97,32 +96,87 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Detect relevant changes
+        id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@f3360c560367c9daf72b88c0e6164162034c5721 # v4
         with:
-          node-version: '24'
-      - name: Set up locked Python tooling
-        uses: ./.github/actions/setup-uv
-      - name: Verify shared release source manifest
-        run: python3 app-release/update_release_manifest.py --check
+          filters: |
+            compose:
+              - 'compose.yml'
+              - 'nginx/**'
+              - '.gitattributes'
+              - '.github/workflows/deploy-gateway.yml'
+              - '.github/workflows/gate-test.yml'
+              - '.github/workflows/ci-orchestrator.yml'
+            manifest:
+              - 'app-release/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.gitattributes'
+              - '.github/actions/setup-uv/**'
+              - '.github/workflows/gate-test.yml'
+              - '.github/workflows/ci-orchestrator.yml'
+            automation:
+              - '.github/**'
+              - '.gitattributes'
+              - 'pyproject.toml'
+              - 'uv.lock'
+
+      - name: Require test scope detection
+        id: scope
+        env:
+          OUTCOME: ${{ steps.filter.outcome }}
+          COMPOSE: ${{ steps.filter.outputs.compose }}
+          MANIFEST: ${{ steps.filter.outputs.manifest }}
+          AUTOMATION: ${{ steps.filter.outputs.automation }}
+        shell: bash
+        run: |
+          if [[ "$OUTCOME" = success && "$COMPOSE" =~ ^(true|false)$ && "$MANIFEST" =~ ^(true|false)$ && "$AUTOMATION" =~ ^(true|false)$ ]]; then
+            exit 0
+          fi
+          message="Test path detection failed or returned incomplete results. Rerun after the GitHub API or service error clears."
+          echo "::error title=Test path detection unavailable::$message"
+          printf '### Test path detection unavailable\n\n%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Validate Compose configuration
         id: compose
-        continue-on-error: true
+        if: steps.filter.outputs.compose == 'true'
         run: |
           set -o pipefail
           docker compose -f compose.yml config --quiet 2>&1 | tee "$RUNNER_TEMP/compose.log"
 
+      - name: Set up locked Python tooling
+        if: steps.filter.outputs.manifest == 'true' || steps.filter.outputs.automation == 'true'
+        uses: ./.github/actions/setup-uv
+
+      - name: Verify shared release source manifest
+        if: steps.filter.outputs.manifest == 'true'
+        run: python3 app-release/update_release_manifest.py --check
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.filter.outputs.automation == 'true'
+        with:
+          node-version: '24'
+
       - name: Validate action-local regressions
         id: automation
+        if: steps.filter.outputs.automation == 'true'
         continue-on-error: true
         run: |
           set -o pipefail
           {
-            mapfile -t automation_tests < <(find .github/actions -name '*.test.js' -print)
-            [ "${#automation_tests[@]}" -gt 0 ] || exit 1
+            shopt -s globstar nullglob dotglob
+            automation_tests=(.github/actions/**/*.test.js)
+            if [ "${#automation_tests[@]}" -eq 0 ]; then
+              echo "No GitHub action regression tests were found." >&2
+              exit 1
+            fi
             node --test "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"
       - name: Bound Compose diagnostics
-        if: always()
+        if: always() && (steps.compose.outcome == 'success' || steps.compose.outcome == 'failure')
         shell: bash
         run: python3 - "$RUNNER_TEMP/compose.log" "$RUNNER_TEMP/compose.outputs" <<< "$BOUNDED_LOG_PYTHON"
       - id: ingress-report
@@ -138,11 +192,25 @@ jobs:
       - id: automation-report
         if: always()
         env:
+          SCOPE: ${{ steps.scope.outcome }}
+          AUTOMATION: ${{ steps.filter.outputs.automation }}
           OUTCOME: ${{ steps.automation.outcome }}
         shell: bash
-        run: python3 - "$RUNNER_TEMP/automation.log" "$GITHUB_OUTPUT" automation "$OUTCOME" <<< "$BOUNDED_LOG_PYTHON"
-      - name: Require every validation suite
-        if: always() && (steps.compose.outcome != 'success' || steps.automation.outcome != 'success' || steps.automation-report.outcome != 'success')
+        run: |
+          if [ "$SCOPE" != success ]; then
+            echo 'automation_status=failure' >> "$GITHUB_OUTPUT"
+            echo 'automation=Unable to determine which checks apply.' >> "$GITHUB_OUTPUT"
+          elif [ "$AUTOMATION" = false ]; then
+            echo 'automation_status=not-applicable' >> "$GITHUB_OUTPUT"
+            echo 'automation=No GitHub automation or tooling changes.' >> "$GITHUB_OUTPUT"
+          elif [ "$OUTCOME" = success ] || [ "$OUTCOME" = failure ]; then
+            python3 - "$RUNNER_TEMP/automation.log" "$GITHUB_OUTPUT" automation "$OUTCOME" <<< "$BOUNDED_LOG_PYTHON"
+          else
+            echo 'automation_status=failure' >> "$GITHUB_OUTPUT"
+            echo 'automation=Action regressions did not run. Check the preceding validation and setup steps.' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Require every applicable validation suite
+        if: always() && (steps.automation-report.outcome != 'success' || (steps.filter.outputs.automation == 'true' && steps.automation.outcome != 'success'))
         run: exit 1
       - name: Retain bounded failure diagnostics
         if: failure()
