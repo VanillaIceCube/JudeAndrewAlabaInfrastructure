@@ -155,14 +155,17 @@ jobs:
           set -euo pipefail
           export INGRESS_CERTS_DIR
           INGRESS_CERTS_DIR=$(mktemp -d "$RUNNER_TEMP/ingress-certs.XXXXXX")
-          openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=ci.invalid -days 1 \
+          openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=ci.invalid -addext subjectAltName=DNS:notoli.judeandrewalaba.com -days 1 \
             -keyout "$INGRESS_CERTS_DIR/origin.key" -out "$INGRESS_CERTS_DIR/origin.pem" 2>/dev/null
           docker compose -f compose.yml config --format json > "$RUNNER_TEMP/ingress-compose.json"
           PYTHONPATH=nginx python3 - <<'PY' 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+          from contextlib import ExitStack
           import copy
           import json
           import os
           import tempfile
+          import time
+          import uuid
           from pathlib import Path
           from unittest import TestCase
           import gateway_release as gateway
@@ -191,13 +194,67 @@ jobs:
                   if directive not in configured[0]:
                       raise ValueError(f"Missing {app} routing directive: {directive}")
 
-          with tempfile.TemporaryDirectory() as folder:
+          with tempfile.TemporaryDirectory() as folder, ExitStack() as cleanup:
               root = Path(folder)
               for name in ("releases", "attempts", "incoming"):
                   (root / name).mkdir(mode=0o700)
               gateway.ensure_image(model["services"]["proxy"]["image"])
               gateway.Gateway(root).syntax(model)
-          print("Passed gateway addresses and listeners, app routes, recovery-state checks and isolated nginx -t.")
+              image = model["services"]["proxy"]["image"]
+              prefix = "ingress-fixture-" + uuid.uuid4().hex[:12]
+              def network(suffix, *options):
+                  name = prefix + "-" + suffix
+                  network_id = gateway.docker("network", "create", "--internal", *options, name)
+                  cleanup.callback(gateway.docker, "network", "rm", network_id)
+                  return name
+
+              def container(*args):
+                  container_id = gateway.docker("create", *args)
+                  cleanup.callback(gateway.docker, "rm", "-f", container_id)
+                  return container_id
+
+              front = network("front")
+              backend = network("backend", "--subnet", gateway.check_host.NETWORKS["notoli_backend_private"][1])
+              observer = root / "observer.conf"
+              observer.write_text('server { listen 80; listen 8000; location / { default_type text/plain; '
+                                  'return 200 "$server_port|$remote_addr|$http_x_forwarded_for|$http_x_real_ip|'
+                                  '$http_x_forwarded_proto|$http_forwarded|$http_x_forwarded_host|$host|$request_uri"; } }')
+              mock_config = f"type=bind,src={observer},dst=/etc/nginx/conf.d/default.conf,readonly"
+              trusted_ip = model["services"]["proxy"]["networks"]["notoli_backend"]["ipv4_address"]
+              domain = "notoli.judeandrewalaba.com"
+              mounts = []
+              for volume in model["services"]["proxy"]["volumes"]:
+                  mounts += ["--mount", f"type=bind,src={volume['source']},dst={volume['target']},readonly"]
+              proxy = container("--network", front, "--network-alias", domain, *mounts, image)
+              gateway.docker("network", "connect", "--ip", trusted_ip, backend, proxy)
+              gateway.docker("start", proxy)
+              for net, alias in ((front, "notoli-frontend"), (backend, "notoli-backend")):
+                  upstream = container("--network", net, "--network-alias", alias, "--mount", mock_config, image)
+                  gateway.docker("start", upstream)
+              client = container("--network", front, "--entrypoint", "sleep", "--mount",
+                                 f"type=bind,src={certs}/origin.pem,dst=/etc/ssl/certs/ca-certificates.crt,readonly", image, "120")
+              gateway.docker("start", client)
+              def address(container_id, net):
+                  return gateway.inspect("container", container_id)["NetworkSettings"]["Networks"][net]["IPAddress"]
+              client_ip = address(client, front)
+              spoofed = "198.51.100.17"
+              headers = ["--header", "X-Forwarded-For: " + spoofed, "--header", "X-Real-IP: " + spoofed,
+                         "--header", "Forwarded: for=" + spoofed, "--header", "X-Forwarded-Host: untrusted.invalid",
+                         "--header", "X-Forwarded-Proto: http"]
+              for path, port, peer in (("/", "80", address(proxy, front)),
+                                       ("/api/notifications/?probe=1", "8000", trusted_ip), ("/mcp", "8000", trusted_ip)):
+                  for attempt in range(5):
+                      try:
+                          response = gateway.docker("exec", client, "wget", "-q", "-O", "-", "-Y", "off", "-T", "3",
+                                                    *headers, "https://" + domain + path, timeout=6)
+                          break
+                      except gateway.ReleaseError:
+                          if attempt == 4:
+                              raise
+                          time.sleep(1)
+                  expected = [port, peer, client_ip, client_ip, "https", "", "", domain, path]
+                  TestCase().assertEqual(response.split("|"), expected)
+          print("Passed live fixture requests, exact Notoli proxy trust, forwarded-header handling and recovery-state checks.")
           PY
 
       - name: Set up locked Python tooling

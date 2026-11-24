@@ -12,7 +12,7 @@ All notable changes to this project are documented in this file.
 
 - Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
 - Run canonical release and recovery tests in a pinned consumer fixture when the shared release scope changes.
-- Validate gateway topology, routing, retired-route recovery state, and the pinned Nginx configuration in an isolated CI container.
+- Test the pinned gateway in disposable networks for routing, the exact Notoli proxy address, forwarded-header handling, and retired-route recovery state.
 - Raise existing security groups to at least P1 for unknown source severity.
 - Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds. The schedules follow America/Los_Angeles through daylight-saving transitions.
 - Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.
