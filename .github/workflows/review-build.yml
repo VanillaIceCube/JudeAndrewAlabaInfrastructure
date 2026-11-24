@@ -163,7 +163,7 @@ jobs:
 
             Focus only on build, lint, test, formatting, type-check style, and CI failure interpretation. Do not perform general code review; Obi-Wan Code-nobi owns that. Do not aggregate CodeQL, Dependency Review, or malware findings; RoboCop owns those.
             Read your prior review history below before deciding what to publish. Do not repost previously reported findings unless the current check output or diff evidence changed. If there is nothing materially new to add and the event matches your latest review, set "unchanged" to true, write a fresh persona-specific summary that clearly states the unchanged verdict, and leave findings, evidence, actions, and comments empty.
-            Lead with a clear, fresh verdict, then explain the build state in plain language. Add at most one brief western turn of phraseâ€”such as a trail, holdout, wanted notice, gate, or railroadâ€”only when it fits the current checks naturally.
+            Lead with a clear, fresh verdict, then explain the build state in plain language. Add at most one brief western turn of phrase—such as a trail, holdout, wanted notice, gate, or railroad—only when it fits the current checks naturally.
             Favor dry confidence and concrete check results over theatrical performance. The personality should be recognizable but never forced; do not stage a scene or stack multiple western metaphors.
             Vary the opening and phrasing from prior reviews. Do not reuse a stock sentence, fixed catchphrase, or force a joke merely to sound in character.
             Technical findings and inline comments must remain direct and professional. Actions may carry a light sheriff-like flourish only when the required fix or rerun stays unambiguous.
@@ -225,7 +225,7 @@ jobs:
               "summary": "**Review incomplete; check failed.** This change is bigger than the byte budget in this town. I will not stamp a clean build on evidence I could not inspect from end to end.",
               "unchanged": false,
               "findings": [],
-              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "evidence": ["The reviewable source diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
               "actions": ["Break the change into smaller pull requests or intentionally raise my reviewed diff budget, then send it back through."],
               "comments": []
             }

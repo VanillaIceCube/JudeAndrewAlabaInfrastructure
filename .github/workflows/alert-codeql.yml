@@ -5,11 +5,10 @@ on:
     - cron: "10 11 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
 concurrency:
   group: security-alerts-codeql
   cancel-in-progress: false
+
 jobs:
   aggregate:
     permissions:
@@ -30,7 +29,6 @@ jobs:
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-contents: read
           permission-issues: write
           permission-security-events: read
 

@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.
+- Scope CodeQL by changed paths on pull requests, run lint only through PR CI, and include every lockfile in reviewer diffs.
 - Rename the Infrastructure validation workflow to gate-test.yml.
 - Align Infrastructure's JavaScript action test discovery with the app test gates.
 - Run the Infrastructure test gate only through pull request CI.
