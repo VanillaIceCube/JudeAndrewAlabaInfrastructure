@@ -42,7 +42,7 @@ jobs:
           mkdir -p "$tool_dir"
           tar -xzf "$archive" -C "$tool_dir" actionlint
           printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
-      - name: Validate workflow, shell, Python, JavaScript and Compose
+      - name: Validate workflow, shell, Python and JavaScript
         id: lint
         continue-on-error: true
         run: |
@@ -60,8 +60,6 @@ jobs:
           while IFS= read -r source; do
             node --check "$source"
           done < <(git ls-files --cached --others --exclude-standard '*.js')
-          docker compose -f compose.yml config --quiet
-          python3 app-release/update_release_manifest.py --check
           BASH
       - name: Report diagnostics
         id: report

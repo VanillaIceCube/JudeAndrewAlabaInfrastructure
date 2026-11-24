@@ -215,6 +215,7 @@ filters = yaml.safe_load(by_id["filter"]["with"]["filters"])
 for filename, expected in {
     "CHANGELOG.md": set(),
     "compose.yml": {"compose"},
+    ".env": {"compose"},
     "nginx/vhosts/example.conf": {"compose"},
     "app-release/v1/workflow.yml": {"manifest"},
     ".github/actions/example/action.yml": {"automation"},
