@@ -534,9 +534,10 @@ flowchart LR
 [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
 [malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on scoped PRs, the weekly schedule and manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries. Each alert workflow reads existing findings on its own daily schedule or manual dispatch.
+
+The separate CodeQL Gate scans changed languages in PR CI. Its weekly and manual
+runs perform full analysis.
 
 ### Promotion, release and manual operations
 
