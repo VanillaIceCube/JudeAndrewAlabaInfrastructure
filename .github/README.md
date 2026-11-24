@@ -25,8 +25,6 @@ existing failure gates when changing these helpers.
 Install the pinned, checksum-verified workflow validator with
 `bash .github/tools/install_actionlint.sh`, then run
 `PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" uv run --locked bash .github/tools/lint_infrastructure.sh`.
-After workflow edits, regenerate `.github/workflows/ci-source-inventory.json` using
-`uv run --locked python .github/tools/ci_architecture.py` and verify with `--check`.
 See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
 
 ## 🚦 Before your first pull request
