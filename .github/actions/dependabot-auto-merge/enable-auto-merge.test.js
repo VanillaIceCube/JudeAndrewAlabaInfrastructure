@@ -389,7 +389,7 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(orchestrator, /Verify branch rules are readable with the workflow token/);
   assert.match(orchestrator, /expectedHeadOid/);
   assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review\]/);
-  const gate = fs.readFileSync(path.join(workflows, "validate.yml"), "utf8");
+  const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
   assert.match(gate, /find \.github\/actions -name '\*\.test\.js'/);
   assert.match(gate, /node --test "\$\{automation_tests\[@\]\}"/);
   for (const file of [".github/workflows/ci-auto-merge.yml", ".github/workflows/ci-orchestrator.yml"]) {
