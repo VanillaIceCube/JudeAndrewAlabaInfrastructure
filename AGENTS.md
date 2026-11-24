@@ -108,8 +108,8 @@ and host operations within their separately authorized Infrastructure scope.
 
 ### Gateway promotion authorization
 
-Infrastructure requires explicit owner approval for a merge to `main` and separate
-authorization for `env-prod` promotion. The shared main-first rule above preserves
+Only verified eligible Dependabot updates may request protected auto-merge to `main`.
+Every other merge requires the owner’s decision. Production always requires separate owner authorization for `env-prod` promotion. The shared main-first rule above preserves
 the owner-authorized experiment exception and both histories.
 
 The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
@@ -165,7 +165,8 @@ corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.
 
 Require `Required CI`, preserve independent gates and applicable reviewer failures,
-and keep manual owner merging. Trusted same-repository Dependabot PRs require the
+and use the protected Dependabot Policy follow-up for eligible patch/minor updates.
+Other merges remain manual. Trusted same-repository Dependabot PRs require the
 same three reviewers as human PRs; production/Project-token secrets remain outside
 Dependabot. Preserve non-mutating reviews. Dependabot security-update PRs do not
 authorize merging, and a human PR smoke test does not prove Dependabot access.
