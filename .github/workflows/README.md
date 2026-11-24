@@ -79,7 +79,7 @@ constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
-Declare permissions explicitly in the workflow or job. The checker rejects broad
+Every workflow declares an explicit top-level permissions map. Jobs may narrow or override it. The checker rejects broad
 grants such as `write-all` and unknown permission scopes or levels. PR CI compares
 each workflow and job's effective write scopes to the same path and job on its
 exact base commit. New workflows and jobs start with no approved write scopes.
@@ -171,6 +171,8 @@ tracking runs after the scheduled scan succeeds. To refresh all three languages
 sooner, select **Actions → CodeQL Gate → Run workflow → main**, or run
 `gh workflow run gate-codeql.yml --ref main`. Check the run and its analyzed
 commit before relying on the updated default-branch baseline.
+Code Scanning recorded all three language analyses for `main` during the
+[November 23 scheduled scan](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/actions/runs/45276291226).
 
 CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
@@ -358,7 +360,7 @@ from the pull request's changed files. It runs applicable checks in this order.
 
 | Check | Changes that trigger it |
 | --- | --- |
-| Compose configuration | Root Compose, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
+| Compose configuration, gateway topology, routes, recovery state and isolated Nginx syntax | Root Compose, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
 | Shared release manifest and consumer release/recovery tests | Release source, Python tooling, test gate, CI orchestrator, or Git attributes. |
 | JavaScript action regressions | GitHub configuration and automation, Python project or lockfile, or Git attributes. |
 
@@ -400,9 +402,11 @@ validation job. The root ingress, gateway transaction/retirement, snapshot,
 release-profile matrix, automation-policy and bounded-log suites were retired.
 When the release scope applies, CI syncs the proposed canonical source and all
 five test modules into a disposable, commit-pinned FullStackTemplate checkout.
-The tests use its application policy and the hosted runner’s Docker engine.
+CI enumerates `app-release/v1/tests/test_*.py`, checks each module byte-for-byte
+against its synced copy and runs that exact list with the pinned application policy and hosted Docker engine.
 The recovery output passes their status and bounded diagnostics to the build reviewer.
-The retired ingress suite reports `not-applicable`.
+The ingress check validates fixed proxy addresses, both app routes, and accepted
+recovery state, then runs the pinned Nginx image with an ephemeral certificate and no network.
 
 <a id="-automation-regressions-and-bounded-diagnostics"></a>
 
