@@ -136,6 +136,16 @@ test("latest check rerun supersedes an earlier failure, but not a newer pending 
   await assert.rejects(h.enable(), /Required check/);
 });
 
+test("a new external required provider holds auto-merge for an owner decision", async () => {
+  const h = harness();
+  const context = "External policy";
+  h.rules[1].parameters.required_status_checks.push({ context, integration_id: 67890 });
+  h.checks.push({ id: 2000, name: context, status: "completed", conclusion: "success",
+    app: { id: 67890, slug: "external-provider" } });
+  await assert.rejects(h.enable(), /Manual merge required: External policy/);
+  assert.equal(h.calls.length, 0);
+});
+
 test("CodeQL skips follow Infrastructure path filters and consider both sides of a rename", async () => {
   const python = "CodeQL / Analyze Python";
   const javascript = "CodeQL / Analyze JavaScript/TypeScript";
