@@ -592,7 +592,7 @@
         "pull-requests": "read",
         "statuses": "read"
       },
-      "source_sha256": "0ed4262793c30b7b291b6b1bd8866f8471743fe3af27a900a2dfb9eb095c3132",
+      "source_sha256": "c5696fb26acf4be7d9bf76130d1d361fe5bb7fe74c46418ce2e3553f1b9c6c64",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -630,7 +630,7 @@
         "pull-requests": "read",
         "statuses": "read"
       },
-      "source_sha256": "83490fa1724aab79f0c877a2b70be604a669137aee615eb1c5a0a5cb4c74b7c9",
+      "source_sha256": "5b500c5b502cc4145b1d3e3ed1e7493550f7527da189eded0662ede8e1fab7f6",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -712,7 +712,7 @@
         "security-events": "read",
         "statuses": "read"
       },
-      "source_sha256": "9ae06a6544a576f97a46538421119db66ec763bfb32e4fdcbf9d63a52fb10dee",
+      "source_sha256": "0cfdf811f4c50908a23443fe1ab054e934078b05fc5b38cdf87f0441c3041eec",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",

@@ -44,11 +44,11 @@ Dependabot credentials and a Dependabot-triggered run after owner merge.
 | MacroMapper | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge and app-specific required checks |
 | Notoli | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge; reviewer branch-policy work is separate |
 | FullStackTemplate | All three / all three | Actions + Dependabot | Existing eligible dependency auto-merge and required reviewer child checks |
-| Infrastructure | All three / all three | Actions + Dependabot | Owner merge only; Required CI includes every applicable review |
+| Infrastructure | All three / all three | Actions + Dependabot | Eligible Dependabot auto-merge plus Required CI. Other merges use the owner process. |
 
 Independent checks, evidence limits and major-upgrade gaps remain specific to
 each repository's actual scanners and dependency ecosystems. Infrastructure
-retains its non-mutating lint reviewer, immutable actions, no auto-merge,
+retains its non-mutating lint reviewer, immutable actions,
 repository-scoped App tokens and production credential boundary. Parity of
 review eligibility does not copy application deployment or auto-fix behavior.
 
@@ -100,8 +100,8 @@ Dependabot uses its separate secret store for all six reviewer credentials;
 missing credentials or skipped applicable reviews fail Required CI. Obi-Wan's
 existing metadata/major-upgrade evidence path applies to Dependabot updates,
 with web search enabled only for major upgrades and explicit gaps for unsupported
-evidence. Dependabot still requires manual owner merge; AI review adds no merge
-or deployment authority.
+evidence. Only the protected Dependabot policy can automatically request a main merge.
+Owner approval governs other merges and production promotion.
 
 GITHUB_TOKEN begins with contents read. Only CodeQL upload/review jobs request
 additional permissions. App tokens name this repository and explicit permissions;
@@ -116,6 +116,30 @@ feeds, malformed AI JSON or absent Project metadata fail visibly. Source links
 remain; secret and private host/recovery contents are excluded.
 
 ## 🛡️ Security and alerts
+
+### Protected Dependabot auto-merge
+
+The owner approved the following policy for staged adoption. Continue manual owner merges until the implementation and activation steps in [repository setup](../README.md#-branch-protection) are complete.
+
+After a successful PR CI run, the follow-up checks out reviewed `main` and resolves
+the run to the exact open PR head. It publishes a fresh `Dependabot Policy` check.
+Human and fork PRs receive an inapplicable policy success and follow the manual
+merge process. Eligibility is limited to same-repository Dependabot PRs targeting
+`main` with exactly one verified Dependabot-authored commit. Every dependency in
+the signed metadata must be a patch or minor update. Any matching open alert
+needs a known CVSS score at most 6.9. Version and security updates share this policy.
+Major and SHA-only Actions updates require a manual decision. Unverified metadata,
+missing approvals, unavailable checks and unsafe alert scores fail the policy.
+
+Before enabling native auto-merge, the follow-up checks all active branch
+requirements, the Infrastructure lint and validation jobs, Dependency Review,
+the dependency-scope guard, Gitleaks, CodeQL scope and analyzers, and each
+reviewer job. CodeQL skips require matching changed paths, including paths
+before renames. All three reviewer bots must approve the current head. The
+policy waits for its own check to be visible and in progress. A previous run's
+successful check cannot satisfy that check. GitHub receives the expected head
+SHA and enforces branch protection. No workflow requests a production promotion.
+See [repository setup](../README.md#-branch-protection) for activation.
 
 ### Infrastructure checks
 
@@ -133,8 +157,8 @@ remain; secret and private host/recovery contents are excluded.
 
 CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
-logging and reversal. Image updates require separate operator-reviewed
-image/advisory assessment and production authorization.
+logging and reversal. Before production promotion, an operator reviews the image and advisory evidence
+and separately authorizes deployment.
 
 <a id="-dependency-evidence-and-alert-lifecycle-parity"></a>
 
@@ -213,9 +237,8 @@ tags and missing analysis fail visibly. The version/security update groups
 merged in #106 remain unchanged, including weekly cadence and separate Compose
 updates. Run `node --test .github/actions/check-codeql-pins/*.test.js` locally.
 
-Application auto-merge is intentionally inapplicable here: retain owner merge,
-independent Required CI, all three same-repository Dependabot reviewers, no fork
-secrets, and separate production/recovery authorization. Successful Dependabot
+The protected Dependabot follow-up checks Required CI and all three current-head
+reviewer approvals. Fork credentials and production/recovery authorization remain separate. Successful Dependabot
 review evidence already exists on #53 and #33; human implementation PRs alone
 do not prove Dependabot secret access. No shared app-release behavior changes.
 
@@ -241,7 +264,7 @@ Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 ma
 recover, and only after readback proves closed/completed with the exact saved body.
 All other errors remain failures. A successful empty feed does not exercise the race.
 
-Infrastructure retains weekly Dependabot cadence, Required CI, and owner merge; application auto-merge is not adopted.
+Infrastructure uses weekly Dependabot updates and requires its own CI aggregate and scanner contexts for protected auto-merge.
 
 Malware lookup retains per-source-GHSA requests and rejects mismatched or unknown advisory classifications before writing the source checkpoint or changing issues. Empty feeds make no advisory requests.
 
@@ -427,9 +450,10 @@ flowchart TD
   Scanners --> Gate
   Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
   Gate -->|Applications| Main[Normal protected main merge]
-  Gate -->|Infrastructure| RequiredCI[Required CI aggregate and owner merge]
+  Gate -->|Infrastructure| RequiredCI[Required CI aggregate]
   RequiredCI --> Main
-  Gate --> Auto[Application Dependabot eligibility and exact-head auto-merge checks]
+  Gate -->|Applications| Auto[Protected Dependabot policy for the current head]
+  RequiredCI --> Auto
   Auto --> Platform[GitHub protected auto-merge]
 ```
 
@@ -440,8 +464,8 @@ execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
 consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
 credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
-are not current-head acceptance. App Dependabot auto-merge verifies the exact head
-without executing PR code; Infrastructure retains Required CI and owner merge.
+are not current-head acceptance. The Dependabot follow-up verifies the exact head using reviewed main code.
+Infrastructure also requires its Required CI aggregate. Production promotion is a separate owner action.
 
 ### Reviewer data and write boundary
 
