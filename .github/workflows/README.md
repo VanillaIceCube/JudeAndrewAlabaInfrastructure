@@ -406,7 +406,10 @@ CI enumerates `app-release/v1/tests/test_*.py`, checks each module byte-for-byte
 against its synced copy and runs that exact list with the pinned application policy and hosted Docker engine.
 The recovery output passes their status and bounded diagnostics to the build reviewer.
 The ingress check validates fixed proxy addresses, both app routes, and accepted
-recovery state, then runs the pinned Nginx image with an ephemeral certificate and no network.
+recovery state, and Nginx syntax. A disposable client then sends HTTPS requests
+through the real vhost to fixture upstreams on isolated Docker networks. The
+check verifies frontend, API and MCP routing, the backend peer at `172.30.88.2`,
+and replacement of client-supplied forwarding headers. It publishes no ports.
 
 <a id="-automation-regressions-and-bounded-diagnostics"></a>
 
