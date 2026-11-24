@@ -147,14 +147,14 @@ See [repository setup](../README.md#-branch-protection) for activation.
 
 ### Infrastructure checks
 
-PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. The test check keeps its existing name, `Tests / validate`. Required CI requires both results. For same-repository PRs, Required CI also checks that its read-only token can read main’s status rules and that GitHub supports the expected-head guard for native auto-merge. Full CodeQL scans still run on main pushes.
+PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. The test check keeps its existing name, `Tests / validate`. Required CI requires both results. For same-repository PRs, Required CI also checks that its read-only token can read main’s status rules and that GitHub supports the expected-head guard for native auto-merge.
 
 | Capability | Behavior |
 | --- | --- |
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |
 | Lint Eastwood | Interprets actionlint/ShellCheck, Compose, ingress/reversal, SQLite recovery and automation diagnostics; never edits source |
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
-| CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on main pushes, weekly runs and manual scans |
+| CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on Mondays at 10:24 UTC and on manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
 | Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
@@ -202,7 +202,7 @@ Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
 feeds do not establish that a live close race occurred.
 
 Infrastructure deliberately retains weekly grouped Actions and separate Compose
-Dependabot updates, full CodeQL scans on main, scheduled and manual runs, `pull-requests: read` for
+Dependabot updates, full CodeQL scans on scheduled and manual runs, `pull-requests: read` for
 Dependency Review, immutable actions and the separate secret-scanning gate.
 Dependency graph evidence covers supported Actions/Compose dependencies; it is
 not an image-content scanner and does not assume backend/frontend directories.
@@ -527,7 +527,7 @@ flowchart LR
 [malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
 recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
+runs on scoped PRs, the weekly schedule and manual dispatch. Alert maintenance
 neither merges code nor deploys.
 
 ### Promotion, release and manual operations
