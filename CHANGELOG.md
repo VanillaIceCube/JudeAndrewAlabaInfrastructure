@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-24
+
+### Changed
+
+- Rename the Infrastructure validation workflow to gate-test.yml.
+- Align Infrastructure's JavaScript action test discovery with the app test gates.
+- Run the Infrastructure test gate only through pull request CI.
+- Validate Compose before checking the release manifest and running action regressions.
+- Run CI for pull requests targeting any branch except env-prod and select Infrastructure test checks by changed files.
+
 ## 2026-11-23
 
 ### Fixed

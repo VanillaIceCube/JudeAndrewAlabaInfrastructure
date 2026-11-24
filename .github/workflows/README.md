@@ -16,8 +16,8 @@ to succeed. Commands in this guide run from the repository root.
 
 ## 🔄 Pull requests and reviews
 
-A new CI run for a pull request cancels the older run for that pull request.
-The current run follows the job dependencies in the workflow.
+CI runs on pull requests targeting any branch except `env-prod`. A new run
+cancels the older run for the same pull request.
 
 ### Major-upgrade review evidence
 
@@ -309,6 +309,18 @@ main-to-env-prod/manual release paths and credential trust boundaries to source.
 <a id="-validation-and-activation"></a>
 
 ### Validation and activation
+
+The [test gate](gate-test.yml) runs through the CI orchestrator and selects checks
+from the pull request's changed files. It runs applicable checks in this order.
+
+| Check | Changes that trigger it |
+| --- | --- |
+| Compose configuration | Root Compose, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
+| Shared release manifest | Release source, Python tooling, test gate, CI orchestrator, or Git attributes. |
+| JavaScript action regressions | GitHub configuration and automation, Python project or lockfile, or Git attributes. |
+
+A failed prerequisite stops later checks. If path detection fails, the test gate fails.
+The gate succeeds when no checks apply and reports automation as not applicable.
 
 Use Node 24, uv with the locked Python 3.12 project, Docker, OpenSSL, ShellCheck,
 and [Actionlint 1.7.12](https://github.com/rhysd/actionlint/releases/tag/v1.7.12)
