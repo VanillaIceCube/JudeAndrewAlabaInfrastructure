@@ -79,7 +79,6 @@ jobs:
             if len(data) > 2 * cap:
                 data = data[:cap] + b"\n... artifact truncated; complete output is in the job log ...\n" + data[-cap:]
             source.with_suffix(".bounded.txt").write_bytes(data)
-            source.with_suffix(".summary.txt").write_text(content, encoding="utf-8", newline="\n")
 
 
         if __name__ == "__main__":
@@ -104,6 +103,7 @@ jobs:
           filters: |
             compose:
               - 'compose.yml'
+              - '.env'
               - 'nginx/**'
               - '.gitattributes'
               - '.github/workflows/deploy-gateway.yml'
@@ -140,13 +140,6 @@ jobs:
           printf '### Test path detection unavailable\n\n%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
-      - name: Validate Compose configuration
-        id: compose
-        if: steps.filter.outputs.compose == 'true'
-        run: |
-          set -o pipefail
-          docker compose -f compose.yml config --quiet 2>&1 | tee "$RUNNER_TEMP/compose.log"
-
       - name: Test gateway topology, routes, recovery state and Nginx configuration
         id: ingress
         if: steps.filter.outputs.compose == 'true'
@@ -157,8 +150,11 @@ jobs:
           INGRESS_CERTS_DIR=$(mktemp -d "$RUNNER_TEMP/ingress-certs.XXXXXX")
           openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=ci.invalid -addext subjectAltName=DNS:notoli.judeandrewalaba.com -days 1 \
             -keyout "$INGRESS_CERTS_DIR/origin.key" -out "$INGRESS_CERTS_DIR/origin.pem" 2>/dev/null
-          docker compose -f compose.yml config --format json > "$RUNNER_TEMP/ingress-compose.json"
-          PYTHONPATH=nginx python3 - <<'PY' 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+          docker compose -f compose.yml config --format json > "$RUNNER_TEMP/ingress-compose.json" 2> "$RUNNER_TEMP/ingress.log" || {
+            cat "$RUNNER_TEMP/ingress.log" >&2
+            exit 1
+          }
+          PYTHONPATH=nginx python3 - <<'PY' 2>&1 | tee -a "$RUNNER_TEMP/ingress.log"
           from contextlib import ExitStack
           import copy
           import json
@@ -314,10 +310,6 @@ jobs:
             fi
             node --test "${automation_tests[@]}"
           } 2>&1 | tee "$RUNNER_TEMP/automation.log"
-      - name: Bound Compose diagnostics
-        if: always() && (steps.compose.outcome == 'success' || steps.compose.outcome == 'failure')
-        shell: bash
-        run: python3 - "$RUNNER_TEMP/compose.log" "$RUNNER_TEMP/compose.outputs" <<< "$BOUNDED_LOG_PYTHON"
       - id: ingress-report
         if: always()
         env:

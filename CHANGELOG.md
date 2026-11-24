@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Simplify lint, test and security gates, consolidate CodeQL pin validation, and use Dependency Review’s native diagnostics.
 - Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
 - Run canonical release and recovery tests in a pinned consumer fixture when the shared release scope changes.
 - Test the pinned gateway in disposable networks for routing, the exact Notoli proxy address, forwarded-header handling, and retired-route recovery state.

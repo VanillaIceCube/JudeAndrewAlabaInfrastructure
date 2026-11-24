@@ -189,11 +189,9 @@ regression contract. Dependency Review still blocks high/critical additions;
 every non-success scanner outcome, missing/malformed output or failed evidence
 preparation fails the independent Vulnerability check. No empty-array fallback
 may turn unavailable evidence into a clean scan. RoboCop receives at most 16 KiB
-of package/severity/manifest context, with omitted-entry counts. The
-`dependency-review-evidence` artifact retains every structured entry for seven
-days, excluding untrusted free text and arbitrary URLs; unavailable evidence is
-retained as structured diagnostics. Artifacts have the repository's Actions
-access controls, not an additional private storage boundary.
+of package, severity and manifest context, with omitted-entry counts. Scanner
+outputs reach the report helper through standard input. GitHub Dependency
+Review publishes its native summary and job logs.
 
 Alert synchronization saves source history/replacement links first, ensures
 Project membership, then writes End date before Status Done. Done can trigger
@@ -246,12 +244,12 @@ gates remain unchanged. Canonical rollout:
 ### Atomic CodeQL regression guard
 
 FullStackTemplate is the canonical application Dependabot policy (#240).
-Infrastructure adopts the common CodeQL revision guard and negative tests before
-its required scope detection: every CodeQL entry point in `.github` must use
+Infrastructure checks CodeQL revisions before scope detection and runs the regression
+fixtures with the automation tests: every CodeQL entry point in `.github` must use
 the same full immutable SHA. Split init/analyze, cross-workflow drift, mutable
 tags and missing analysis fail visibly. The version/security update groups
 merged in #106 remain unchanged, including weekly cadence and separate Compose
-updates. Run `node --test .github/actions/check-codeql-pins/*.test.js` locally.
+updates. Run `node --test .github/actions/check-workflow-security/check-workflow-security.test.js` locally.
 
 The protected Dependabot follow-up checks Required CI and all three current-head
 reviewer approvals. Fork credentials and production/recovery authorization remain separate. Successful Dependabot
@@ -360,7 +358,7 @@ from the pull request's changed files. It runs applicable checks in this order.
 
 | Check | Changes that trigger it |
 | --- | --- |
-| Compose configuration, gateway topology, routes, recovery state and isolated Nginx syntax | Root Compose, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
+| Compose configuration, gateway topology, routes, recovery state and isolated Nginx syntax | Root Compose configuration or environment file, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
 | Shared release manifest and consumer release/recovery tests | Release source, Python tooling, test gate, CI orchestrator, or Git attributes. |
 | JavaScript action regressions | GitHub configuration and automation, Python project or lockfile, or Git attributes. |
 
