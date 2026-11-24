@@ -10,6 +10,9 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Compare proposed GitHub Actions write grants with the exact base commit and verify them again using reviewed default-branch code.
+- Run canonical release and recovery tests in a pinned consumer fixture when the shared release scope changes.
+- Raise existing security groups to at least P1 for unknown source severity.
 - Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds. The schedules follow America/Los_Angeles through daylight-saving transitions.
 - Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.
 - Scope CodeQL by changed paths on pull requests and run full scans daily and on manual dispatch. Remove the separate scan after each merge to main. Run lint only through PR CI and include every lockfile in reviewer diffs.

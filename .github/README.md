@@ -156,6 +156,13 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 ## 🔒 Branch protection
 
+VanillaIceCube owns this personal repository and is its sole collaborator with
+merge access as verified on November 24, 2026. Both `main` and `env-prod` require
+pull requests. Human source merges and production promotions use the owner
+account. The main ruleset requires resolved review threads, Required CI, and
+Dependabot Policy. Code-owner review is disabled in that ruleset. Recheck these
+settings and collaborator access when granting repository roles.
+
 With native auto-merge disabled, first land the reviewed follow-up on `main` using
 the existing owner process. Verify that a successful ordinary PR CI run emits a
 successful `Dependabot Policy` check on its exact head under GitHub Actions.

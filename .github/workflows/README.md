@@ -80,8 +80,12 @@ remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
 Declare permissions explicitly in the workflow or job. The checker rejects broad
-grants such as `write-all` and unknown permission scopes or levels. Review changes
-to write permissions in the pull request that changes the workflow.
+grants such as `write-all` and unknown permission scopes or levels. PR CI compares
+each workflow and job's effective write scopes to the same path and job on its
+exact base commit. New workflows and jobs start with no approved write scopes.
+The required default-branch policy repeats this comparison for main PRs using
+reviewed code and Git blobs. It never executes proposed workflows. A deliberate
+increase requires an independently reviewed change to the trusted policy.
 
 ## 🔒 Merge and dependency controls
 
@@ -123,8 +127,8 @@ remain; secret and private host/recovery contents are excluded.
 
 After a successful PR CI run, the follow-up checks out reviewed `main` and resolves
 the run to the exact open PR head. It publishes a fresh `Dependabot Policy` check.
-Human and fork PRs receive an inapplicable policy success and follow the manual
-merge process. Eligibility is limited to same-repository Dependabot PRs targeting
+Human and fork PRs follow the manual merge process after the trusted workflow
+write-grant comparison succeeds. Eligibility is limited to same-repository Dependabot PRs targeting
 `main` with exactly one verified Dependabot-authored commit. Every dependency in
 the signed metadata must be a patch or minor update. Any matching open alert
 needs a known CVSS score at most 6.9. Version and security updates share this policy.
@@ -268,8 +272,8 @@ Existing managed source refs select the canonical issue even when wording change
 Project attachment retries transient failures at most three times, reading back
 possibly committed writes before retrying. Unresolved attachments identify the
 saved issue; rerun the same feed to reuse it. Reconciliation fills missing fields.
-A group containing a critical alert receives P0. High alerts receive at least P1.
-Other vulnerability groups default to P2, or P1 when severity is unknown. CodeQL and
+A group containing a critical alert receives P0. High or unknown severity raises
+an existing P2/P3 group to P1. Other vulnerability groups default to P2. CodeQL and
 malware groups default to P1. An urgent alert can raise an existing group's priority.
 Higher priorities and other populated planning fields are preserved. All active groups synchronize before
 superseded issues can close. Closure saves source history and End date before Done.
@@ -355,7 +359,7 @@ from the pull request's changed files. It runs applicable checks in this order.
 | Check | Changes that trigger it |
 | --- | --- |
 | Compose configuration | Root Compose, Nginx, gateway deployment workflow, test gate, CI orchestrator, or Git attributes. |
-| Shared release manifest | Release source, Python tooling, test gate, CI orchestrator, or Git attributes. |
+| Shared release manifest and consumer release/recovery tests | Release source, Python tooling, test gate, CI orchestrator, or Git attributes. |
 | JavaScript action regressions | GitHub configuration and automation, Python project or lockfile, or Git attributes. |
 
 A failed prerequisite stops later checks. If path detection fails, the test gate fails.
@@ -391,14 +395,14 @@ owner merge. The unmerged feature PR proves checks and identities, not scheduled
 activation. No merge, promotion or production operation is implied.
 
 Infrastructure validation checks Compose configuration, the canonical shared
-release manifest and action-local Node regressions, including architecture
-dependency/privilege contracts. Compose and action-test failures still fail the
+release manifest, release/recovery tests, and action-local Node regressions. Compose and action-test failures still fail the
 validation job. The root ingress, gateway transaction/retirement, snapshot,
 release-profile matrix, automation-policy and bounded-log suites were retired.
-Reusable ingress/recovery outputs remain available to the build reviewer as
-`not-applicable`, with explicit retired-suite descriptions; no runtime routing or
-recovery acceptance is claimed. Canonical `app-release/v1/tests/` and consumer
-deployment suites remain separate and unchanged.
+When the release scope applies, CI syncs the proposed canonical source and all
+five test modules into a disposable, commit-pinned FullStackTemplate checkout.
+The tests use its application policy and the hosted runner’s Docker engine.
+The recovery output passes their status and bounded diagnostics to the build reviewer.
+The retired ingress suite reports `not-applicable`.
 
 <a id="-automation-regressions-and-bounded-diagnostics"></a>
 
