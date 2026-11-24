@@ -78,9 +78,10 @@ uv run --locked python app-release/update_release_manifest.py --check
 uv run --locked node --test .github/actions/*/*.test.js
 ```
 
-For automation changes, run Actionlint and ShellCheck through
-`.github/tools/lint_infrastructure.sh`. Shared behavior changes also require both
-applications' deployment suites and pinned-source parity checks. Root ingress,
+For automation changes, run the checks in
+[the Infrastructure lint workflow](.github/workflows/gate-lint.yml). Shared
+behavior changes also require both applications' deployment suites and
+pinned-source parity checks. Root ingress,
 gateway, snapshot, release-profile and tooling suites have been retired; retained
 checks do not establish runtime or recovery acceptance. Never execute the
 production cutover procedure as a test.

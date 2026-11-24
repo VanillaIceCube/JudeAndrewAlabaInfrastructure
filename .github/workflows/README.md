@@ -330,7 +330,11 @@ on your PATH.
 docker compose -f compose.yml config --quiet
 uv run --locked python app-release/update_release_manifest.py --check
 uv run --locked node --test .github/actions/*/*.test.js
-uv run --locked bash .github/tools/lint_infrastructure.sh
+actionlint
+uv run --locked node .github/actions/check-workflow-security/check-workflow-security.js
+git ls-files -z --cached --others --exclude-standard -- '*.sh' | xargs -0 -r shellcheck
+git ls-files -z --cached --others --exclude-standard -- '*.js' | xargs -0 -r -n 1 node --check
+uv run --locked python -m compileall -q nginx app-release
 ```
 
 The [lint workflow](gate-lint.yml) verifies the checksum of its pinned Linux amd64
@@ -366,7 +370,7 @@ request construction and prior-review collection run with mocked curl/GitHub rea
 not live paid API calls. Diagnostic preprocessing remains active, bounding context
 to 16,000 characters and artifacts to about 1 MiB per log for seven days; its root
 regression test has been retired. Complete output remains in the job log.
-Preprocessing feeds the existing `ci_report.py` interface.
+The lint and validation workflows pass those excerpts to the build reviewer.
 
 The shared YAML regression suite checks aliases, flow syntax, and explicit
 permission mappings.
