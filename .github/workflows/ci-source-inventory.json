@@ -30,7 +30,7 @@
       ".github/workflows/ci-auto-merge.yml",
       ".github/workflows/gate-codeql.yml",
       ".github/workflows/gate-lint.yml",
-      ".github/workflows/validate.yml"
+      ".github/workflows/gate-test.yml"
     ]
   },
   "workflows": {
@@ -286,14 +286,14 @@
         },
         "tests": {
           "name": "Tests",
-          "uses": "./.github/workflows/validate.yml"
+          "uses": "./.github/workflows/gate-test.yml"
         }
       },
       "name": "CI",
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "de1242702ea6c3992cf6c0417c6ad565a809a4aa06769705b3a83c062e104733",
+      "source_sha256": "4ddcbfaafe48d29c0894ba82d0b6f420fa2db9df77d75562eda58e80fff24ef8",
       "variable_names": []
     },
     "deploy-gateway.yml": {
@@ -478,6 +478,48 @@
         "contents": "read"
       },
       "source_sha256": "79bffd6251e961eaf9a8887beae133a311b5788e689ef5336907a65c86ed7bec",
+      "variable_names": []
+    },
+    "gate-test.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_call": {
+          "outputs": {
+            "automation_log": {
+              "description": "Automation diagnostics.",
+              "value": "${{ jobs.validate.outputs.automation_log }}"
+            },
+            "automation_status": {
+              "description": "Automation regression status.",
+              "value": "${{ jobs.validate.outputs.automation_status }}"
+            },
+            "ingress_log": {
+              "description": "Retired ingress suite description.",
+              "value": "${{ jobs.validate.outputs.ingress_log }}"
+            },
+            "ingress_status": {
+              "description": "Retired ingress test suite (not-applicable).",
+              "value": "${{ jobs.validate.outputs.ingress_status }}"
+            },
+            "recovery_log": {
+              "description": "Retired recovery suites description.",
+              "value": "${{ jobs.validate.outputs.recovery_log }}"
+            },
+            "recovery_status": {
+              "description": "Retired recovery test suites (not-applicable).",
+              "value": "${{ jobs.validate.outputs.recovery_status }}"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "validate": {}
+      },
+      "name": "Validate infrastructure",
+      "permissions": {
+        "contents": "read"
+      },
+      "source_sha256": "3a99ea6bf748f38ed4ceed4f7a84970aa38d186312339bbd287be35bc13d9042",
       "variable_names": []
     },
     "gate-vulnerability.yml": {
@@ -769,48 +811,6 @@
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID"
       ]
-    },
-    "validate.yml": {
-      "credential_names": [],
-      "events": {
-        "workflow_call": {
-          "outputs": {
-            "automation_log": {
-              "description": "Automation diagnostics.",
-              "value": "${{ jobs.validate.outputs.automation_log }}"
-            },
-            "automation_status": {
-              "description": "Automation regression status.",
-              "value": "${{ jobs.validate.outputs.automation_status }}"
-            },
-            "ingress_log": {
-              "description": "Retired ingress suite description.",
-              "value": "${{ jobs.validate.outputs.ingress_log }}"
-            },
-            "ingress_status": {
-              "description": "Retired ingress test suite (not-applicable).",
-              "value": "${{ jobs.validate.outputs.ingress_status }}"
-            },
-            "recovery_log": {
-              "description": "Retired recovery suites description.",
-              "value": "${{ jobs.validate.outputs.recovery_log }}"
-            },
-            "recovery_status": {
-              "description": "Retired recovery test suites (not-applicable).",
-              "value": "${{ jobs.validate.outputs.recovery_status }}"
-            }
-          }
-        }
-      },
-      "jobs": {
-        "validate": {}
-      },
-      "name": "Validate infrastructure",
-      "permissions": {
-        "contents": "read"
-      },
-      "source_sha256": "3a99ea6bf748f38ed4ceed4f7a84970aa38d186312339bbd287be35bc13d9042",
-      "variable_names": []
     }
   }
 }

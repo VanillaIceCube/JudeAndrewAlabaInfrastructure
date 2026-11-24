@@ -63,7 +63,7 @@ def contracts(data, root):
     expected = {"codeql", "dependency-vulnerability", "dependency-malware"}
     if infrastructure:
         expected.add("secrets")
-        for gate in ["gate-lint.yml", "validate.yml"]:
+        for gate in ["gate-lint.yml", "gate-test.yml"]:
             if set(workflows[gate]["events"]) != {"workflow_call"}:
                 raise ValueError(f"Infrastructure PR-only gate trigger drift: {gate}")
         if jobs.get("result", {}).get("name") != "Required CI" or "gate-secrets.yml" not in workflows:
