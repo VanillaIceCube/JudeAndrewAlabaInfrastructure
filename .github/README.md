@@ -22,9 +22,8 @@ with `uv run --locked` so Python and Node subprocesses use the locked environmen
 results, and `check_dependency_scope.py` for scanner applicability. Preserve
 existing failure gates when changing these helpers.
 
-Install the pinned, checksum-verified workflow validator with
-`bash .github/tools/install_actionlint.sh`, then run
-`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" uv run --locked bash .github/tools/lint_infrastructure.sh`.
+Put [Actionlint 1.7.12](https://github.com/rhysd/actionlint/releases/tag/v1.7.12)
+on your PATH, then run `uv run --locked bash .github/tools/lint_infrastructure.sh`.
 See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
 
 ## 🚦 Before your first pull request

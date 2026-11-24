@@ -322,17 +322,21 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ### Validation and activation
 
+Use Node 24, uv with the locked Python 3.12 project, Docker, OpenSSL, ShellCheck,
+and [Actionlint 1.7.12](https://github.com/rhysd/actionlint/releases/tag/v1.7.12)
+on your PATH.
+
 ```sh
 docker compose -f compose.yml config --quiet
 uv run --locked python app-release/update_release_manifest.py --check
 uv run --locked node --test .github/actions/*/*.test.js
-bash .github/tools/install_actionlint.sh
-PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" bash .github/tools/lint_infrastructure.sh
+uv run --locked bash .github/tools/lint_infrastructure.sh
 ```
 
-Use Node 24, uv with the locked Python 3.12 project, Docker, OpenSSL and ShellCheck. The Linux amd64
-actionlint installer verifies its pinned checksum. CI captures bounded diagnostics
-while enforcing original exit status. Shared release changes require a regenerated manifest and matched consumer pins.
+The [lint workflow](gate-lint.yml) verifies the checksum of its pinned Linux amd64
+Actionlint release. CI captures bounded diagnostics while enforcing the original
+exit status. Shared release changes require a regenerated manifest and matched
+consumer pins.
 
 CI report files are decoded as UTF-8 with replacement for malformed bytes. Gateway
 evidence always goes to stdout; it also appends UTF-8 text when a nonempty
