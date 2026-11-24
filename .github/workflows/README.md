@@ -139,9 +139,14 @@ before renames. All three reviewer bots must approve the current head. The
 policy waits for its own check to be visible and in progress. A previous run's
 successful check cannot satisfy that check. GitHub receives the expected head
 SHA and enforces branch protection. No workflow requests a production promotion.
+The shared policy accepts check runs produced by GitHub Actions. Adding a
+required check from another provider pauses automatic merging for owner review,
+even if that provider reports success. The native rules still govern manual merges.
 See [repository setup](../README.md#-branch-protection) for activation.
 
 ### Infrastructure checks
+
+PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. The test check keeps its existing name, `Tests / validate`. Required CI requires both results. For same-repository PRs, Required CI also checks that its read-only token can read main’s status rules and that GitHub supports the expected-head guard for native auto-merge.
 
 | Capability | Behavior |
 | --- | --- |
