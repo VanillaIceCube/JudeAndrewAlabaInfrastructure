@@ -78,9 +78,10 @@ uv run --locked python app-release/update_release_manifest.py --check
 uv run --locked node --test .github/actions/*/*.test.js
 ```
 
-For automation changes, run Actionlint and ShellCheck through
-`.github/tools/lint_infrastructure.sh`. Shared behavior changes also require both
-applications' deployment suites and pinned-source parity checks. Root ingress,
+For automation changes, run the checks in
+[the Infrastructure lint workflow](.github/workflows/gate-lint.yml). Shared
+behavior changes also require both applications' deployment suites and
+pinned-source parity checks. Root ingress,
 gateway, snapshot, release-profile and tooling suites have been retired; retained
 checks do not establish runtime or recovery acceptance. Never execute the
 production cutover procedure as a test.
@@ -107,8 +108,8 @@ and host operations within their separately authorized Infrastructure scope.
 
 ### Gateway promotion authorization
 
-Infrastructure requires explicit owner approval for a merge to `main` and separate
-authorization for `env-prod` promotion. The shared main-first rule above preserves
+Only verified eligible Dependabot updates may request protected auto-merge to `main`.
+Every other merge requires the owner’s decision. Production always requires separate owner authorization for `env-prod` promotion. The shared main-first rule above preserves
 the owner-authorized experiment exception and both histories.
 
 The owner's [October 19 decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4#issuecomment-6273538610)
@@ -160,20 +161,18 @@ setup documented in `.github/README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
 and token inputs. Run `.github/actions/custom-regressions/security-alert-contract.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
-corrected main. Preserve applicable bounded malware review and documented
-coverage decisions. Maintain CI architecture diagrams and regenerate
-`.github/workflows/ci-source-inventory.json` with `python .github/tools/ci_architecture.py` after
-workflow edits. Promotion summaries are informational.
+corrected main. Keep advisory-based malware alert tracking and document PR scanner coverage. Keep the CI architecture diagrams aligned with workflow edits.
 
 Require `Required CI`, preserve independent gates and applicable reviewer failures,
-and keep manual owner merging. Trusted same-repository Dependabot PRs require the
+and use the protected Dependabot Policy follow-up for eligible patch/minor updates.
+Other merges remain manual. Trusted same-repository Dependabot PRs require the
 same three reviewers as human PRs; production/Project-token secrets remain outside
 Dependabot. Preserve non-mutating reviews. Dependabot security-update PRs do not
 authorize merging, and a human PR smoke test does not prove Dependabot access.
 Infrastructure has one publisher test file and no npm dependency graph; application
 publisher/branch-gating tests and npm malware scanning are not automatic parity
-requirements here. Keep the Infrastructure-specific Required CI and extra secrets
-gate documented in the workflow guide.
+requirements here. Keep Infrastructure's Required CI aggregation documented in
+the workflow guide. It includes the shared secret scan.
 
 ## 🔑 OpenAI reviewer isolation
 

@@ -17,17 +17,8 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 Install uv and run `uv sync --locked` from the repository root. Run local checks
 with `uv run --locked` so Python and Node subprocesses use the locked environment.
-`tools/` owns `bounded_log.py` and
-`ci_report.py` for bounded review evidence, `check_ci_result.py` for required
-results, and `check_dependency_scope.py` for scanner applicability. Preserve
-existing failure gates when changing these helpers.
-
-Install the pinned, checksum-verified workflow validator with
-`bash .github/tools/install_actionlint.sh`, then run
-`PATH="${RUNNER_TEMP:-/tmp}/infrastructure-tools:$PATH" uv run --locked bash .github/tools/lint_infrastructure.sh`.
-After workflow edits, regenerate `.github/workflows/ci-source-inventory.json` using
-`uv run --locked python .github/tools/ci_architecture.py` and verify with `--check`.
-See [workflow checks](workflows/README.md#-checks-and-diagnostics) for the retained validation scope.
+The workflows define lint checks, bounded review logs and the Required CI result. See the
+[workflow checks](workflows/README.md#-checks-and-diagnostics) for local commands.
 
 ## 🚦 Before your first pull request
 
@@ -53,7 +44,7 @@ Lint Eastwood `4271110` and RoboCop `4271112` mint short-lived tokens scoped to
 Infrastructure. Review tokens request contents read and pull requests write.
 RoboCop alerts request issues write and only the relevant alert API read permission.
 Metadata read is implicit. Lint Eastwood's existing account write capability is
-narrowed without changing other repositories. Bots never edit, merge or deploy.
+narrowed without changing other repositories. The reviewer Apps only review. The default-branch Dependabot policy uses the workflow token.
 
 | Configuration | Storage/purpose |
 | --- | --- |
@@ -75,13 +66,13 @@ app/SSH/environment credentials; no values enter tickets, logs or artifacts.
 ### Repository and Project settings
 
 Enable dependency graph, Dependabot alerts/security-update PRs, secret scanning
-and push protection where available. Keep `allow_auto_merge=false`. CodeQL uses
+and push protection where available. Enable native auto-merge only after the protected follow-up is installed and required as described below. CodeQL uses
 advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
 Project #13 uses Status (Backlog/Done), Domain (CI/CD), Work type (Security),
-Priority (P0/P1/P2), Size (M) and numeric Estimate. End date is optional. Reused
-items retain human planning fields. Existing labels: `codeql`, `vulnerability`,
+Priority (P0/P1/P2), Size (M), numeric Estimate and a date field for End date.
+Urgent alerts raise the group priority when needed. Reused items retain other human planning fields. Existing labels: `codeql`, `vulnerability`,
 `malware`, `dependencies`, `github_actions`, `docker`. Validate Project
 access/schema before issue writes; RoboCop alone mutates issues.
 
@@ -165,7 +156,26 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 ## 🔒 Branch protection
 
-Require `Required CI`, preserve all independent gates and applicable reviews, and keep manual owner merging. Dependabot security-update PRs do not authorize merging. Gateway promotion has its own owner/source/branch controls.
+VanillaIceCube owns this personal repository and is its sole collaborator with
+merge access as verified on November 24, 2026. Both `main` and `env-prod` require
+pull requests. Human source merges and production promotions use the owner
+account. The main ruleset requires resolved review threads, Required CI, and
+Dependabot Policy. Code-owner review is disabled in that ruleset. Recheck these
+settings and collaborator access when granting repository roles.
+
+With native auto-merge disabled, first land the reviewed follow-up on `main` using
+the existing owner process. Verify that a successful ordinary PR CI run emits a
+successful `Dependabot Policy` check on its exact head under GitHub Actions.
+Keep `Required CI` required from GitHub Actions (integration 15368) and add
+`Dependabot Policy` from the same integration. Recheck both required contexts
+and merge-commit support before the owner enables the repository's native
+auto-merge setting. Rerun PR CI on active heads that lack the new policy check.
+
+The setting is repository-wide. The workflow requests native auto-merge only for
+verified eligible Dependabot PRs. Other PRs follow the manual owner process.
+After activation, verify a real eligible Dependabot run, its three current-head
+bot approvals and its policy check. Owner-triggered `env-prod` promotion and
+gateway recovery have separate authorization. [Workflow policy](workflows/README.md#protected-dependabot-auto-merge)
 
 <a id="-verification"></a>
 
@@ -202,7 +212,7 @@ values cannot be retrieved/copied through GitHub. OpenAI placeholder values
 must be replaced with real repository-specific keys. Configure the shared App
 ID and reviewer project variables, then validate a real Dependabot-triggered
 PR after the reviewed source is merged by the owner. All three reviews are
-required. Fork exclusions, independent checks and manual owner merging remain.
+required. The protected follow-up verifies all three approvals for the current Dependabot head.
 
 <a id="-related-guides"></a>
 

@@ -1,11 +1,20 @@
-name: Set up repository Python tooling with uv
-description: Install the pinned Python toolchain and synchronize the locked tooling environment.
+name: Set up Python with uv
+description: Install the pinned Python toolchain and synchronize the locked project environment.
+inputs:
+  project-directory:
+    description: Directory containing pyproject.toml and uv.lock, relative to the repository root.
+    required: false
+    default: "."
+  only-dev:
+    description: Install only repository tooling without application dependencies.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
     - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
-        python-version-file: pyproject.toml
+        python-version-file: ${{ inputs.project-directory }}/pyproject.toml
     - name: Install uv
       shell: bash
       working-directory: ${{ github.workspace }}
@@ -24,9 +33,17 @@ runs:
           --no-cache-dir --force-reinstall --no-deps --only-binary=:all: \
           --require-hashes --index-url https://pypi.org/simple \
           --requirement "$requirements"
-    - name: Synchronize repository tooling
+    - name: Synchronize the project environment
+      if: inputs.only-dev != 'true'
       shell: bash
-      working-directory: ${{ github.workspace }}
-      run: |
-        uv sync --locked
-        echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: uv sync --locked
+    - name: Synchronize repository tooling only
+      if: inputs.only-dev == 'true'
+      shell: bash
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: uv sync --locked --only-group dev
+    - name: Expose the synchronized Python environment
+      shell: bash
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"

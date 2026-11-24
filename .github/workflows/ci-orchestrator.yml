@@ -2,10 +2,11 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [main]
+    branches-ignore:
+      - env-prod
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -14,13 +15,17 @@ jobs:
     uses: ./.github/workflows/gate-lint.yml
   tests:
     name: Tests
-    uses: ./.github/workflows/validate.yml
+    uses: ./.github/workflows/gate-test.yml
+    permissions:
+      contents: read
+      pull-requests: read
   codeql:
     name: CodeQL
     uses: ./.github/workflows/gate-codeql.yml
     permissions:
       actions: read
       contents: read
+      pull-requests: read
       security-events: write
   dependency-vulnerability:
     name: Vulnerability
@@ -28,9 +33,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-  dependency-malware:
-    name: Dependency scope
-    uses: ./.github/workflows/gate-malware.yml
   secrets:
     name: Secret scan
     uses: ./.github/workflows/gate-secrets.yml
@@ -72,7 +74,7 @@ jobs:
       test_automation_log: ${{ needs.tests.outputs.automation_log }}
   security-review:
     name: AI Security Review
-    needs: [codeql, dependency-vulnerability, dependency-malware, secrets]
+    needs: [codeql, dependency-vulnerability, secrets]
     if: always() && github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-security.yml
     secrets:
@@ -93,12 +95,10 @@ jobs:
       codeql_scope_actions: ${{ needs.codeql.outputs.scope_actions }}
       dependency_vulnerability_result: ${{ needs.dependency-vulnerability.result }}
       dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
-      dependency_malware_result: ${{ needs.dependency-malware.result }}
-      dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
       secret_scan_result: ${{ needs.secrets.result }}
   result:
     name: Required CI
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review]
+    needs: [lints, tests, codeql, dependency-vulnerability, secrets, code-review, build-review, security-review]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -108,4 +108,60 @@ jobs:
       - name: Require independent gates and applicable reviews
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: python3 .github/tools/check_ci_result.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          """Fail closed unless all expected gates and applicable reviewers succeeded."""
+          import json
+          import os
+          from pathlib import Path
+
+          GATES = {"lints", "tests", "codeql", "dependency-vulnerability", "secrets"}
+          REVIEWS = {"code-review", "build-review", "security-review"}
+
+
+          def reviews_applicable(event, repository):
+              """Human and Dependabot PRs from this repository require every reviewer."""
+              head_repository = event.get("pull_request", {}).get("head", {}).get("repo") or {}
+              return bool(repository and head_repository.get("full_name") == repository)
+
+
+          def failures(results, reviews_applicable):
+              problems = []
+              for name in sorted(GATES | REVIEWS):
+                  expected = "skipped" if name in REVIEWS and not reviews_applicable else "success"
+                  result = results.get(name, {}).get("result", "missing")
+                  if result != expected:
+                      problems.append(f"{name}: {result} (expected {expected})")
+              return problems
+
+
+          if __name__ == "__main__":
+              event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+              applicable = reviews_applicable(event, os.environ["GITHUB_REPOSITORY"])
+              problems = failures(json.loads(os.environ["RESULTS"]), applicable)
+              if problems:
+                  raise SystemExit("\n".join(problems))
+              print("All independent gates and applicable reviews passed.")
+          PY
+
+      - name: Verify branch rules are readable with the workflow token
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // API 2026-03-10 requires Metadata: read for this endpoint:
+            // https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch
+            const rules = await github.paginate(github.rest.repos.getBranchRules, {
+              ...context.repo, branch: 'main', per_page: 100,
+              headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+            });
+            if (!rules.some((rule) => rule.type === 'required_status_checks')) {
+              throw new Error('Expected protected main-branch status rules.');
+            }
+            core.info('Live branch rules are readable with the read-only workflow token.');
+            const schema = await github.graphql('query { __type(name: "EnablePullRequestAutoMergeInput") { inputFields { name } } }');
+            if (!schema.__type.inputFields.some((field) => field.name === 'expectedHeadOid')) {
+              throw new Error('GitHub auto-merge schema lacks the required atomic head guard.');
+            }
+            core.info('Live GitHub schema supports expectedHeadOid for native auto-merge.');

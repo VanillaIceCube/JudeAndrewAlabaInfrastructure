@@ -1,34 +1,44 @@
 name: CodeQL Gate
+
 on:
   workflow_call:
     outputs:
       scope_status:
-        description: All three present languages are always analyzed.
-        value: ${{ jobs.scope.outputs.status }}
+        description: Whether path-aware CodeQL scope detection succeeded.
+        value: ${{ jobs.changes.outputs.scope_status }}
       scope_python:
-        description: Python scope.
-        value: ${{ jobs.scope.outputs.python }}
+        description: Whether the pull request requires Python analysis.
+        value: ${{ jobs.changes.outputs.python }}
       scope_javascript:
-        description: Automation JavaScript scope.
-        value: ${{ jobs.scope.outputs.javascript }}
+        description: Whether the pull request requires JavaScript/TypeScript analysis.
+        value: ${{ jobs.changes.outputs.javascript }}
       scope_actions:
-        description: Workflow and composite Actions scope.
-        value: ${{ jobs.scope.outputs.actions }}
-  push:
-    branches: [main]
+        description: Whether the pull request requires GitHub Actions analysis.
+        value: ${{ jobs.changes.outputs.actions }}
   schedule:
-    - cron: '24 10 * * 1'
+    - cron: "0 0 * * *"
+      timezone: "America/Los_Angeles"
   workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
+  pull-requests: read
   security-events: write
+
 jobs:
-  scope:
+  changes:
     name: Detect CodeQL Scope
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
-      status: ${{ steps.scope.outputs.status }}
+      scope_status: ${{ steps.scope.outputs.scope_status }}
       python: ${{ steps.scope.outputs.python }}
       javascript: ${{ steps.scope.outputs.javascript }}
       actions: ${{ steps.scope.outputs.actions }}
@@ -36,43 +46,182 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Set up locked Python tooling
+
+      - name: Synchronize locked repository tooling
         uses: ./.github/actions/setup-uv
 
       - name: Verify atomic immutable CodeQL revisions
         run: node .github/actions/check-codeql-pins/check-codeql-pins.js
+
       - name: Test CodeQL drift prevention
         run: node --test .github/actions/check-codeql-pins/check-codeql-pins.test.js
-      - id: scope
-        name: Require actual source for every configured language
+
+      - name: Require actual source for every configured language
         run: |
           test -n "$(git ls-files '*.py')"
           test -n "$(git ls-files '*.js')"
           test -n "$(git ls-files '.github/workflows/*.yml')"
-          printf 'status=success\npython=true\njavascript=true\nactions=true\n' >> "$GITHUB_OUTPUT"
-  analyze:
-    name: ${{ matrix.name }}
-    needs: scope
+
+      - name: Detect relevant changes
+        id: filter
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: dorny/paths-filter@f3360c560367c9daf72b88c0e6164162034c5721 # v4
+        with:
+          filters: |
+            python:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+            javascript:
+              - '**/*.js'
+              - '**/*.cjs'
+              - '**/*.mjs'
+              - '**/*.jsx'
+              - '**/*.ts'
+              - '**/*.cts'
+              - '**/*.mts'
+              - '**/*.tsx'
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+            actions:
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+
+      - name: Report path detection failure
+        if: github.event_name == 'pull_request' && steps.filter.outcome != 'success'
+        shell: bash
+        run: |
+          message="GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=CodeQL path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### CodeQL path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
+
+      - name: Set analysis scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PYTHON_SCOPE: ${{ steps.filter.outputs.python }}
+          JAVASCRIPT_SCOPE: ${{ steps.filter.outputs.javascript }}
+          ACTIONS_SCOPE: ${{ steps.filter.outputs.actions }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            for value in "$PYTHON_SCOPE" "$JAVASCRIPT_SCOPE" "$ACTIONS_SCOPE"; do
+              case "$value" in
+                true|false) ;;
+                *) echo '::error::CodeQL scope output is missing or invalid'; exit 1 ;;
+              esac
+            done
+          fi
+          {
+            echo "scope_status=success"
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "python=$PYTHON_SCOPE"
+              echo "javascript=$JAVASCRIPT_SCOPE"
+              # Keep the Actions configuration present for relevant PRs so
+              # GitHub can compare it with the configuration on the base branch.
+              if [ "$ACTIONS_SCOPE" = "true" ] || \
+                 [ "$PYTHON_SCOPE" = "true" ] || \
+                 [ "$JAVASCRIPT_SCOPE" = "true" ]; then
+                echo "actions=true"
+              else
+                echo "actions=false"
+              fi
+            else
+              echo "python=true"
+              echo "javascript=true"
+              echo "actions=true"
+            fi
+          } >> "$GITHUB_OUTPUT"
+
+  analyze-python:
+    name: Analyze Python
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: python
-            name: Analyze Python
-          - language: javascript-typescript
-            name: Analyze JavaScript/TypeScript
-          - language: actions
-            name: Analyze GitHub Actions
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
-          languages: ${{ matrix.language }}
+          languages: python
           queries: security-extended,security-and-quality
-      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
-          category: /language:${{ matrix.language }}
+          category: "/language:python"
+
+  analyze-javascript:
+    name: Analyze JavaScript/TypeScript
+    needs: changes
+    if: needs.changes.outputs.javascript == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:javascript-typescript"
+
+  analyze-actions:
+    name: Analyze GitHub Actions
+    needs: changes
+    if: needs.changes.outputs.actions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: actions
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:actions"
