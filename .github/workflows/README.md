@@ -161,6 +161,14 @@ PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. 
 | Dependabot | Weekly grouped Actions and separate Compose updates, limits, owner assignment and existing labels |
 | Security alerts | Daily/manual CodeQL, all-severity vulnerabilities and advisory-classified malware, RoboCop issues and Project #13 metadata |
 
+The repository owner chose weekly default-branch CodeQL baselines. Required PR
+checks continue to scan changed languages before merge. Security-tab findings
+for newly merged code can lag until the next full scan completes. Daily alert
+tracking reads the latest available findings. To refresh all three languages
+sooner, select **Actions → CodeQL Gate → Run workflow → main**, or run
+`gh workflow run gate-codeql.yml --ref main`. Check the run and its analyzed
+commit before relying on the updated default-branch baseline.
+
 CodeQL/Dependency Review do not scan Nginx configuration or image contents for
 malware/CVEs. Disposable Nginx tests cover actual routing, DNS, forwarding/trust,
 logging and reversal. Before production promotion, an operator reviews the image and advisory evidence
