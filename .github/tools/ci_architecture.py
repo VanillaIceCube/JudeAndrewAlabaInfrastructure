@@ -79,6 +79,8 @@ def contracts(data, root):
         if workflows[name]["events"]["schedule"] != [{"cron": "0 0 * * *", "timezone": "America/Los_Angeles"}]:
             raise ValueError(f"Midnight Pacific alert schedule drift: {name}")
     codeql = workflows["gate-codeql.yml"]["events"]
+    if codeql.get("schedule") != [{"cron": "0 0 * * 1", "timezone": "America/Los_Angeles"}]:
+        raise ValueError("Weekly CodeQL scan must run on Monday at midnight Pacific")
     if "main" not in codeql.get("push", {}).get("branches", []) or not {"schedule", "workflow_dispatch"}.issubset(codeql):
         raise ValueError("Default-branch/manual/scheduled CodeQL diagram drift")
     deploy = workflows["deploy-gateway.yml" if infrastructure else "ci-deploy.yml"]["events"]

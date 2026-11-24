@@ -359,7 +359,8 @@
         },
         "schedule": [
           {
-            "cron": "24 10 * * 1"
+            "cron": "0 0 * * 1",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_call": {
@@ -415,7 +416,7 @@
         "pull-requests": "read",
         "security-events": "write"
       },
-      "source_sha256": "cf7fd2fa5d6974e256c3b433d39ce2b7e12f82c4684a79936600c782dabfa6eb",
+      "source_sha256": "a87aca8a4bb0acbc9deaf7ad178c3ad8001df04334c1e3976cab25db2dd57656",
       "variable_names": []
     },
     "gate-lint.yml": {

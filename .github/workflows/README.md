@@ -154,7 +154,7 @@ PR CI calls the [lint gate](gate-lint.yml) and [test gate](gate-test.yml) once. 
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |
 | Lint Eastwood | Interprets actionlint/ShellCheck, Compose, ingress/reversal, SQLite recovery and automation diagnostics; never edits source |
 | RoboCop | Interprets authoritative scanner evidence and infrastructure security risks |
-| CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on main pushes, weekly runs and manual scans |
+| CodeQL | Changed Python, JavaScript/TypeScript and Actions on PRs; all three on main pushes, Mondays at midnight Pacific (America/Los_Angeles), and manual runs |
 | Dependency Review | New high/critical vulnerable dependencies block PRs; Actions use GitHub's dependency graph |
 | Package malware | Explicitly inapplicable without manifests; adding a manifest blocks until scanner support is reviewed |
 | Secrets | Gitleaks on PRs plus repository secret scanning and push protection |
