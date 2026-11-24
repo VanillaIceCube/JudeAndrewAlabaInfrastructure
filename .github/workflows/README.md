@@ -147,6 +147,8 @@ See [repository setup](../README.md#-branch-protection) for activation.
 
 ### Infrastructure checks
 
+PR CI runs lint and validation once and requires both results. For same-repository PRs, Required CI also checks that its read-only token can read main’s status rules and that GitHub supports the expected-head guard for native auto-merge. Full CodeQL scans still run on main pushes.
+
 | Capability | Behavior |
 | --- | --- |
 | Obi-Wan Code-nobi | Infrastructure correctness, maintainability, valid inline comments and prior-review history |

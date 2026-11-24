@@ -293,7 +293,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "c98ba3f735de9c566b5fbb2c3f2d9365adb3a7b22b4787e8b8fbf4f5adf5a2fd",
+      "source_sha256": "de1242702ea6c3992cf6c0417c6ad565a809a4aa06769705b3a83c062e104733",
       "variable_names": []
     },
     "deploy-gateway.yml": {
@@ -418,11 +418,6 @@
     "gate-lint.yml": {
       "credential_names": [],
       "events": {
-        "push": {
-          "branches": [
-            "main"
-          ]
-        },
         "workflow_call": {
           "outputs": {
             "log": {
@@ -441,7 +436,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "c89def97a0e0004da0f6c6c2d99cbebec6d2bd59914d71076c43b7b7e345f7cc",
+      "source_sha256": "8993c2f812d24c534a7eb8d795f681839e2a01eb385b1b2f5c7e1714fb9e82cd",
       "variable_names": []
     },
     "gate-malware.yml": {
@@ -778,11 +773,6 @@
     "validate.yml": {
       "credential_names": [],
       "events": {
-        "push": {
-          "branches": [
-            "main"
-          ]
-        },
         "workflow_call": {
           "outputs": {
             "automation_log": {
@@ -819,7 +809,7 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "2405ca640833f03b4c5eee2554f6963171f9c7d39d385a7105759f0987a42136",
+      "source_sha256": "3a99ea6bf748f38ed4ceed4f7a84970aa38d186312339bbd287be35bc13d9042",
       "variable_names": []
     }
   }
