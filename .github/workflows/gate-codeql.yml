@@ -19,7 +19,8 @@ on:
     branches:
       - main
   schedule:
-    - cron: "24 10 * * 1"
+    - cron: "0 0 * * 1"
+      timezone: "America/Los_Angeles"
   workflow_dispatch:
 
 concurrency:
