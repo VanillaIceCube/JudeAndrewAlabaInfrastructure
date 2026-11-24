@@ -3,10 +3,10 @@ on:
   workflow_call:
     outputs:
       ingress_status:
-        description: Retired ingress test suite (not-applicable).
+        description: Gateway topology, routing, recovery-state and Nginx syntax check status.
         value: ${{ jobs.validate.outputs.ingress_status }}
       ingress_log:
-        description: Retired ingress suite description.
+        description: Bounded gateway validation diagnostics.
         value: ${{ jobs.validate.outputs.ingress_log }}
       recovery_status:
         description: Canonical release and recovery regression status.
@@ -147,6 +147,59 @@ jobs:
           set -o pipefail
           docker compose -f compose.yml config --quiet 2>&1 | tee "$RUNNER_TEMP/compose.log"
 
+      - name: Test gateway topology, routes, recovery state and Nginx configuration
+        id: ingress
+        if: steps.filter.outputs.compose == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export INGRESS_CERTS_DIR
+          INGRESS_CERTS_DIR=$(mktemp -d "$RUNNER_TEMP/ingress-certs.XXXXXX")
+          openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=ci.invalid -days 1 \
+            -keyout "$INGRESS_CERTS_DIR/origin.key" -out "$INGRESS_CERTS_DIR/origin.pem" 2>/dev/null
+          docker compose -f compose.yml config --format json > "$RUNNER_TEMP/ingress-compose.json"
+          PYTHONPATH=nginx python3 - <<'PY' 2>&1 | tee "$RUNNER_TEMP/ingress.log"
+          import copy
+          import json
+          import os
+          import tempfile
+          from pathlib import Path
+          from unittest import TestCase
+          import gateway_release as gateway
+
+          repo = Path.cwd()
+          model = json.loads((Path(os.environ["RUNNER_TEMP"]) / "ingress-compose.json").read_text())
+          certs = os.environ["INGRESS_CERTS_DIR"]
+          gateway.validate_gateway_compose(model, certs)
+          wrong_proxy = copy.deepcopy(model)
+          wrong_proxy["services"]["proxy"]["networks"]["macromapper"]["ipv4_address"] = "172.20.0.99"
+          with TestCase().assertRaisesRegex(gateway.ReleaseError, "Proxy trust/address drift"):
+              gateway.validate_gateway_compose(wrong_proxy, certs)
+
+          state = gateway.retired_route_state(repo, model)
+          gateway.retired_route_state(repo, model, state)
+          with TestCase().assertRaises(gateway.ReleaseError):
+              gateway.retired_route_state(repo, model, dict(state, profile="unexpected"))
+
+          vhosts = [p.read_text() for p in (repo / "nginx/vhosts").glob("*.conf")]
+          for app in ("notoli", "macromapper"):
+              configured = [v for v in vhosts if f"server_name {app}.judeandrewalaba.com;" in v]
+              if len(configured) != 1:
+                  raise ValueError(f"Expected one {app} vhost")
+              for directive in (f"set $app_backend {app}-backend:8000;", f"set $app_frontend {app}-frontend:80;",
+                                "proxy_pass http://$app_backend$request_uri;", "proxy_pass http://$app_frontend$request_uri;"):
+                  if directive not in configured[0]:
+                      raise ValueError(f"Missing {app} routing directive: {directive}")
+
+          with tempfile.TemporaryDirectory() as folder:
+              root = Path(folder)
+              for name in ("releases", "attempts", "incoming"):
+                  (root / name).mkdir(mode=0o700)
+              gateway.ensure_image(model["services"]["proxy"]["image"])
+              gateway.Gateway(root).syntax(model)
+          print("Passed gateway addresses and listeners, app routes, recovery-state checks and isolated nginx -t.")
+          PY
+
       - name: Set up locked Python tooling
         if: steps.filter.outputs.manifest == 'true' || steps.filter.outputs.automation == 'true'
         uses: ./.github/actions/setup-uv
@@ -173,7 +226,16 @@ jobs:
         run: |
           set -euo pipefail
           python3 deploy/production/build_bundle.py --check-parity --source-root "$GITHUB_WORKSPACE" --sync
-          python3 -m unittest discover -s deploy/tests -v 2>&1 | tee "$RUNNER_TEMP/release-tests.log"
+          cd deploy/tests
+          shopt -s nullglob
+          modules=()
+          for canonical in "$GITHUB_WORKSPACE"/app-release/v1/tests/test_*.py; do
+            filename=${canonical##*/}
+            cmp -- "$canonical" "$filename"
+            modules+=("${filename%.py}")
+          done
+          (( ${#modules[@]} > 0 )) || { echo "Missing canonical release tests"; exit 1; }
+          python3 -m unittest -v "${modules[@]}" 2>&1 | tee "$RUNNER_TEMP/release-tests.log"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.filter.outputs.automation == 'true'
@@ -201,9 +263,21 @@ jobs:
         run: python3 - "$RUNNER_TEMP/compose.log" "$RUNNER_TEMP/compose.outputs" <<< "$BOUNDED_LOG_PYTHON"
       - id: ingress-report
         if: always()
+        env:
+          SCOPE: ${{ steps.scope.outcome }}
+          APPLICABLE: ${{ steps.filter.outputs.compose }}
+          OUTCOME: ${{ steps.ingress.outcome }}
+        shell: bash
         run: |
-          echo 'ingress_status=not-applicable' >> "$GITHUB_OUTPUT"
-          echo 'ingress=Root ingress routing and reversal tests were retired; no runtime acceptance was performed.' >> "$GITHUB_OUTPUT"
+          if [[ "$SCOPE" == success && "$APPLICABLE" == false ]]; then
+            echo 'ingress_status=not-applicable' >> "$GITHUB_OUTPUT"
+            echo 'ingress=No gateway or ingress check changes.' >> "$GITHUB_OUTPUT"
+          elif [[ "$OUTCOME" == success || "$OUTCOME" == failure ]]; then
+            python3 - "$RUNNER_TEMP/ingress.log" "$GITHUB_OUTPUT" ingress "$OUTCOME" <<< "$BOUNDED_LOG_PYTHON"
+          else
+            echo 'ingress_status=failure' >> "$GITHUB_OUTPUT"
+            echo 'ingress=Gateway regression checks did not run. Check scope and prerequisites.' >> "$GITHUB_OUTPUT"
+          fi
       - id: recovery-report
         if: always()
         env:
@@ -243,7 +317,8 @@ jobs:
           fi
       - name: Require every applicable validation suite
         if: >-
-          always() && (steps.recovery-report.outputs.recovery_status == 'failure' ||
+          always() && (steps.ingress-report.outputs.ingress_status == 'failure' ||
+          steps.recovery-report.outputs.recovery_status == 'failure' ||
           steps.automation-report.outcome != 'success' ||
           (steps.filter.outputs.automation == 'true' && steps.automation.outcome != 'success'))
         run: exit 1
