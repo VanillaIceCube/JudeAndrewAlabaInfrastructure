@@ -405,7 +405,7 @@ flowchart TD
   Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
   CI --> LintTest[Lint and test workflows]
   CI --> Scanners[CodeQL and dependency scanners]
-  CI -->|Infrastructure| Secrets[Gitleaks secret scan]
+  CI --> Secrets[Gitleaks secret scan]
   Secrets --> Robo
   Secrets --> Gate
   CI --> Obi[Obi-Wan code review]
@@ -429,7 +429,7 @@ Infrastructure restricts it to `main`. Same-repository human and Dependabot PRs
 receive the configured reviewers. Forks receive no reviewer credentials: never
 execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
-consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
+consumes scanner evidence, including the secret scan. Missing evidence,
 credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
 are not current-head acceptance. App Dependabot auto-merge verifies the exact head
 without executing PR code; Infrastructure retains Required CI and owner merge.
