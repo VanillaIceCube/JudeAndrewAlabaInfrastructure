@@ -49,7 +49,8 @@ jobs:
           set -o pipefail
           bash -s <<'BASH' 2>&1 | tee "$RUNNER_TEMP/lint.log"
           set -euo pipefail
-          actionlint
+          # This release omits GitHub's Dependabot alerts permission from its scope list.
+          actionlint -ignore 'unknown permission scope "vulnerability-alerts"'
           node .github/actions/check-workflow-security/check-workflow-security.js
           mapfile -t shell_files < <(git ls-files --cached --others --exclude-standard '*.sh')
           if [ "${#shell_files[@]}" -gt 0 ]; then

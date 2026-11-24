@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-24
 
+### Added
+
+- Add protected Dependabot auto-merge for verified patch and minor updates after Infrastructure CI and three current-head approvals.
+
 ### Changed
 
 - Raise the priority of existing grouped Project issues when a high or critical alert joins, preserving other planning fields.

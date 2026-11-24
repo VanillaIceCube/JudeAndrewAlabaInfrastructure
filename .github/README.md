@@ -45,7 +45,7 @@ Lint Eastwood `4271110` and RoboCop `4271112` mint short-lived tokens scoped to
 Infrastructure. Review tokens request contents read and pull requests write.
 RoboCop alerts request issues write and only the relevant alert API read permission.
 Metadata read is implicit. Lint Eastwood's existing account write capability is
-narrowed without changing other repositories. Bots never edit, merge or deploy.
+narrowed without changing other repositories. The reviewer Apps only review. The default-branch Dependabot policy uses the workflow token.
 
 | Configuration | Storage/purpose |
 | --- | --- |
@@ -67,7 +67,7 @@ app/SSH/environment credentials; no values enter tickets, logs or artifacts.
 ### Repository and Project settings
 
 Enable dependency graph, Dependabot alerts/security-update PRs, secret scanning
-and push protection where available. Keep `allow_auto_merge=false`. CodeQL uses
+and push protection where available. Enable native auto-merge only after the protected follow-up is installed and required as described below. CodeQL uses
 advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
@@ -157,7 +157,19 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 ## 🔒 Branch protection
 
-Require `Required CI`, preserve all independent gates and applicable reviews, and keep manual owner merging. Dependabot security-update PRs do not authorize merging. Gateway promotion has its own owner/source/branch controls.
+With native auto-merge disabled, first land the reviewed follow-up on `main` using
+the existing owner process. Verify that a successful ordinary PR CI run emits a
+successful `Dependabot Policy` check on its exact head under GitHub Actions.
+Keep `Required CI` required from GitHub Actions (integration 15368) and add
+`Dependabot Policy` from the same integration. Recheck both required contexts
+and merge-commit support before the owner enables the repository's native
+auto-merge setting. Rerun PR CI on active heads that lack the new policy check.
+
+The setting is repository-wide. The workflow requests native auto-merge only for
+verified eligible Dependabot PRs. Other PRs follow the manual owner process.
+After activation, verify a real eligible Dependabot run, its three current-head
+bot approvals and its policy check. Owner-triggered `env-prod` promotion and
+gateway recovery have separate authorization. [Workflow policy](workflows/README.md#protected-dependabot-auto-merge)
 
 <a id="-verification"></a>
 
@@ -194,7 +206,7 @@ values cannot be retrieved/copied through GitHub. OpenAI placeholder values
 must be replaced with real repository-specific keys. Configure the shared App
 ID and reviewer project variables, then validate a real Dependabot-triggered
 PR after the reviewed source is merged by the owner. All three reviews are
-required. Fork exclusions, independent checks and manual owner merging remain.
+required. The protected follow-up verifies all three approvals for the current Dependabot head.
 
 <a id="-related-guides"></a>
 
