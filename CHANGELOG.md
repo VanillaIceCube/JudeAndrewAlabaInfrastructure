@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-24
+
+### Changed
+
+- Reserve job-scoped permissions for the protected Dependabot workflow. Eligible updates may request native auto-merge after the owner installs and verifies the workflow. The owner continues to decide other merges and production promotions.
+
 ## 2026-11-23
 
 ### Fixed
