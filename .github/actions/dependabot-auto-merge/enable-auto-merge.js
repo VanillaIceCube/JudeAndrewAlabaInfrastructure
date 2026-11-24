@@ -77,6 +77,11 @@ function verifyChecks(rules, checks, files, policyCheckId) {
   if (!required.some((check) => check.context === "Required CI" && check.integration_id === 15368)) {
     throw new Error("Required CI must be required from GitHub Actions before activation");
   }
+  const externalCheck = required.find((check) => check.integration_id != null &&
+    check.integration_id !== 15368);
+  if (externalCheck) {
+    throw new Error(`Manual merge required: ${externalCheck.context} is bound to a provider outside this policy`);
+  }
   const requirements = [...required];
   for (const context of independentChecks) {
     if (!requirements.some((item) => item.context === context)) requirements.push({ context });
