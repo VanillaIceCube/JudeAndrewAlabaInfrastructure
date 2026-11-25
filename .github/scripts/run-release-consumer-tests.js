@@ -5,10 +5,10 @@ const { execFileSync, spawnSync } = require('node:child_process');
 
 const workspace = process.env.GITHUB_WORKSPACE;
 // Exercise the candidate builder against the pinned application's policy and Compose file.
-fs.copyFileSync(path.join(workspace, 'app-release/build_bundle.py'), 'deploy/production/build_bundle.py');
+fs.copyFileSync(path.join(workspace, 'deploy/build_bundle.py'), 'deploy/production/build_bundle.py');
 execFileSync('python3', ['deploy/production/build_bundle.py', '--check-parity', '--source-root', workspace, '--sync'],
   { stdio: 'inherit' });
-const canonical = path.join(workspace, 'app-release/tests');
+const canonical = path.join(workspace, 'deploy/tests');
 const consumer = path.resolve('deploy/tests');
 const files = fs.readdirSync(canonical).filter(file => /^test_.*\.py$/.test(file)).sort();
 assert.ok(files.length, 'Missing canonical release tests');

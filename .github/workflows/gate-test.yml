@@ -55,7 +55,7 @@ jobs:
               - '.github/workflows/gate-test.yml'
               - '.github/workflows/ci-orchestrator.yml'
             manifest:
-              - 'app-release/**'
+              - 'deploy/**'
               - '.github/scripts/run-release-consumer-tests.js'
               - 'pyproject.toml'
               - 'uv.lock'
@@ -98,7 +98,7 @@ jobs:
 
       - name: Verify shared release source manifest
         if: steps.filter.outputs.manifest == 'true'
-        run: python3 app-release/update_release_manifest.py --check
+        run: python3 deploy/update_release_manifest.py --check
 
       - name: Check out the pinned consumer test fixture
         if: steps.filter.outputs.manifest == 'true'
