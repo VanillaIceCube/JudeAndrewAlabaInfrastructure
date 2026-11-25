@@ -34,12 +34,7 @@ The deployment identity owns the app root and its `incoming/` directory (0700) a
 
 ## Update the source and its consumers
 
-1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Regenerate and check the manifest.
-
-   ```sh
-   python3 deploy/update_release_manifest.py
-   python3 deploy/update_release_manifest.py --check
-   ```
+1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Each app compares its six shared files and its rendered workflow directly with the pinned source.
 
 2. Commit the canonical files and set `deploy/production/app.json` → `shared_source.commit` in each app to that full SHA. When the set of shared files changes, use the new builder in each consumer. Run from the application root.
 

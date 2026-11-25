@@ -146,11 +146,10 @@ repository Actions secrets/variables under the explicit authorization below.
 
 ## 🧪 Checks
 
-Validate Compose configuration, the release manifest and the automation suites:
+Validate Compose and run the automation tests locally.
 
 ```sh
 docker compose -f compose.yml config --quiet
-uv run --locked python deploy/update_release_manifest.py --check
 npm ci --prefix .github --ignore-scripts --no-audit --no-fund
 node .github/scripts/run-automation-tests.js
 ```
@@ -176,8 +175,7 @@ does not authorize deployment, and an absent production branch is not a reason
 to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
-Change `deploy/` in the Infrastructure repository, regenerate its manifest, then synchronize
-all consumers to the same immutable source commit. Application repositories track
+Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
 that source in `shared_source` in `deploy/production/app.json`; never edit only a vendored copy.
 Preserve app-specific Compose, network/readiness policy, immutable image digests,
 SQLite writer integrity and private pre-migration copies of the database and app
