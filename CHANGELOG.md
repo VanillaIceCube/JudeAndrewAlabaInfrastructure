@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-25
+
+### Changed
+
+- The release test workflow captures parity checks and test output in the same diagnostic log.
+- Infrastructure lint uses the repository’s locked Python environment on Windows and Linux.
+
 ## 2026-11-24
 
 ### Added

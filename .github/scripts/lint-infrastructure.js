@@ -13,5 +13,5 @@ function check(tool, ...args) {
 check('actionlint', '-ignore', 'unknown permission scope "vulnerability-alerts"');
 const shellFiles = trackedFiles('*.sh');
 if (shellFiles.length) check('shellcheck', '--', ...shellFiles);
-check('python3', '-m', 'compileall', '-q', 'nginx', 'app-release');
+check('uv', 'run', '--locked', 'python', '-m', 'compileall', '-q', 'nginx', 'app-release');
 for (const file of trackedFiles('*.js', '*.cjs')) check(process.execPath, '--check', file);
