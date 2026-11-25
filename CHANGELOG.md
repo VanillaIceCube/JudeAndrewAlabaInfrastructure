@@ -10,6 +10,11 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Organize GitHub automation tests by implementation name and check that each top-level suite has a matching source.
+- Allow Dependabot to accept a skipped file-specific check when the changed-file list is empty.
+- Use the automation manifest for the Node version in lint and test CI.
+- Standardize GitHub automation programs and tests on JavaScript and move saved test data to `.github/fixtures/`. Use verb-first action and script names with matching entry files and dedicated tests.
+- Group GitHub automation by how it runs. Standalone programs live in `.github/scripts/` alongside workflows, reusable actions and tests. Pull-request CI checks the layout.
 - Simplify lint, test and security gates, consolidate CodeQL pin validation, and use Dependency Review’s native diagnostics.
 - Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
 - Run canonical release and recovery tests in a pinned consumer fixture when the shared release scope changes.

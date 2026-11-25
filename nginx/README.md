@@ -428,6 +428,9 @@ before adding a vhost. This guide enables no new service.
 
 ## 🧪 Checks and acceptance
 
+The gateway integration test uses `python3 nginx/gateway_release.py check-config --directory . --certificates <directory>` to verify a rendered Compose model supplied on standard input. `--record <file>` checks recovery state and `--syntax` runs the pinned image’s nginx syntax check in an isolated container.
+
+
 See [workflow checks](../.github/workflows/README.md#-checks-and-diagnostics).
 Compose configuration, shared release manifest and action-local regressions remain;
 root routing, gateway transaction/retirement, snapshot and profile tests were retired.

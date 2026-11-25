@@ -5,18 +5,21 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 ## 🧭 Structure
 
-- [Workflows](workflows/README.md): triggers, required gates, security checks, releases, and diagnostics.
-- [Local actions](actions/README.md): reviewer context, feedback lifecycle, request policy, and regression tests.
-- `tools/`: CI validation, bounded reporting and verified Actionlint installation.
-- `dependabot.yml`: dependency-update configuration.
-- `workflows/*.yml` and `actions/*/action.yml`: executable automation definitions.
+| Location | Purpose |
+| --- | --- |
+| [workflows](workflows/README.md) | Entry points, gates, reviewers, schedules and deployment. The guide includes four flow diagrams. |
+| [scripts](scripts) | Standalone automation programs that workflows or people run, and their supporting modules. |
+| [actions](actions/README.md) | Reusable composite steps, each with its own `action.yml` and implementation. |
+| [tests](tests) | One suite per tested JavaScript implementation or workflow, named after its source. |
+| [fixtures](fixtures) | Saved test inputs and expected output. Use lowercase, hyphen-separated nouns for the data and add the scenario last when variants exist. |
+| [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
+| [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
 <a id="-ci-tools"></a>
 
 ### CI tools
 
-Install uv and run `uv sync --locked` from the repository root. Run local checks
-with `uv run --locked` so Python and Node subprocesses use the locked environment.
+Install Node.js and run `npm ci --prefix .github --ignore-scripts --no-audit --no-fund` from the repository root for the automation checks. Run `uv sync --locked` for the Python release tooling.
 The workflows define lint checks, bounded review logs and the Required CI result. See the
 [workflow checks](workflows/README.md#-checks-and-diagnostics) for local commands.
 
