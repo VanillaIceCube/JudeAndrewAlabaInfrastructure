@@ -6,10 +6,25 @@
 
 1. The app workflow verifies the pinned source, builds the two images and uploads a checksummed bundle to `$DEPLOY_PATH/incoming/$RELEASE_ID`. Only the deploying identity may read the environment file. The release ID identifies the source commit and GitHub run attempt.
 2. The launcher acquires a shared host maintenance lock and the app’s exclusive deployment lock. It checks the bundle, existing database, trusted gateway and external route networks before pulling the exact image digests.
-3. It stops this app’s backend writers and uses the new backend image on the app’s egress network to run `manage.py check --deploy` and `migrate --noinput`.
-4. It runs `docker compose up -d` for the two services, checks their actual port bindings and networks, then probes the direct backend and public routes. A failed check exits nonzero.
+3. It stops this app's existing frontend and backend, checks the SQLite journals, and saves the database and containers together. Migration starts only after the complete backup is in place.
+4. The new backend image runs `manage.py check --deploy` and `migrate --noinput`. Compose then starts both services and the launcher checks their port bindings, networks, direct backend response and public routes.
+5. If startup or post-start host validation fails, or either health check still fails after retries, the launcher stops both services and fails the deployment. A public-route failure also takes this app offline. The shared gateway and other apps keep serving. The next launch requires a new attempt. The production services use `restart: unless-stopped` so a daemon restart respects that stop.
 
-Applications bind one SQLite file. A stopped writer may still hold its WAL or rollback journal in the container. The launcher refuses to replace that writer or discard an interrupted migration with a journal. Preserve it and have the operator checkpoint the database. Deployments do not capture databases, select historical controllers or restore an older release. Deployment files and any existing host data remain private.
+## Pre-migration backup
+
+Each deployment attempt keeps its own private `$DEPLOY_PATH/incoming/$RELEASE_ID/before-migration/` on the host. A retry leaves earlier copies available. On first launch the directory contains the existing database and an empty container inventory.
+
+| File | Contents |
+| --- | --- |
+| `db.sqlite3` | A snapshot made with the SQLite backup API after writers stop. The launcher checks its integrity before migrating. |
+| `backend.tar` and `frontend.tar` | A loadable Docker image for each existing app container, including its writable filesystem and configuration. |
+| `containers.json` | The corresponding Docker inspect records from before shutdown, including the original image IDs, mounts, environment and network settings. |
+
+Applications bind one SQLite file. A stopped writer can still hold committed data in a container-local WAL or rollback journal. If the launcher reports a journal, preserve that container and have the operator checkpoint it before retrying. Unexpected data mounts also block the backup because Docker excludes mounts from container snapshots.
+
+Keep these files private. Both the archives and the inventory can contain application credentials. Allow disk space for the database and both containers for each retained attempt. Include these directories in the host's backup retention policy and keep the last working set while a failed release is investigated.
+
+For a manual recovery rehearsal, copy the database into a private test directory and use `docker image load --input backend.tar` and `docker image load --input frontend.tar` for the available archives. Their local tags are `<app>-backup-backend:<attempt>` and `<app>-backup-frontend:<attempt>`. Use the saved runtime settings with isolated networks and the copied database. A production restore is a separate operator action. Preserve the failed database and journals and account for writes accepted since the snapshot before replacing live data. The app can receive traffic while readiness runs.
 
 ## Host inputs
 
