@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Launch the gateway and application services directly. Remove built-in database captures, stored recovery generations, adoption and rollback commands. Verify database writer integrity, gateway trust and launch readiness.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
 - Infrastructure lint uses the repository’s locked Python environment on Windows and Linux.
 
