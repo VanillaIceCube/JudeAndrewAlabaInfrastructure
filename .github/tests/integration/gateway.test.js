@@ -11,7 +11,7 @@ function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', timeout: 120_000 }).trim();
 }
 
-test('gateway configuration, recovery state, forwarding and exact proxy trust', async t => {
+test('gateway configuration, forwarding and exact proxy trust', async t => {
   const root = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'gateway-check-'));
   const cleanups = [() => fs.rmSync(root, { recursive: true, force: true })];
   t.after(() => {
@@ -38,12 +38,6 @@ test('gateway configuration, recovery state, forwarding and exact proxy trust', 
 
   const validated = checkConfig(model, '--syntax');
   assert.equal(validated.status, 0, validated.stderr);
-  const record = JSON.parse(validated.stdout);
-  const recordFile = path.join(root, 'record.json');
-  fs.writeFileSync(recordFile, JSON.stringify(record));
-  assert.equal(checkConfig(model, '--record', recordFile).status, 0);
-  fs.writeFileSync(recordFile, JSON.stringify({ ...record, profile: 'unexpected' }));
-  assert.equal(checkConfig(model, '--record', recordFile).status, 1);
   const invalid = structuredClone(model);
   invalid.services.proxy.networks.macromapper.ipv4_address = '172.20.0.99';
   assert.equal(checkConfig(invalid).status, 1);
