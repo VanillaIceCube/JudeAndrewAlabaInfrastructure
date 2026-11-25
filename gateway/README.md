@@ -8,7 +8,7 @@ The [Compose file](../compose.yml) launches one digest-pinned Nginx container, `
 
 The owner promotes a reviewed source tree to `env-prod`. The [gateway workflow](../.github/workflows/deploy-gateway.yml) also permits an owner-triggered dispatch on that branch. It requires `DEPLOY_ENABLED=true`, checks the original and retrying actors and the exact source and workflow before loading the SSH key. Repository settings hold the SSH host, port, user, independently verified fingerprint, and private key. [Gateway authorization decision](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/41)
 
-The workflow uploads the reviewed configuration to a private attempt directory and runs the [host launcher](gateway_release.py) under the exclusive maintenance lock. It validates the archive and Compose model, pulls the pinned Nginx image if needed, and runs `nginx -t` before starting `proxy`. The launcher verifies the image, certificate mount and route network boundaries. The gateway can start before the apps. An app with only one attached service fails the readiness check. An attached backend and frontend are probed through the origin and public edge.
+The [transport script](scripts/gateway_transport.py) uploads the reviewed configuration to a private attempt directory and runs the [host launcher](scripts/gateway_release.py) under the exclusive maintenance lock. It validates the archive and Compose model, pulls the pinned Nginx image if needed, and runs `nginx -t` before starting `proxy`. The launcher verifies the image, certificate mount and route network boundaries. The gateway can start before the apps. An app with only one attached service fails the readiness check. An attached backend and frontend are probed through the origin and public edge.
 
 A failed launch exits nonzero. Inspect the systemd unit `gateway-<commit>-<run>-<attempt>` or the private container logs to identify the failed step. A fresh attempt launches the reviewed configuration again. Gateway deployment has no adoption step, generation journal, automatic restore or rollback operation.
 
@@ -30,7 +30,7 @@ The origin certificate and key are `origin.pem` and `origin.key`. Compose mounts
 | `notoli_default` | `172.18.0.0/16` | Notoli frontend traffic |
 | `macromapper-ingress` | `172.20.0.0/16` | `172.20.0.3` is MacroMapper’s trusted proxy. |
 
-The [vhosts](vhosts/) route browser requests to the matching frontend and API, authentication and discovery requests to the matching backend. [Header configuration](snippets/headers.conf) overwrites forwarded client and scheme headers. [TLS configuration](snippets/tls.conf) uses the operator’s origin certificates. Backend services have no host-published port. Adding an app requires reviewing its exact routes, hostnames, network membership, trust boundaries, resource capacity and independent deployment.
+The [vhosts](nginx/vhosts/) route browser requests to the matching frontend and API, authentication and discovery requests to the matching backend. [Header configuration](nginx/headers.conf) overwrites forwarded client and scheme headers. [TLS configuration](nginx/tls.conf) uses the operator’s origin certificates. Backend services have no host-published port. Adding an app requires reviewing its exact routes, hostnames, network membership, trust boundaries, resource capacity and independent deployment.
 
 <a id="-optional-mcp-contract"></a>
 
@@ -45,4 +45,4 @@ docker compose config --quiet
 RUNNER_TEMP=/tmp node --test .github/tests/integration/gateway.test.js
 ```
 
-The integration fixture uses disposable networks, test certificates and request observers to verify Nginx syntax and forwarding. On the prepared host with both applications active, `python3 gateway/check_host.py` verifies live topology, peer addresses and unpublished backends. Acceptance of a production promotion belongs to the operator.
+The integration fixture uses disposable networks, test certificates and request observers to verify Nginx syntax and forwarding. On the prepared host with both applications active, `python3 gateway/scripts/check_host.py` verifies live topology, peer addresses and unpublished backends. Acceptance of a production promotion belongs to the operator.

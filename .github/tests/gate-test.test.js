@@ -20,7 +20,7 @@ test("changed paths select independent checks", () => {
   for (const [file, expected] of [
     [".github/package.json", ["automation"]], [".github/package-lock.json", ["automation"]],
     ["CHANGELOG.md", []], ["compose.yml", ["compose"]], [".env", ["compose"]],
-    ["gateway/vhosts/example.conf", ["compose"]], ["deploy/workflow.yml", ["release"]],
+    ["gateway/nginx/vhosts/example.conf", ["compose"]], ["deploy/workflow.yml", ["release"]],
     [".github/actions/example/action.yml", ["automation"]], [".github/tests/gate-test.test.js", ["automation"]],
     [".github/tests/integration/gateway.test.js", ["compose", "automation"]],
     [".github/scripts/run-release-consumer-tests.js", ["release", "automation"]],

@@ -168,9 +168,7 @@ def main():
                 "--output=" + str(archive),
                 source,
                 "compose.yml",
-                "gateway/nginx.conf",
-                "gateway/vhosts/*.conf",
-                "gateway/snippets/*.conf",
+                "gateway/nginx",
             ]
         )
         run(
@@ -179,8 +177,8 @@ def main():
                 "-F",
                 config,
                 archive,
-                "gateway/gateway_release.py",
-                "gateway/check_host.py",
+                "gateway/scripts/gateway_release.py",
+                "gateway/scripts/check_host.py",
                 "gateway:" + remote + "/",
             ]
         )
