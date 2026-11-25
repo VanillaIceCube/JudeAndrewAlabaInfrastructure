@@ -177,8 +177,7 @@ auto-merge setting. Rerun PR CI on active heads that lack the new policy check.
 The setting is repository-wide. The workflow requests native auto-merge only for
 verified eligible Dependabot PRs. Other PRs follow the manual owner process.
 After activation, verify a real eligible Dependabot run, its three current-head
-bot approvals and its policy check. Owner-triggered `env-prod` promotion and
-gateway recovery have separate authorization. [Workflow policy](workflows/README.md#protected-dependabot-auto-merge)
+bot approvals and its policy check. Gateway production promotion is owner-triggered on `env-prod`. [Workflow policy](workflows/README.md#protected-dependabot-auto-merge)
 
 <a id="-verification"></a>
 
@@ -224,7 +223,7 @@ required. The protected follow-up verifies all three approvals for the current D
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
 - [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
-- [Gateway setup, releases, and recovery](../nginx/README.md#-operations).
+- [Gateway setup and launches](../nginx/README.md#-operations).
 
 ## 🤝 Shared engineering ownership and rollout
 

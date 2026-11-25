@@ -4,7 +4,7 @@ inputs:
   project-directory:
     description: Directory containing pyproject.toml and uv.lock, relative to the repository root.
     required: false
-    default: "."
+    default: "backend"
   only-dev:
     description: Install only repository tooling without application dependencies.
     required: false

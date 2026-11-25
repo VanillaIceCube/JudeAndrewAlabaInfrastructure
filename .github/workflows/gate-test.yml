@@ -2,22 +2,22 @@ name: Validate infrastructure
 on:
   workflow_call:
     outputs:
-      ingress_status:
-        description: Gateway topology, routing, recovery-state and Nginx syntax check status.
+      test_ingress_status:
+        description: Gateway topology, routing and Nginx syntax check status.
         value: ${{ jobs.validate.outputs.ingress_status }}
-      ingress_log:
+      test_ingress_log:
         description: Bounded gateway validation diagnostics.
         value: ${{ jobs.validate.outputs.ingress_log }}
-      recovery_status:
-        description: Canonical release and recovery regression status.
-        value: ${{ jobs.validate.outputs.recovery_status }}
-      recovery_log:
-        description: Bounded release and recovery diagnostics.
-        value: ${{ jobs.validate.outputs.recovery_log }}
-      automation_status:
+      test_release_status:
+        description: Canonical application launch regression status.
+        value: ${{ jobs.validate.outputs.release_status }}
+      test_release_log:
+        description: Bounded application launch diagnostics.
+        value: ${{ jobs.validate.outputs.release_log }}
+      test_automation_status:
         description: Automation regression status.
         value: ${{ jobs.validate.outputs.automation_status }}
-      automation_log:
+      test_automation_log:
         description: Automation diagnostics.
         value: ${{ jobs.validate.outputs.automation_log }}
 permissions:
@@ -30,8 +30,8 @@ jobs:
     outputs:
       ingress_status: ${{ steps.ingress-report.outputs.ingress_status }}
       ingress_log: ${{ steps.ingress-report.outputs.ingress }}
-      recovery_status: ${{ steps.recovery-report.outputs.recovery_status }}
-      recovery_log: ${{ steps.recovery-report.outputs.recovery }}
+      release_status: ${{ steps.release-report.outputs.release_status }}
+      release_log: ${{ steps.release-report.outputs.release }}
       automation_status: ${{ steps.automation-report.outputs.automation_status }}
       automation_log: ${{ steps.automation-report.outputs.automation }}
     steps:
@@ -85,7 +85,7 @@ jobs:
             require('node:fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, '### Test path detection unavailable\n\n' + message + '\n');
             process.exitCode = 1;
           }
-      - name: Test gateway topology, routes, recovery state and Nginx configuration
+      - name: Test gateway topology, routes and Nginx configuration
         id: ingress
         if: steps.filter.outputs.compose == 'true'
         shell: bash
@@ -93,6 +93,8 @@ jobs:
       - name: Set up locked Python tooling
         if: steps.filter.outputs.manifest == 'true' || steps.filter.outputs.automation == 'true'
         uses: ./.github/actions/setup-uv
+        with:
+          project-directory: .
 
       - name: Verify shared release source manifest
         if: steps.filter.outputs.manifest == 'true'
@@ -107,7 +109,7 @@ jobs:
           path: release-consumer-fixture
           persist-credentials: false
 
-      - name: Run canonical release and recovery tests with the consumer policy
+      - name: Run canonical application launch tests with the consumer policy
         id: release-tests
         if: steps.filter.outputs.manifest == 'true'
         continue-on-error: true
@@ -139,13 +141,13 @@ jobs:
           APPLICABLE: ${{ steps.filter.outputs.compose }}
           OUTCOME: ${{ steps.ingress.outcome }}
         run: node .github/scripts/report-test-result.js ingress
-      - id: recovery-report
+      - id: release-report
         if: always()
         env:
           SCOPE: ${{ steps.scope.outcome }}
           APPLICABLE: ${{ steps.filter.outputs.manifest }}
           OUTCOME: ${{ steps.release-tests.outcome }}
-        run: node .github/scripts/report-test-result.js recovery
+        run: node .github/scripts/report-test-result.js release
       - id: automation-report
         if: always()
         env:
@@ -156,7 +158,7 @@ jobs:
       - name: Require every applicable validation suite
         if: >-
           always() && (steps.ingress-report.outputs.ingress_status == 'failure' ||
-          steps.recovery-report.outputs.recovery_status == 'failure' ||
+          steps.release-report.outputs.release_status == 'failure' ||
           steps.automation-report.outcome != 'success' ||
           (steps.filter.outputs.automation == 'true' && steps.automation.outcome != 'success'))
         run: exit 1
