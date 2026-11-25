@@ -29,7 +29,7 @@ test('gateway configuration, forwarding and exact proxy trust', async t => {
     { encoding: 'utf8', env: { ...process.env, INGRESS_CERTS_DIR: root } }));
   const proxy = model.services.proxy;
   function checkConfig(config, ...args) {
-    const result = spawnSync('python3', ['nginx/gateway_release.py', 'check-config', '--directory', process.cwd(),
+    const result = spawnSync('python3', ['gateway/gateway_release.py', 'check-config', '--directory', process.cwd(),
       '--certificates', root, ...args], { input: JSON.stringify(config), encoding: 'utf8', timeout: 240_000 });
     if (result.error) throw result.error;
     assert.equal(result.signal, null);
@@ -42,8 +42,8 @@ test('gateway configuration, forwarding and exact proxy trust', async t => {
   invalid.services.proxy.networks.macromapper.ipv4_address = '172.20.0.99';
   assert.equal(checkConfig(invalid).status, 1);
 
-  const configs = fs.readdirSync('nginx/vhosts').filter(file => file.endsWith('.conf'))
-    .map(file => fs.readFileSync(path.join('nginx/vhosts', file), 'utf8'));
+  const configs = fs.readdirSync('gateway/vhosts').filter(file => file.endsWith('.conf'))
+    .map(file => fs.readFileSync(path.join('gateway/vhosts', file), 'utf8'));
   for (const app of ['notoli', 'macromapper']) {
     const matches = configs.filter(conf => conf.includes('server_name ' + app + '.judeandrewalaba.com;'));
     assert.equal(matches.length, 1, 'Expected one vhost for ' + app);

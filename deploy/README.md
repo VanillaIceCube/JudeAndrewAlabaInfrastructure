@@ -50,4 +50,4 @@ The deployment identity owns the app root and its `incoming/` directory (0700) a
 
 3. Publish the canonical commit before remote consumer checks. `--check-parity` without `--source-root` checks the immutable GitHub revision. The pinned template fixture in Infrastructure CI exercises the candidate launcher against real consumer configuration.
 
-FullStackTemplate provides onboarding examples. Each live app controls its own promotion, credentials and production acceptance. Gateway operations are described in the [Nginx guide](../nginx/README.md).
+FullStackTemplate provides onboarding examples. Each live app controls its own promotion, credentials and production acceptance. Gateway operations are described in the [gateway guide](../gateway/README.md).

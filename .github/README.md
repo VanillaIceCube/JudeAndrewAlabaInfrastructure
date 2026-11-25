@@ -223,7 +223,7 @@ required. The protected follow-up verifies all three approvals for the current D
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
 - [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
-- [Gateway setup and launches](../nginx/README.md#-operations).
+- [Gateway setup and launches](../gateway/README.md#-operations).
 
 ## 🤝 Shared engineering ownership and rollout
 

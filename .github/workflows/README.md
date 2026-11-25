@@ -97,7 +97,7 @@ flowchart LR
     DEPLOY --> TARGET["Shared gateway"]
 ```
 
-[Gateway operation](../../nginx/README.md) · [Shared application release source](../../deploy/README.md)
+[Gateway operation](../../gateway/README.md) · [Shared application release source](../../deploy/README.md)
 
 ## 🧪 Checks and diagnostics
 
