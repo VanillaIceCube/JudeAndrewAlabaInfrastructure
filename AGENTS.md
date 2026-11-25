@@ -158,9 +158,9 @@ node .github/scripts/run-automation-tests.js
 For automation changes, run the checks in
 [the Infrastructure lint workflow](.github/workflows/gate-lint.yml). Shared
 behavior changes also require both applications' deployment suites and
-pinned-source parity checks. Root ingress,
-gateway, snapshot, release-profile and tooling suites have been retired; retained
-checks do not establish runtime or recovery acceptance. Never execute the
+pinned-source parity checks. The [gateway integration test](.github/tests/integration/gateway.test.js)
+exercises routing, exact proxy trust and recovery-record validation on disposable networks.
+Use the operator guide for live handoff and recovery acceptance. Never execute the
 production cutover procedure as a test.
 
 ## 🚀 Production
