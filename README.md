@@ -10,7 +10,7 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 - Shared HTTPS ingress and application routing.
 - Independent application releases with pinned common tooling.
-- Explicit verification and recovery procedures.
+- Verified application and gateway launches.
 - Application onboarding and optional MCP routing.
 - Automated validation, security checks, and AI reviews.
 
