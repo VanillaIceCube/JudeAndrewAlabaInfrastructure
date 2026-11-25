@@ -147,11 +147,8 @@ the actual destination. A version bump
 is required for incompatible contract semantics; coordinate adoption in all three app
 PRs. Explicit pin changes are reviewable upgrades, not an automatic deployment.
 
-The November 14 unused-code audit removed the bundle builder's unused origin
-constant after checking workflow entry points and all three consumer suites.
-Runtime readiness retains its separate origin value. SQLite backup progress
-callbacks keep their three-argument signature, and historical-generation guards
-remain necessary for recovery. This cleanup does not authorize production work.
+Keep the three arguments required by SQLite’s backup progress callback. Recovery
+also checks the historical generation before restoring a database or restarting a container.
 
 ## 🧪 Verification and operations
 
@@ -159,9 +156,9 @@ Both apps execute the same fault, SQLite/WAL, generation/checkpoint, timeout,
 lock, readiness, missing-backend and retry tests. App-policy regressions retain
 Notoli's exact trust/MCP behavior and MacroMapper's unpublished frontend/OpenAI
 requirements. Real Docker recovery checks preserve companion container identity,
-configuration, database bytes and a separate gateway fixture. Infrastructure's
-root Nginx route/handoff/reversal suite has been retired; current CI does not
-establish gateway runtime acceptance.
+configuration and database bytes. Infrastructure also runs a
+[gateway integration test](../.github/tests/integration/gateway.test.js) against
+disposable networks. Live gateway handoff and reversal require operator acceptance.
 
 Each app keeps one canonical `deploy/production/README.md`; local Docker setup
 lives in `deploy/README.md`. Architecture/merge/production approvals and rollout
