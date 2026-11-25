@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Launch the gateway and application services directly. Remove built-in database captures, stored recovery generations, adoption and rollback commands. Verify database writer integrity, gateway trust and launch readiness.
+- Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
 - Infrastructure lint uses the repository’s locked Python environment on Windows and Linux.
 
