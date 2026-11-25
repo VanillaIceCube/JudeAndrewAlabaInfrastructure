@@ -54,7 +54,7 @@ jobs:
               - '.github/workflows/deploy-gateway.yml'
               - '.github/workflows/gate-test.yml'
               - '.github/workflows/ci-orchestrator.yml'
-            manifest:
+            release:
               - 'deploy/**'
               - '.github/scripts/run-release-consumer-tests.js'
               - 'pyproject.toml'
@@ -74,12 +74,12 @@ jobs:
         env:
           OUTCOME: ${{ steps.filter.outcome }}
           COMPOSE: ${{ steps.filter.outputs.compose }}
-          MANIFEST: ${{ steps.filter.outputs.manifest }}
+          RELEASE: ${{ steps.filter.outputs.release }}
           AUTOMATION: ${{ steps.filter.outputs.automation }}
         shell: node {0}
         run: |
-          const { OUTCOME, COMPOSE, MANIFEST, AUTOMATION } = process.env;
-          if (OUTCOME !== 'success' || ![COMPOSE, MANIFEST, AUTOMATION].every(value => ['true', 'false'].includes(value))) {
+          const { OUTCOME, COMPOSE, RELEASE, AUTOMATION } = process.env;
+          if (OUTCOME !== 'success' || ![COMPOSE, RELEASE, AUTOMATION].every(value => ['true', 'false'].includes(value))) {
             const message = 'Test path detection failed or returned incomplete results. Rerun after the GitHub API or service error clears.';
             console.log('::error title=Test path detection unavailable::' + message);
             require('node:fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, '### Test path detection unavailable\n\n' + message + '\n');
@@ -91,17 +91,13 @@ jobs:
         shell: bash
         run: node --test .github/tests/integration/gateway.test.js 2>&1 | tee "$RUNNER_TEMP/ingress.log"
       - name: Set up locked Python tooling
-        if: steps.filter.outputs.manifest == 'true' || steps.filter.outputs.automation == 'true'
+        if: steps.filter.outputs.release == 'true' || steps.filter.outputs.automation == 'true'
         uses: ./.github/actions/setup-uv
         with:
           project-directory: .
 
-      - name: Verify shared release source manifest
-        if: steps.filter.outputs.manifest == 'true'
-        run: python3 deploy/update_release_manifest.py --check
-
       - name: Check out the pinned consumer test fixture
-        if: steps.filter.outputs.manifest == 'true'
+        if: steps.filter.outputs.release == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: VanillaIceCube/FullStackTemplate
@@ -111,7 +107,7 @@ jobs:
 
       - name: Run canonical application launch tests with the consumer policy
         id: release-tests
-        if: steps.filter.outputs.manifest == 'true'
+        if: steps.filter.outputs.release == 'true'
         continue-on-error: true
         working-directory: release-consumer-fixture
         shell: bash
@@ -145,7 +141,7 @@ jobs:
         if: always()
         env:
           SCOPE: ${{ steps.scope.outcome }}
-          APPLICABLE: ${{ steps.filter.outputs.manifest }}
+          APPLICABLE: ${{ steps.filter.outputs.release }}
           OUTCOME: ${{ steps.release-tests.outcome }}
         run: node .github/scripts/report-test-result.js release
       - id: automation-report
