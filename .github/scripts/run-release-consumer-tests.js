@@ -4,6 +4,8 @@ const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 
 const workspace = process.env.GITHUB_WORKSPACE;
+// Exercise the candidate builder against the pinned application's policy and Compose file.
+fs.copyFileSync(path.join(workspace, 'app-release/v1/build_bundle.py'), 'deploy/production/build_bundle.py');
 execFileSync('python3', ['deploy/production/build_bundle.py', '--check-parity', '--source-root', workspace, '--sync'],
   { stdio: 'inherit' });
 const canonical = path.join(workspace, 'app-release/v1/tests');
