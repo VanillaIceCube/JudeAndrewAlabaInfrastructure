@@ -14,6 +14,8 @@ A failed launch exits nonzero. Inspect the systemd unit `gateway-<commit>-<run>-
 
 ## Host preparation
 
+First-time provisioning requires separate operator authorization. Confirm the designated host operator and approved work in the [owner's authorization record](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4) before creating host paths, networks or credentials. An `env-prod` promotion launches the gateway on the prepared host.
+
 Provision `/opt/host-ingress-deploy` and its `incoming/` directory under the deploying identity with mode 0700. Provision `/var/lib/jude-deploy-locks/maintenance.lock` (0600) in a private directory shared with the app launchers. Verify access to Docker, systemd, the registry image, and the pre-existing external networks. Keep the deployment identity and SSH host fingerprint under operator control.
 
 The origin certificate and key are `origin.pem` and `origin.key`. Compose mounts the host certificate directory read-only. Its first-launch default is `/root/apps/notoli/certs`. A subsequent launch uses the existing read-only certificate mount. The operator may supply `/opt/host-ingress-deploy/origin-ca.pem` as the independent origin trust anchor. Keep key material off GitHub and out of logs.
