@@ -55,8 +55,7 @@ before changing topology or shared release behavior.
 
 Install uv and run `uv sync --locked` from the repository root. The root
 `pyproject.toml` and `uv.lock` own the pinned PyYAML tooling environment. The project
-`requires-python` constraint selects Python 3.12. Run local Python/Node checks through `uv run --locked` so
-Node child processes find that same parser. Runtime gateway/release scripts do
+`requires-python` constraint selects Python 3.12. Run Python checks through `uv run --locked`. Install the Node automation parsers from `.github/package-lock.json` before running JavaScript checks. Runtime gateway/release scripts do
 not require uv on production hosts. See the GitHub workflow guide for coverage.
 
 ## ⚙️ Configuration
@@ -70,12 +69,13 @@ repository Actions secrets/variables under the explicit authorization below.
 
 ## 🧪 Checks
 
-Validate Compose configuration and the retained action-local regressions:
+Validate Compose configuration, the release manifest and the automation suites:
 
 ```sh
 docker compose -f compose.yml config --quiet
 uv run --locked python app-release/update_release_manifest.py --check
-uv run --locked node --test .github/actions/*/*.test.js
+npm ci --prefix .github --ignore-scripts --no-audit --no-fund
+node .github/scripts/run-automation-tests.js
 ```
 
 For automation changes, run the checks in
@@ -143,12 +143,12 @@ fails. Missing credentials, incomplete required major-upgrade briefs and oversiz
 diffs must fail visibly. The shared diff budget is 2 MB (2,000,000 bytes). Obi-Wan's semver-major
 Dependabot brief uses complete primary-source evidence; web search remains limited
 to that review path. Run the repository's publisher regression tests and
-Actionlint when changing this contract. Where used, the read-only `verify-gates.js` audit requires actual
+Actionlint when changing this contract. Where used, the read-only `validate-reviewer-gates.js` audit requires actual
 successful reviewer results, including after cancelled or skipped runs.
 
-Dependency review retains full JSON in the `dependency-review-evidence` artifact,
-passes it through a file rather than environment variables, and limits RoboCop's
-report to 16 KiB plus summary metadata. Disclose omitted entries; bounded reports
+Dependency Review uses standard input for scanner outputs and limits RoboCop's
+report to 16 KiB, including summary metadata. GitHub's native review summary and
+workflow logs provide diagnostics. Disclose omitted entries; bounded reports
 must not change the independent gate's non-success verdict. Missing evidence
 fails. Preserve CodeQL scope outputs, full default-branch coverage and RoboCop
 baseline evidence; concurrent security-alert closure requires verified final state.
@@ -159,7 +159,7 @@ RoboCop's short-lived App token reads alerts and authors issue mutations;
 Keep App IDs/private keys, least-privilege permissions, trigger policy and field
 setup documented in `.github/README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
-and token inputs. Run `.github/actions/custom-regressions/security-alert-contract.test.js`
+and token inputs. Run `.github/tests/track-security-alerts.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Keep advisory-based malware alert tracking and document PR scanner coverage. Keep the CI architecture diagrams aligned with workflow edits.
 
@@ -169,9 +169,7 @@ Other merges remain manual. Trusted same-repository Dependabot PRs require the
 same three reviewers as human PRs; production/Project-token secrets remain outside
 Dependabot. Preserve non-mutating reviews. Dependabot security-update PRs do not
 authorize merging, and a human PR smoke test does not prove Dependabot access.
-Infrastructure has one publisher test file and no npm dependency graph; application
-publisher/branch-gating tests and npm malware scanning are not automatic parity
-requirements here. Keep Infrastructure's Required CI aggregation documented in
+Infrastructure has one publisher test file and an npm lockfile for its GitHub automation. Its PR dependency gate reviews dependency changes; the application-specific malware gate also scans frontend and backend lockfiles. Keep Infrastructure's Required CI aggregation documented in
 the workflow guide. It includes the shared secret scan.
 
 ## 🔑 OpenAI reviewer isolation
