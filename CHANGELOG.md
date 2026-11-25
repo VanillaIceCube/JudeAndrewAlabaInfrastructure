@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Add protected Dependabot auto-merge for verified patch and minor updates after Infrastructure CI and three current-head approvals.
 
+### Fixed
+
+- Install the hash-pinned uv wheel directly so Python checks can start on hosted Linux runners.
+
 ### Changed
 
 - Organize GitHub automation tests by implementation name and check that each top-level suite has a matching source.
