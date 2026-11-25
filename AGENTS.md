@@ -1,5 +1,82 @@
 # AGENTS.md
 
+## Human-First Engineering
+
+This repository is intended to be understood, maintained, and owned by humans. AI-assisted development must not come at the expense of human comprehension.
+
+### Simplicity and Readability
+
+- Prefer simple, explicit, conventional implementations over clever or unnecessarily flexible solutions.
+- Follow KISS, YAGNI, and separation of concerns without applying them dogmatically.
+- Every abstraction, dependency, helper, and layer of indirection must justify its existence.
+- Keep related functionality together. Minimize the number of files a developer must navigate to understand an operation.
+- Prefer native framework and standard library functionality over custom implementations.
+- Do not introduce abstractions for hypothetical future requirements.
+- Prioritize readability over minimizing lines of code.
+- Comments should explain why something exists, not restate what the code does.
+
+### Deletion and Consolidation
+
+- Prefer removing unnecessary complexity over introducing additional code to manage it.
+- Remove unused imports, functions, files, dependencies, configuration, and obsolete implementation paths when verified safe.
+- Maintain a single source of truth for business logic.
+- Do not introduce parallel implementations, transitional wrappers, or compatibility layers without a demonstrated requirement.
+- Leave modified code simpler or equally understandable whenever reasonably possible.
+
+### Validation and Error Handling
+
+- Address root causes rather than masking symptoms.
+- Establish invariants and validate inputs at the appropriate upstream boundaries.
+- Do not repeatedly validate conditions that are already guaranteed.
+- Avoid speculative defensive checks, unnecessary fallbacks, broad exception handling, and silent failures.
+- Unexpected internal failures should surface clearly.
+- Preserve necessary security, authorization, data integrity, concurrency, external input validation, and legitimate recovery mechanisms.
+
+### Testing
+
+- Test meaningful, observable behavior rather than implementation details.
+- Prefer straightforward tests with realistic inputs and minimal mocking.
+- Do not create redundant tests solely to increase coverage.
+- Do not weaken meaningful test coverage to make an implementation pass.
+- Keep test infrastructure proportional to the complexity of the application.
+- Follow established testing conventions.
+
+### Architectural Consistency
+
+- Understand existing conventions before introducing new patterns.
+- Prefer extending an established, sound pattern over creating another.
+- Maintain appropriate consistency across Notoli, MacroMapper, FullStackTemplate, and shared infrastructure.
+- Where functionality is genuinely shared, maintain a canonical implementation through FullStackTemplate.
+- Do not propagate unnecessary complexity in the name of parity.
+- Respect legitimate product-specific requirements.
+
+### Scope and Ownership
+
+- Implement what was requested, not what might eventually be requested.
+- Avoid unrelated refactoring and speculative improvements.
+- Do not introduce new dependencies, architectural layers, or infrastructure without clear justification.
+- Preserve existing behavior unless a behavioral change is explicitly intended.
+- Flag consequential architectural decisions and uncertain deletions for human review.
+- Verify changes using relevant tests, linting, type checks, and builds.
+
+### Final Self-Review
+
+Before completing any change, ask:
+
+- Can this implementation be simpler?
+- Is every new abstraction necessary?
+- Can a human easily trace the execution flow?
+- Am I solving a real problem or a hypothetical one?
+- Am I addressing the root cause or masking it?
+- Have I introduced unnecessary maintenance overhead?
+- Would a human developer reasonably choose this implementation without AI assistance?
+
+If a simpler, equally correct implementation exists, prefer it.
+
+
+
+Complexity must be earned. Code is a liability as well as an asset. The objective is not to maximize output, but to deliver reliable functionality with the lowest reasonable maintenance burden.
+
 ## 🧭 Ownership and shared rollout
 
 FullStackTemplate owns reusable application engineering and the canonical MCP
