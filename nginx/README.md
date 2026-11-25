@@ -129,8 +129,8 @@ and SNI with a separately provisioned CA if necessary. Redirects/challenges
 cannot silently pass. Requests use `JudeGatewayRelease/1.0` and cache bypass
 headers. Each complete suite has an 80-second process deadline, three attempts
 and two-second intervals (244 seconds maximum); each socket has a five-second
-timeout and responses are limited to 256 KiB. The former root ingress route/DNS suite has been retired; verify the
-120-second backend/MCP timeout contract under separately authorized acceptance.
+timeout and responses are limited to 256 KiB. Verify the 120-second backend/MCP
+timeout during separately authorized acceptance.
 
 Restart policy compares the effective expanded Compose model, immutable image,
 all `nginx/**/*.conf` bytes and certificate mount location to the **actually
@@ -232,7 +232,7 @@ and adoption are ready. Initial setup remains an explicit owner operation. Confi
   Only the gateway workflow references the key, only its transport step receives
   it, and its only triggers are `env-prod` push and owner manual dispatch on that
   branch. Review/scanner jobs must never request deployment credentials; keep
-  the key outside Dependabot. Review these workflow rules explicitly; the root gateway regression suite has been retired.
+  the key outside Dependabot. Review trigger and credential scope when changing that workflow.
   These controls prevent other existing jobs from initiating gateway operations;
   a writer able to install an arbitrary secret-reading workflow remains privileged.
   The helper's context checks cannot constrain a workflow that bypasses it.
@@ -428,13 +428,13 @@ before adding a vhost. This guide enables no new service.
 
 ## 🧪 Checks and acceptance
 
-The gateway integration test uses `python3 nginx/gateway_release.py check-config --directory . --certificates <directory>` to verify a rendered Compose model supplied on standard input. `--record <file>` checks recovery state and `--syntax` runs the pinned image’s nginx syntax check in an isolated container.
+The [gateway integration test](../.github/tests/integration/gateway.test.js) renders
+the Compose model, runs the pinned Nginx image’s syntax check and verifies the
+recovery record. It sends requests through disposable networks to check upstream
+routing, forwarding headers and the exact trusted proxy address.
 
-
-See [workflow checks](../.github/workflows/README.md#-checks-and-diagnostics).
-Compose configuration, shared release manifest and action-local regressions remain;
-root routing, gateway transaction/retirement, snapshot and profile tests were retired.
-No current local result substitutes for live topology, handoff/recovery or authenticated
-acceptance. Use disposable networks/test certificates for rehearsals. Never run the
-production cutover as a test. Unauthenticated public readiness is separate from account,
-email and billable-AI operations, each requiring its authorized scope.
+Run it with the environment in the [workflow guide](../.github/workflows/README.md#-checks-and-diagnostics).
+Live topology, handoff, recovery and authenticated acceptance require the
+authorized operator. Use disposable networks and test certificates for rehearsals.
+Reserve the production cutover for an authorized release.
+Account, email and billable AI checks each require their authorized scope.
