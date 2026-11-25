@@ -70,6 +70,32 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'JudeAndrewAlabaInfrastructure' && 'true' || 'false' }}
+
+      - name: Collect read-only auto-merge API evidence
+        if: steps.pr-diff.outputs.truncated != 'true' && github.event.repository.name != 'JudeAndrewAlabaInfrastructure'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo, pull_number: context.payload.pull_request.number, per_page: 100,
+            });
+            if (files.some((file) => file.filename.startsWith('.github/scripts/dependabot-') ||
+              ['.github/workflows/ci-auto-merge.yml', '.github/workflows/ci-orchestrator.yml'].includes(file.filename))) {
+              // Direct read-only API calls; do not execute PR-workspace modules with this client.
+              const rules = await github.paginate(github.rest.repos.getBranchRules, {
+                ...context.repo, branch: 'main', per_page: 100,
+                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+              });
+              const schema = await github.graphql('query { __type(name: "EnablePullRequestAutoMergeInput") { inputFields { name } } }');
+              const evidence = { api_version: '2026-03-10', branch_rules_read_with_workflow_token: 'success',
+                rule_types: rules.map((rule) => rule.type), auto_merge_input_fields: schema.__type.inputFields.map((field) => field.name) };
+              if (!evidence.rule_types.includes('required_status_checks') || !evidence.auto_merge_input_fields.includes('expectedHeadOid')) {
+                throw new Error('Live GitHub API contracts do not satisfy protected auto-merge requirements.');
+              }
+              require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/auto-merge-api-evidence.json`, JSON.stringify(evidence, null, 2));
+              core.info(JSON.stringify(evidence));
+            }
 
       - name: Write code review context
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -108,27 +134,12 @@ jobs:
             Let character color the summary without dominating it. Avoid forced metaphors, recycled movie
             quotes, and Yoda-like grammar. Keep technical findings exact and trustworthy.
           prompt_prefix: |
-            This repository owns shared ingress and app-release/v1. Preserve independent app releases, existing
-            networks, exact Notoli proxy trust, immutable images, SQLite journal recovery, and explicit
-            rollback. Verified eligible Dependabot updates may enter native auto-merge through the protected
-            main-branch policy. Other merges and every production promotion require owner authorization.
-            Reviewers never edit files, merge, or deploy.
-
-            Gateway authorization policy: the owner explicitly chose automatic deployment on owner-triggered
-            env-prod promotions, matching Notoli/MacroMapper. That promotion is the production authorization; a
-            second environment reviewer or per-release approval variable is not required. The owner-selected
-            gateway settings model in issue #41 uses repository Actions secrets/variables only, without GitHub
-            Environments or Deployment API records. Enforce owner identity for the original and retrying actors,
-            exact current env-prod source, exact promoted workflow, reviewed source content, credential-free
-            authorization before loading the dedicated SSH key, trigger restrictions, least privilege and
-            recovery controls. Repository secret access is not branch-scoped: repository writers who can install
-            arbitrary workflows remain privileged and this exposure must be documented; do not claim helper
-            checks constrain workflows that bypass the helper or require an environment to implement this
-            selected model. Initial host setup and explicit rollback still require their authorized operator
-            scope. Gateway authorization applies only to production promotion.
-
-            Review this pull request as Obi-Wan Code-nobi, the AI Code Reviewer for shared Infrastructure
-            (Nginx, Docker Compose, Python release/recovery tooling, shell and GitHub Actions).
+            Review this pull request as Obi-Wan Code-nobi, the AI Code Reviewer for ${{ github.repository }}
+            (application code, infrastructure, Docker and GitHub Actions).
+            For gateway changes, enforce the owner's env-prod promotion policy, including source and workflow
+            verification, original and retrying actor checks, pinned SSH host identity and credential isolation.
+            The selected model uses repository settings. A writer who can replace workflows remains privileged.
+            Require operator authorization for host setup. Keep the proxy isolated from application data.
 
             Scope:
             - Own general implementation review: correctness, maintainability, architecture, edge cases, missing

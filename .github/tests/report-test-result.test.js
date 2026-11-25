@@ -19,7 +19,7 @@ test("reports distinguish out-of-scope and failed checks", (t) => {
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const output = path.join(directory, "outputs");
   const summary = path.join(directory, "summary");
-  for (const [name, source] of [["ingress", "ingress.log"], ["recovery", "release-tests.log"], ["automation", "automation.log"]]) {
+  for (const [name, source] of [["ingress", "ingress.log"], ["release", "release-tests.log"], ["automation", "automation.log"]]) {
     const command = steps.get(name + "-report").run.trim();
     assert.equal(command, "node .github/scripts/report-test-result.js " + name);
     fs.writeFileSync(path.join(directory, source), "Synthetic check diagnostics\n");
