@@ -18,6 +18,7 @@ import shutil
 import ssl
 import stat
 import subprocess
+import sys
 import tarfile
 import time
 import uuid
@@ -444,7 +445,8 @@ class Gateway:
         fsync_release_tree(directory)
         return model
 
-    def syntax(self, model):
+    @staticmethod
+    def syntax(model):
         args = ["run", "--rm", "--network", "none"]
         for volume in model["services"]["proxy"]["volumes"]:
             args += ["--mount", "type=bind,src=" + volume["source"] + ",dst=" + volume["target"] + ",readonly"]
@@ -596,6 +598,23 @@ class Gateway:
 
 
 def main():
+    if sys.argv[1:2] == ["check-config"]:
+        parser = argparse.ArgumentParser(description="Check a rendered gateway configuration without deploying it.")
+        parser.add_argument("--directory", type=Path, required=True)
+        parser.add_argument("--certificates", required=True)
+        parser.add_argument("--record", type=Path)
+        parser.add_argument("--syntax", action="store_true")
+        args = parser.parse_args(sys.argv[2:])
+        model = json.load(sys.stdin)
+        validate_gateway_compose(model, args.certificates)
+        record = read_json(args.record) if args.record else None
+        state = retired_route_state(args.directory.resolve(), model, record)
+        if args.syntax:
+            ensure_image(model["services"]["proxy"]["image"])
+            Gateway.syntax(model)
+        print(json.dumps(state))
+        return
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("adopt", "deploy", "rollback"))
     parser.add_argument("--source", required=True)
