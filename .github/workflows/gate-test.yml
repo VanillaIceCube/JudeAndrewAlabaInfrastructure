@@ -48,7 +48,7 @@ jobs:
             compose:
               - 'compose.yml'
               - '.env'
-              - 'nginx/**'
+              - 'gateway/**'
               - '.github/tests/integration/gateway.test.js'
               - '.gitattributes'
               - '.github/workflows/deploy-gateway.yml'

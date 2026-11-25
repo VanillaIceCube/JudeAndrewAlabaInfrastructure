@@ -137,9 +137,9 @@ not require uv on production hosts. See the GitHub workflow guide for coverage.
 
 ## ⚙️ Configuration
 
-Use [nginx/README.md](nginx/README.md),
+Use [gateway/README.md](gateway/README.md),
 [deploy/README.md](deploy/README.md) and the
-[gateway operations](nginx/README.md#-operations) for topology, release profiles and private
+[gateway operations](gateway/README.md#-operations) for topology, release profiles and private
 configuration. Preserve exact app proxy trust and independent app readiness;
 application credentials remain in their owning app. Gateway deployment uses
 repository Actions secrets/variables under the explicit authorization below.
@@ -277,16 +277,16 @@ issuer is not a deployment prerequisite. Advertise an app service only after its
 own registry, OAuth and readiness checks pass; framework adoption alone does not
 authorize activation, client registration, owner consent or plugin installation.
 
-Follow the [optional MCP contract](nginx/README.md#-optional-mcp-contract) for app-owned ASGI/OAuth,
+Follow the [optional MCP contract](gateway/README.md#-optional-mcp-contract) for app-owned ASGI/OAuth,
 shared ingress and launch readiness. Notoli and MacroMapper route MCP/discovery
 to their own backends. Preserve independent releases and each app's exact proxy
 trust; do not apply app-specific scopes or credentials to Infrastructure.
 
 ## 🧩 Repository-specific contracts
 
-Read the [architecture](nginx/README.md#-structure-and-ownership),
+Read the [architecture](gateway/README.md#-structure-and-ownership),
 [release standard](deploy/README.md) and
-[gateway guide](nginx/README.md) before related changes. Keep independent app
+[gateway guide](gateway/README.md) before related changes. Keep independent app
 releases, existing network objects and Notoli's exact proxy trust intact. The
 external YNAB integration and shared MCP issuer were retired by the owner on
 October 30; follow the [owner decision in #96](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/96).

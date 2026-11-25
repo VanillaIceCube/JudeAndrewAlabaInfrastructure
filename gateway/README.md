@@ -45,4 +45,4 @@ docker compose config --quiet
 RUNNER_TEMP=/tmp node --test .github/tests/integration/gateway.test.js
 ```
 
-The integration fixture uses disposable networks, test certificates and request observers to verify Nginx syntax and forwarding. On the prepared host with both applications active, `python3 nginx/check_host.py` verifies live topology, peer addresses and unpublished backends. Acceptance of a production promotion belongs to the operator.
+The integration fixture uses disposable networks, test certificates and request observers to verify Nginx syntax and forwarding. On the prepared host with both applications active, `python3 gateway/check_host.py` verifies live topology, peer addresses and unpublished backends. Acceptance of a production promotion belongs to the operator.

@@ -24,9 +24,9 @@ SHA = re.compile(r"[a-f0-9]{40}")
 IDENTITY = re.compile(r"[a-f0-9]{40}-[0-9]+-[0-9]+")
 DIGEST = re.compile(r"nginx@sha256:[a-f0-9]{64}")
 TARGETS = {
-    "/etc/nginx/nginx.conf": "nginx/nginx.conf",
-    "/etc/nginx/conf.d": "nginx/vhosts",
-    "/etc/nginx/snippets": "nginx/snippets",
+    "/etc/nginx/nginx.conf": "gateway/nginx.conf",
+    "/etc/nginx/conf.d": "gateway/vhosts",
+    "/etc/nginx/snippets": "gateway/snippets",
 }
 DOMAINS = ("notoli.judeandrewalaba.com", "macromapper.judeandrewalaba.com")
 
@@ -134,7 +134,8 @@ def unpack(archive, destination):
             )
             if item.isdir():
                 require(
-                    name.rstrip("/") in {"nginx", "nginx/vhosts", "nginx/snippets"},
+                    name.rstrip("/")
+                    in {"gateway", "gateway/vhosts", "gateway/snippets"},
                     "Unexpected payload directory",
                 )
                 (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -144,7 +145,7 @@ def unpack(archive, destination):
                 and name not in seen
                 and (
                     name == "compose.yml"
-                    or (name.startswith("nginx/") and name.endswith(".conf"))
+                    or (name.startswith("gateway/") and name.endswith(".conf"))
                 ),
                 "Unexpected payload",
             )
@@ -156,7 +157,7 @@ def unpack(archive, destination):
             with source.extractfile(item) as stream, output.open("xb") as target:
                 shutil.copyfileobj(stream, target)
             output.chmod(0o600)
-    require({"compose.yml", "nginx/nginx.conf"} <= seen, "Incomplete gateway bundle")
+    require({"compose.yml", "gateway/nginx.conf"} <= seen, "Incomplete gateway bundle")
 
 
 def validate_gateway_compose(model, directory, certificate_directory):
@@ -232,7 +233,7 @@ def validate_gateway_compose(model, directory, certificate_directory):
                 Path(volume["source"]) == directory / TARGETS[volume["target"]],
                 "Configuration mount outside staged source",
             )
-    vhosts = {p.name for p in (directory / "nginx/vhosts").glob("*.conf")}
+    vhosts = {p.name for p in (directory / "gateway/vhosts").glob("*.conf")}
     require(
         vhosts == {"00-notoli.conf", "10-macromapper.conf"}, "Unexpected gateway vhost"
     )
