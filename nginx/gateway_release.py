@@ -144,7 +144,6 @@ def unpack(archive, destination):
                 and name not in seen
                 and (
                     name == "compose.yml"
-                    or name in {"nginx/check_host.py", "nginx/gateway_release.py"}
                     or (name.startswith("nginx/") and name.endswith(".conf"))
                 ),
                 "Unexpected payload",
@@ -445,14 +444,15 @@ def deploy(archive, checksum, identity):
     )
     require(certificate_identity(certs) == certificates, "Certificates changed")
     members = check_host.verify(allow_missing_apps=True)
-    domains = [
-        domain
-        for domain in DOMAINS
-        if all(
-            domain.split(".")[0] + "-" + service in members
-            for service in ("backend", "frontend")
-        )
-    ]
+    domains = []
+    for domain in DOMAINS:
+        app = domain.split(".")[0]
+        services = {app + "-backend", app + "-frontend"}
+        if services & members:
+            require(
+                services <= members, "Application is only partially attached: " + app
+            )
+            domains.append(domain)
     if domains:
         ca = ROOT / "origin-ca.pem"
         healthy(domains, str(ca) if ca.exists() else None)
