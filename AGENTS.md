@@ -138,7 +138,7 @@ not require uv on production hosts. See the GitHub workflow guide for coverage.
 ## ⚙️ Configuration
 
 Use [nginx/README.md](nginx/README.md),
-[app-release/README.md](app-release/README.md) and the
+[deploy/README.md](deploy/README.md) and the
 [gateway operations](nginx/README.md#-operations) for topology, release profiles and private
 configuration. Preserve exact app proxy trust and independent app readiness;
 application credentials remain in their owning app. Gateway deployment uses
@@ -150,7 +150,7 @@ Validate Compose configuration, the release manifest and the automation suites:
 
 ```sh
 docker compose -f compose.yml config --quiet
-uv run --locked python app-release/update_release_manifest.py --check
+uv run --locked python deploy/update_release_manifest.py --check
 npm ci --prefix .github --ignore-scripts --no-audit --no-fund
 node .github/scripts/run-automation-tests.js
 ```
@@ -176,7 +176,7 @@ does not authorize deployment, and an absent production branch is not a reason
 to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
-Change `app-release/` at the source, regenerate its manifest, then synchronize
+Change `deploy/` in the Infrastructure repository, regenerate its manifest, then synchronize
 all consumers to the same immutable source commit. Application repositories track
 that source in `shared_source` in `deploy/production/app.json`; never edit only a vendored copy.
 Preserve app-specific Compose, network/readiness policy, immutable image digests,
@@ -285,7 +285,7 @@ trust; do not apply app-specific scopes or credentials to Infrastructure.
 ## 🧩 Repository-specific contracts
 
 Read the [architecture](nginx/README.md#-structure-and-ownership),
-[release standard](app-release/README.md) and
+[release standard](deploy/README.md) and
 [gateway guide](nginx/README.md) before related changes. Keep independent app
 releases, existing network objects and Notoli's exact proxy trust intact. The
 external YNAB integration and shared MCP issuer were retired by the owner on

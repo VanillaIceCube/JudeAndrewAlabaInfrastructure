@@ -97,7 +97,7 @@ flowchart LR
     DEPLOY --> TARGET["Shared gateway"]
 ```
 
-[Gateway operation](../../nginx/README.md) · [Shared application release source](../../app-release/README.md)
+[Gateway operation](../../nginx/README.md) · [Shared application release source](../../deploy/README.md)
 
 ## 🧪 Checks and diagnostics
 
@@ -109,7 +109,7 @@ node .github/scripts/run-automation-tests.js
 node .github/scripts/validate-workflows.js --audit
 node .github/scripts/validate-workflows.js --check-codeql-pins
 docker compose -f compose.yml config --quiet
-uv run --locked python app-release/update_release_manifest.py --check
+uv run --locked python deploy/update_release_manifest.py --check
 actionlint -ignore 'unknown permission scope "vulnerability-alerts"'
 ```
 
