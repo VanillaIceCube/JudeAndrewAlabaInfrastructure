@@ -24,9 +24,10 @@ SHA = re.compile(r"[a-f0-9]{40}")
 IDENTITY = re.compile(r"[a-f0-9]{40}-[0-9]+-[0-9]+")
 DIGEST = re.compile(r"nginx@sha256:[a-f0-9]{64}")
 TARGETS = {
-    "/etc/nginx/nginx.conf": "gateway/nginx.conf",
-    "/etc/nginx/conf.d": "gateway/vhosts",
-    "/etc/nginx/snippets": "gateway/snippets",
+    "/etc/nginx/nginx.conf": "gateway/nginx/nginx.conf",
+    "/etc/nginx/conf.d": "gateway/nginx/vhosts",
+    "/etc/nginx/headers.conf": "gateway/nginx/headers.conf",
+    "/etc/nginx/tls.conf": "gateway/nginx/tls.conf",
 }
 DOMAINS = ("notoli.judeandrewalaba.com", "macromapper.judeandrewalaba.com")
 
@@ -135,7 +136,7 @@ def unpack(archive, destination):
             if item.isdir():
                 require(
                     name.rstrip("/")
-                    in {"gateway", "gateway/vhosts", "gateway/snippets"},
+                    in {"gateway", "gateway/nginx", "gateway/nginx/vhosts"},
                     "Unexpected payload directory",
                 )
                 (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -145,7 +146,7 @@ def unpack(archive, destination):
                 and name not in seen
                 and (
                     name == "compose.yml"
-                    or (name.startswith("gateway/") and name.endswith(".conf"))
+                    or (name.startswith("gateway/nginx/") and name.endswith(".conf"))
                 ),
                 "Unexpected payload",
             )
@@ -157,7 +158,10 @@ def unpack(archive, destination):
             with source.extractfile(item) as stream, output.open("xb") as target:
                 shutil.copyfileobj(stream, target)
             output.chmod(0o600)
-    require({"compose.yml", "gateway/nginx.conf"} <= seen, "Incomplete gateway bundle")
+    required = {"compose.yml"} | {
+        name for name in TARGETS.values() if name.endswith(".conf")
+    }
+    require(required <= seen, "Incomplete gateway bundle")
 
 
 def validate_gateway_compose(model, directory, certificate_directory):
@@ -210,11 +214,14 @@ def validate_gateway_compose(model, directory, certificate_directory):
     require(listeners == expected_listeners, "Listener drift")
 
     volumes = proxy["volumes"]
-    require(len(volumes) == 4, "Mount policy drift")
     certificate_target = "/etc/nginx/certs"
     expected_mount_targets = set(TARGETS) | {certificate_target}
     mount_targets = {volume["target"] for volume in volumes}
-    require(mount_targets == expected_mount_targets, "Mount policy drift")
+    require(
+        len(volumes) == len(expected_mount_targets)
+        and mount_targets == expected_mount_targets,
+        "Mount policy drift",
+    )
     for volume in volumes:
         require(
             volume["type"] == "bind" and volume.get("read_only"), "Mount policy drift"
@@ -233,7 +240,7 @@ def validate_gateway_compose(model, directory, certificate_directory):
                 Path(volume["source"]) == directory / TARGETS[volume["target"]],
                 "Configuration mount outside staged source",
             )
-    vhosts = {p.name for p in (directory / "gateway/vhosts").glob("*.conf")}
+    vhosts = {p.name for p in (directory / "gateway/nginx/vhosts").glob("*.conf")}
     require(
         vhosts == {"00-notoli.conf", "10-macromapper.conf"}, "Unexpected gateway vhost"
     )

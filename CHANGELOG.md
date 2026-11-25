@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file.
 
 - Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
-- Keep the shared application launcher in `deploy/` and the Nginx configuration and gateway launcher in `gateway/`. Apps compare their release files directly with the pinned Infrastructure commit.
+- Keep the shared application launcher in `deploy/` and Nginx configuration in `gateway/nginx/` and gateway programs in `gateway/scripts/`. Apps compare their release files directly with the pinned Infrastructure commit.
 - Infrastructure lint uses the repository’s locked Python environment on Windows and Linux.
 
 ## 2026-11-24

@@ -6,9 +6,10 @@ services:
     restart: always
     ports: ["80:80", "443:443"]
     volumes:
-      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./gateway/vhosts:/etc/nginx/conf.d:ro
-      - ./gateway/snippets:/etc/nginx/snippets:ro
+      - ./gateway/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./gateway/nginx/vhosts:/etc/nginx/conf.d:ro
+      - ./gateway/nginx/headers.conf:/etc/nginx/headers.conf:ro
+      - ./gateway/nginx/tls.conf:/etc/nginx/tls.conf:ro
       - ${INGRESS_CERTS_DIR:-/root/apps/notoli/certs}:/etc/nginx/certs:ro
     networks:
       notoli_backend:
