@@ -1,6 +1,6 @@
 # Shared application launcher
 
-[`v1/release.py`](v1/release.py) launches the backend and frontend for FullStackTemplate, Notoli, and MacroMapper. Each app owns its reviewed Compose file, environment and readiness rules. Infrastructure owns this launcher, the bundle builder, the common tests, and the generated deployment workflow.
+[`release.py`](release.py) launches the backend and frontend for FullStackTemplate, Notoli, and MacroMapper. Each app owns its reviewed Compose file, environment and readiness rules. Infrastructure owns this launcher, the bundle builder, the common tests, and the generated deployment workflow.
 
 ## Launch
 
@@ -34,7 +34,7 @@ The deployment identity owns the app root and its `incoming/` directory (0700) a
 
 ## Update the source and its consumers
 
-1. Change [the launcher](v1/release.py), [bundle builder](v1/build_bundle.py), [workflow template](v1/workflow.yml), or [tests](v1/tests/) here. Regenerate and check the manifest.
+1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Regenerate and check the manifest.
 
    ```sh
    python3 app-release/update_release_manifest.py

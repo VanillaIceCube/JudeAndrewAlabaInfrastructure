@@ -1,14 +1,12 @@
 """Refresh the vendored-release manifest, or verify it in infrastructure CI."""
 
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 
-SOURCE = Path(__file__).resolve().parent / "v1"
-spec = importlib.util.spec_from_file_location("parity", SOURCE / "build_bundle.py")
-parity = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(parity)
+from build_bundle import FILES, digest
+
+SOURCE = Path(__file__).resolve().parent
 
 
 def main():
@@ -18,10 +16,10 @@ def main():
     manifest = {
         "contract_version": 1,
         "files": {
-            target: parity.digest((SOURCE / source).read_bytes())
-            for target, source in parity.FILES.items()
+            target: digest((SOURCE / source).read_bytes())
+            for target, source in FILES.items()
         },
-        "workflow_sha256": parity.digest((SOURCE / "workflow.yml").read_bytes()),
+        "workflow_sha256": digest((SOURCE / "workflow.yml").read_bytes()),
     }
     path = SOURCE / "manifest.json"
     if args.check:
