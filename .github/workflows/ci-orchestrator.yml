@@ -64,14 +64,9 @@ jobs:
     with:
       lint_result: ${{ needs.lints.result }}
       test_result: ${{ needs.tests.result }}
-      lint_infrastructure_status: ${{ needs.lints.result }}
-      lint_infrastructure_log: ${{ needs.lints.outputs.log }}
-      test_ingress_status: ${{ needs.tests.outputs.ingress_status }}
-      test_ingress_log: ${{ needs.tests.outputs.ingress_log }}
-      test_recovery_status: ${{ needs.tests.outputs.recovery_status }}
-      test_recovery_log: ${{ needs.tests.outputs.recovery_log }}
-      test_automation_status: ${{ needs.tests.outputs.automation_status }}
-      test_automation_log: ${{ needs.tests.outputs.automation_log }}
+      lint_evidence: ${{ toJSON(needs.lints.outputs) }}
+      test_evidence: ${{ toJSON(needs.tests.outputs) }}
+
   security-review:
     name: AI Security Review
     needs: [codeql, dependency-vulnerability, secrets]

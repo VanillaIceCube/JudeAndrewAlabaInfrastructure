@@ -20,12 +20,12 @@ test("changed paths select independent checks", () => {
   for (const [file, expected] of [
     [".github/package.json", ["automation"]], [".github/package-lock.json", ["automation"]],
     ["CHANGELOG.md", []], ["compose.yml", ["compose"]], [".env", ["compose"]],
-    ["nginx/vhosts/example.conf", ["compose"]], ["app-release/v1/workflow.yml", ["manifest"]],
+    ["gateway/nginx/vhosts/example.conf", ["compose"]], ["deploy/workflow.yml", ["release"]],
     [".github/actions/example/action.yml", ["automation"]], [".github/tests/gate-test.test.js", ["automation"]],
     [".github/tests/integration/gateway.test.js", ["compose", "automation"]],
-    [".github/scripts/run-release-consumer-tests.js", ["manifest", "automation"]],
-    ["uv.lock", ["manifest", "automation"]], [".github/workflows/gate-test.yml", ["compose", "manifest", "automation"]],
-    [".github/workflows/ci-orchestrator.yml", ["compose", "manifest", "automation"]],
+    [".github/scripts/run-release-consumer-tests.js", ["release", "automation"]],
+    ["uv.lock", ["release", "automation"]], [".github/workflows/gate-test.yml", ["compose", "release", "automation"]],
+    [".github/workflows/ci-orchestrator.yml", ["compose", "release", "automation"]],
   ]) {
     const scopes = Object.keys(filters).filter((name) => filters[name].some((pattern) => path.posix.matchesGlob(file, pattern)));
     assert.deepEqual(new Set(scopes), new Set(expected), file);
@@ -38,10 +38,10 @@ test("scope detection rejects failures and incomplete results", (t) => {
   const summary = path.join(directory, "summary");
   const step = steps.get("scope");
   assert.equal(step.shell, "node {0}");
-  const defaults = { OUTCOME: "success", COMPOSE: "false", MANIFEST: "false", AUTOMATION: "false" };
+  const defaults = { OUTCOME: "success", COMPOSE: "false", RELEASE: "false", AUTOMATION: "false" };
   for (const [changed, expected] of [
-    [{}, 0], [{ MANIFEST: "true" }, 0], [{ OUTCOME: "failure" }, 1],
-    [{ MANIFEST: "" }, 1], [{ AUTOMATION: "unexpected" }, 1],
+    [{}, 0], [{ RELEASE: "true" }, 0], [{ OUTCOME: "failure" }, 1],
+    [{ RELEASE: "" }, 1], [{ AUTOMATION: "unexpected" }, 1],
   ]) {
     fs.writeFileSync(summary, "");
     const result = spawnSync(process.execPath, ["-e", step.run], {
