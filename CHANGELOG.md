@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Track security alerts in native GitHub Issues using RoboCop's existing installation token and repository issue fields. Create remediation tickets as Bug, assign the Domain from affected files, and record relative effort as Size.
 - Group the Nginx routes, private response policy, headers and TLS settings for both sites in `gateway/nginx/helpers/`. Each vhost selects its upstreams and API timeout.
 - Update CodeQL to 4.39.4, Dependency Review to 5.0.1 and GitHub App token creation to 3.4.0. Restore Dependabot updates for the PyYAML development pin and lock 6.0.4.
 - Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.

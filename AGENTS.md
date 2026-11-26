@@ -227,8 +227,8 @@ fails. Preserve CodeQL scope outputs, full default-branch coverage and RoboCop
 baseline evidence; concurrent security-alert closure requires verified final state.
 
 Secret-dependent workflows fail visibly when credentials are unavailable.
-RoboCop's short-lived App token reads alerts and authors issue mutations;
-`SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization.
+RoboCop's short-lived App token reads alerts and writes repository issues and
+native issue fields.
 Keep App IDs/private keys, least-privilege permissions, trigger policy and field
 setup documented in `.github/_README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
@@ -254,7 +254,7 @@ repository's reviewer project. Keep credentials separate across repositories
 and application environments, preserve visible missing-key failures, and follow
 the credential ownership and cutover verification in `.github/_README.md`.
 Store the three reviewer OpenAI keys and three reviewer App private keys in both
-Actions and Dependabot. Keep production, application, SSH and Project-token
+Actions and Dependabot. Keep production, application and SSH
 secrets outside Dependabot. A human PR smoke test does not prove Dependabot access.
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert
