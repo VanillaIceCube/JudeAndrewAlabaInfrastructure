@@ -15,18 +15,21 @@ REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
 REMOTE = "/opt/host-ingress-deploy/incoming/"
 
 
-def api(endpoint):
-    result = subprocess.run(
-        ["gh", "api", "--method", "GET", endpoint],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    require(result.returncode == 0, "GitHub source verification API failed")
-    return json.loads(result.stdout) if result.stdout.strip() else None
-
-
 def authorization():
+    # Only the GitHub CLI needs the API token.
+    token = os.environ.pop("GH_TOKEN")
+
+    def api(endpoint):
+        result = subprocess.run(
+            ["gh", "api", "--method", "GET", endpoint],
+            env={**os.environ, "GH_TOKEN": token},
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        require(result.returncode == 0, "GitHub source verification API failed")
+        return json.loads(result.stdout) if result.stdout.strip() else None
+
     require(
         os.environ["GITHUB_REPOSITORY"] == REPOSITORY
         and os.environ["GITHUB_REF"] == "refs/heads/env-prod",
@@ -85,7 +88,7 @@ def authorization():
     return source
 
 
-def ssh_configuration(directory, env):
+def ssh_configuration(directory, env, private_key):
     host, user, port = env["DEPLOY_HOST"], env["DEPLOY_USER"], env["DEPLOY_PORT"]
     require(
         re.fullmatch(r"[a-zA-Z0-9.:\-]+", host)
@@ -121,9 +124,7 @@ def ssh_configuration(directory, env):
     encoding, public_key = matches.pop()
     known.write_text(f"gateway-host {encoding} {public_key}\n")
     key = directory / "key"
-    key.write_bytes(
-        (env["DEPLOY_SSH_KEY"].replace("\r\n", "\n").rstrip("\n") + "\n").encode()
-    )
+    key.write_bytes((private_key.replace("\r\n", "\n").rstrip("\n") + "\n").encode())
     key.chmod(0o600)
     # RSA public key encoding is ssh-rsa; negotiate a SHA-2 signature explicitly.
     algorithm = "rsa-sha2-512" if encoding == "ssh-rsa" else encoding
@@ -148,14 +149,21 @@ def evidence(message):
 
 
 def main():
+    # Child commands inherit the process environment. SSH reads its key from a file.
+    private_key = os.environ.pop("DEPLOY_SSH_KEY", None)
+    if sys.argv[1:] not in ([], ["authorize"]):
+        raise ReleaseError("Unexpected gateway transport argument")
     source = authorization()
+    if sys.argv[1:]:
+        return
+    require(private_key, "Missing deployment SSH key")
     identity = (
         f"{source}-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
     )
     require(IDENTITY.fullmatch(identity), "Invalid Actions identity")
     with tempfile.TemporaryDirectory() as temporary:
         directory = Path(temporary)
-        config = ssh_configuration(directory, os.environ)
+        config = ssh_configuration(directory, os.environ, private_key)
         ssh = ["ssh", "-F", config, "gateway"]
         remote = REMOTE + identity
         run([*ssh, "umask 077; mkdir " + remote])
@@ -211,12 +219,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        if sys.argv[1:] == ["authorize"]:
-            authorization()
-        elif not sys.argv[1:]:
-            main()
-        else:
-            raise ReleaseError("Unexpected gateway transport argument")
+        main()
     except (
         ReleaseError,
         OSError,
