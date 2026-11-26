@@ -163,7 +163,8 @@ test('gateway configuration, forwarding and exact proxy trust', async t => {
     [notoli, address(ingress, front), trustedIp], [macromapper, macroPeer, macroPeer],
   ]) {
     for (const [url, port, cache] of [
-      ['/', '80', 'public'], ['/mcp/', '80', 'public'], ['/static/admin/test.css', '8000', 'public'],
+      ['/', '80', 'public'], ['/settings?tab=profile', '80', 'public'],
+      ['/mcp/', '80', 'public'], ['/static/admin/test.css', '8000', 'public'],
       ['/api/notifications/?probe=1', '8000', 'no-store'], ['/auth/login/', '8000', 'no-store'],
       ['/.well-known/oauth-authorization-server', '8000', 'no-store'], ['/mcp', '8000', 'no-store'],
     ]) {
