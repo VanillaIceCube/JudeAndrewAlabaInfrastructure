@@ -16,7 +16,7 @@ Start with [ci-orchestrator.yml](ci-orchestrator.yml) for a pull request. The ot
 | [review-build.yml](review-build.yml) | Same-repository PR, after lint and tests finish | Lint Eastwood reviews build and test results with their bounded diagnostics, including failures. |
 | [review-security.yml](review-security.yml) | Same-repository PR, after the security gates finish | RoboCop reviews dependency and secret findings, CodeQL scope, analyzer results and default-branch baselines. |
 | [ci-auto-merge.yml](ci-auto-merge.yml) | Successful PR CI completes | Code from `main` validates the exact PR head, records Dependabot Policy and may enable native auto-merge for an eligible dependency update. |
-| [alert-vulnerability.yml](alert-vulnerability.yml) | Daily at midnight Pacific or manually | Reconciles open Dependabot vulnerability alerts with Project tracking issues. |
+| [alert-vulnerability.yml](alert-vulnerability.yml) | Daily at midnight Pacific or manually | Reconciles open Dependabot vulnerability alerts with repository issues. |
 | [alert-malware.yml](alert-malware.yml) | Daily at midnight Pacific or manually | Classifies advisories referenced by this repo’s open Dependabot alerts and tracks malware findings. |
 | [alert-codeql.yml](alert-codeql.yml) | After a successful scheduled CodeQL scan on `main`, or manually | Reads the published Code Scanning alerts and reconciles their tracking issues. |
 | [deploy-gateway.yml](deploy-gateway.yml) | Push to `env-prod` or manual dispatch on that branch | Deploys the authorized shared gateway. The owner and source checks run before SSH credentials are loaded. |
@@ -36,13 +36,13 @@ Start with [ci-orchestrator.yml](ci-orchestrator.yml) for a pull request. The ot
 
 The policy uses the changed paths returned by GitHub. An empty list selects no file-specific checks. Fetch errors propagate, and the policy still requires the independent gates and current-head reviewer approvals.
 
-The follow-up resolves the successful CI run to its open PR into `main`. It reads reviewed code from `main`, the proposed commit as data, the required status checks and the three reviewers’ current-head approvals. Signed patch/minor metadata can qualify for native auto-merge with `expectedHeadOid`. Major updates and SHA-only Action changes without a verified update type need owner review. An open alert on an updated package blocks automatic eligibility if its CVSS score exceeds 6.9 or is missing or invalid. Production promotion has separate owner authorization. [Repository configuration](../README.md)
+The follow-up resolves the successful CI run to its open PR into `main`. It reads reviewed code from `main`, the proposed commit as data, the required status checks and the three reviewers’ current-head approvals. Signed patch/minor metadata can qualify for native auto-merge with `expectedHeadOid`. Major updates and SHA-only Action changes without a verified update type need owner review. An open alert on an updated package blocks automatic eligibility if its CVSS score exceeds 6.9 or is missing or invalid. Production promotion has separate owner authorization. [Repository configuration](../_README.md)
 
 ### Security-alert configuration contract
 
-The daily schedules use `America/Los_Angeles` and follow daylight-saving time. Each feed also accepts manual dispatch. The three callers resolve the `AI_REVIEW_*` variables and pass them into the shared action. RoboCop’s App token reads that feed and writes its issues. The personal Project token supplies Project access. The action validates credentials and field schema before reading alerts or updating issues.
+The daily schedules use `America/Los_Angeles` and follow daylight-saving time. Each feed also accepts manual dispatch. The three callers resolve the `AI_REVIEW_*` variables and pass them into the shared action. RoboCop’s App token reads the feed and writes its issues and native fields. The action validates credentials and the issue schema before reading alerts or updating issues.
 
-A grouped ticket records each source alert once. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads the saved issue and Project state before retrying and confirms closure before reporting success. [Alert implementation](../actions/track-security-alerts/action.yml) · [Project setup and credentials](../README.md)
+A grouped ticket records each source alert once. Set Domain from the affected paths when they agree on Frontend, Backend, or Cloud. Leave mixed or unclear groups for triage and preserve an existing Domain. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads saved issue metadata and persists the lifecycle note and End date before closing the issue. [Alert implementation](../actions/track-security-alerts/action.yml) · [Native issue setup and credentials](../_README.md)
 
 ## 🗺️ Architecture and trust boundaries
 
@@ -83,7 +83,7 @@ flowchart TD
     D --> V["alert-vulnerability.yml"]
     D --> M["alert-malware.yml"]
     MANUAL["Manual dispatch of the chosen alert feed"] -.-> C & V & M
-    C & V & M --> P["track-security-alerts action · reconcile GitHub issues and Project fields"]
+    C & V & M --> P["track-security-alerts action · reconcile GitHub issues and native fields"]
 ```
 
 ### Production deployment
