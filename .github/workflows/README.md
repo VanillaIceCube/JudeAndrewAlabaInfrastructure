@@ -97,7 +97,7 @@ flowchart LR
     DEPLOY --> TARGET["Shared gateway"]
 ```
 
-[Gateway operation and recovery](../../nginx/README.md) · [Shared application release source](../../app-release/README.md)
+[Gateway operation](../../gateway/README.md) · [Shared application release source](../../deploy/README.md)
 
 ## 🧪 Checks and diagnostics
 
@@ -109,11 +109,10 @@ node .github/scripts/run-automation-tests.js
 node .github/scripts/validate-workflows.js --audit
 node .github/scripts/validate-workflows.js --check-codeql-pins
 docker compose -f compose.yml config --quiet
-uv run --locked python app-release/update_release_manifest.py --check
 actionlint -ignore 'unknown permission scope "vulnerability-alerts"'
 ```
 
-The ingress check additionally needs Docker, isolated networks, OpenSSL and the gateway’s fixture images. Shared release changes run the canonical tests against a pinned disposable consumer. Use a disposable local or CI daemon for both. The automation runner discovers top-level JavaScript tests and returns Node’s test exit code. Gate jobs keep the command’s exit status when writing bounded diagnostics for Lint Eastwood.
+The ingress check additionally needs Docker, isolated networks, OpenSSL and the gateway’s fixture images. Shared release changes copy the candidate files into a pinned disposable consumer and run its release tests. Use a disposable local or CI daemon for both. The automation runner discovers top-level JavaScript tests and returns Node’s test exit code. Gate jobs keep the command’s exit status when writing bounded diagnostics for Lint Eastwood.
 
 ## 🧪 Coverage boundaries
 

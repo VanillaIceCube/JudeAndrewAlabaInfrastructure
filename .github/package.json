@@ -1,6 +1,7 @@
 {
   "name": "github-automation",
   "private": true,
+  "commentMarkerPrefix": "infrastructure",
   "engines": {
     "node": "24"
   },

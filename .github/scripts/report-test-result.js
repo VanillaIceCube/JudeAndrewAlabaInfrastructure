@@ -4,7 +4,7 @@ const { execFileSync } = require('node:child_process');
 
 const reports = {
   ingress: ['ingress.log', 'No gateway or ingress check changes.', 'Gateway regression checks did not run. Check scope and prerequisites.'],
-  recovery: ['release-tests.log', 'No release source or test gate changes.', 'Release and recovery tests did not run. Check scope and prerequisites.'],
+  release: ['release-tests.log', 'No release source or test gate changes.', 'Application launch tests did not run. Check scope and prerequisites.'],
   automation: ['automation.log', 'No GitHub automation or tooling changes.', 'Action regressions did not run. Check the preceding validation and setup steps.'],
 };
 const name = process.argv[2];

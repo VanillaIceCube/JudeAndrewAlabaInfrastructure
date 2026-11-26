@@ -17,7 +17,7 @@ on:
         value: ${{ jobs.changes.outputs.actions }}
   schedule:
     - cron: "0 0 * * *"
-      timezone: "America/Los_Angeles"
+      timezone: America/Los_Angeles
   workflow_dispatch:
 
 concurrency:
@@ -61,6 +61,7 @@ jobs:
         with:
           filters: |
             python:
+              - 'backend/**'
               - '**/*.py'
               - 'pyproject.toml'
               - 'uv.lock'
@@ -73,6 +74,7 @@ jobs:
               - '.github/workflows/**'
               - '.github/codeql/**'
             javascript:
+              - 'frontend/**'
               - '**/*.js'
               - '**/*.cjs'
               - '**/*.mjs'

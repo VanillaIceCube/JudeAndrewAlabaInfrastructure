@@ -26,8 +26,9 @@ def inspect(kind, name):
     return json.loads(result.stdout)[0]
 
 
-def verify(allow_missing_proxy=False):
+def verify(allow_missing_proxy=False, allow_missing_apps=False):
     proxy = "host-ingress-proxy"
+    attached = set()
     for name, (internal, subnet, apps) in NETWORKS.items():
         network = inspect("network", name)
         expected = apps | {proxy}
@@ -36,10 +37,18 @@ def verify(allow_missing_proxy=False):
         if [p["Subnet"] for p in network["IPAM"]["Config"]] != [subnet]:
             raise ValueError("IPAM changed")
         members = {v["Name"]: v for v in network["Containers"].values()}
-        if set(members) != expected and not (allow_missing_proxy and set(members) == apps):
+        attached.update(members)
+        required = (set() if allow_missing_apps else apps) | (
+            set() if allow_missing_proxy else {proxy}
+        )
+        if not required <= members.keys() <= expected:
             raise ValueError("Unexpected/missing route-network member")
         if name == "notoli_backend_private":
-            if members["notoli-backend"]["IPv4Address"].split("/")[0] != "172.30.88.3":
+            if (
+                "notoli-backend" in members
+                and members["notoli-backend"]["IPv4Address"].split("/")[0]
+                != "172.30.88.3"
+            ):
                 raise ValueError("Topology invariant failed")
             if proxy in members:
                 if members[proxy]["IPv4Address"].split("/")[0] != "172.30.88.2":
@@ -47,20 +56,24 @@ def verify(allow_missing_proxy=False):
         if name == "macromapper-ingress" and proxy in members:
             if members[proxy]["IPv4Address"].split("/")[0] != "172.20.0.3":
                 raise ValueError("MacroMapper proxy trust address changed")
-    backend = inspect("container", "notoli-backend")
-    if "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2" not in backend["Config"]["Env"]:
-        raise ValueError("Proxy trust changed")
-    if backend["HostConfig"]["PortBindings"]:
-        raise ValueError("Notoli backend exposed")
-    if inspect("container", "macromapper-backend")["HostConfig"]["PortBindings"]:
-        raise ValueError("MacroMapper backend exposed")
+    for name in ("notoli-backend", "macromapper-backend"):
+        if name in attached:
+            backend = inspect("container", name)
+            if backend["HostConfig"]["PortBindings"]:
+                raise ValueError("Backend unexpectedly exposes a host port")
+            if (
+                name == "notoli-backend"
+                and "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"
+                not in backend["Config"]["Env"]
+            ):
+                raise ValueError("Proxy trust changed")
     if not allow_missing_proxy:
         ingress = inspect("container", proxy)
         if not ingress["State"]["Running"]:
             raise ValueError("Ingress is not running")
         if set(ingress["NetworkSettings"]["Networks"]) != set(NETWORKS):
             raise ValueError("Unexpected ingress network")
-    print("PASS: network membership, fixed trust and backend port invariants (host)")
+    return attached
 
 
 if __name__ == "__main__":
@@ -68,6 +81,7 @@ if __name__ == "__main__":
     parser.parse_args()
     try:
         verify()
+        print("Gateway and application network boundaries verified")
     except (
         ValueError,
         KeyError,
