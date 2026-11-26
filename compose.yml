@@ -8,8 +8,7 @@ services:
     volumes:
       - ./gateway/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./gateway/nginx/vhosts:/etc/nginx/conf.d:ro
-      - ./gateway/nginx/headers.conf:/etc/nginx/headers.conf:ro
-      - ./gateway/nginx/tls.conf:/etc/nginx/tls.conf:ro
+      - ./gateway/nginx/helpers:/etc/nginx/helpers:ro
       - ${INGRESS_CERTS_DIR:-/root/apps/notoli/certs}:/etc/nginx/certs:ro
     networks:
       notoli_backend:
