@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Track security alerts through their source references and native fields, preserve issue labels, and assign a primary Domain even when alerts span components. Use the GitHub issue closure timestamp for completion.
 
+### Removed
+
+- Remove the eight Gitleaks exceptions for historical file checksums.
+
 ## 2026-11-25
 
 ### Fixed
