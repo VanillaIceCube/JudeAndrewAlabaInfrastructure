@@ -15,6 +15,8 @@ Source-controlled configuration and GitHub account/repository settings are separ
 | [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
 | [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
+Keep the exact `pyyaml` development pin lowercase so Dependabot's uv updater can match it.
+
 <a id="-ci-tools"></a>
 
 ### CI tools
