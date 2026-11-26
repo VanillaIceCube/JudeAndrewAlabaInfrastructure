@@ -26,8 +26,7 @@ DIGEST = re.compile(r"nginx@sha256:[a-f0-9]{64}")
 TARGETS = {
     "/etc/nginx/nginx.conf": "gateway/nginx/nginx.conf",
     "/etc/nginx/conf.d": "gateway/nginx/vhosts",
-    "/etc/nginx/headers.conf": "gateway/nginx/headers.conf",
-    "/etc/nginx/tls.conf": "gateway/nginx/tls.conf",
+    "/etc/nginx/helpers": "gateway/nginx/helpers",
 }
 DOMAINS = ("notoli.judeandrewalaba.com", "macromapper.judeandrewalaba.com")
 
@@ -136,7 +135,12 @@ def unpack(archive, destination):
             if item.isdir():
                 require(
                     name.rstrip("/")
-                    in {"gateway", "gateway/nginx", "gateway/nginx/vhosts"},
+                    in {
+                        "gateway",
+                        "gateway/nginx",
+                        "gateway/nginx/vhosts",
+                        "gateway/nginx/helpers",
+                    },
                     "Unexpected payload directory",
                 )
                 (destination / path).mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -158,8 +162,13 @@ def unpack(archive, destination):
             with source.extractfile(item) as stream, output.open("xb") as target:
                 shutil.copyfileobj(stream, target)
             output.chmod(0o600)
-    required = {"compose.yml"} | {
-        name for name in TARGETS.values() if name.endswith(".conf")
+    required = {
+        "compose.yml",
+        "gateway/nginx/nginx.conf",
+        "gateway/nginx/helpers/app-routes.conf",
+        "gateway/nginx/helpers/headers.conf",
+        "gateway/nginx/helpers/private-backend.conf",
+        "gateway/nginx/helpers/tls.conf",
     }
     require(required <= seen, "Incomplete gateway bundle")
 

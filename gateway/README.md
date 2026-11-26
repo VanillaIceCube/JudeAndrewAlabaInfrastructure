@@ -30,7 +30,9 @@ The origin certificate and key are `origin.pem` and `origin.key`. Compose mounts
 | `notoli_default` | `172.18.0.0/16` | Notoli frontend traffic |
 | `macromapper-ingress` | `172.20.0.0/16` | `172.20.0.3` is MacroMapper’s trusted proxy. |
 
-The [vhosts](nginx/vhosts/) route browser requests to the matching frontend and API, authentication and discovery requests to the matching backend. [Header configuration](nginx/headers.conf) overwrites forwarded client and scheme headers. [TLS configuration](nginx/tls.conf) uses the operator’s origin certificates. Backend services have no host-published port. Adding an app requires reviewing its exact routes, hostnames, network membership, trust boundaries, resource capacity and independent deployment.
+Each [vhost](nginx/vhosts/) selects its frontend and backend. MacroMapper gives API requests 120 seconds for meal estimation. Both hosts use the same browser, static, discovery and MCP [routes](nginx/helpers/app-routes.conf) and [private response policy](nginx/helpers/private-backend.conf).
+
+[Header configuration](nginx/helpers/headers.conf) overwrites forwarded client and scheme headers. [TLS configuration](nginx/helpers/tls.conf) uses the operator’s origin certificates. Backend services have no host-published port. Adding an app requires reviewing its exact routes, hostnames, network membership, trust boundaries, resource capacity and independent deployment.
 
 <a id="-optional-mcp-contract"></a>
 
