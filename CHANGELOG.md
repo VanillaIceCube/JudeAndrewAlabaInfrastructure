@@ -10,7 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
-- Remove the eight Gitleaks exceptions for historical file checksums.
+- Remove the eight Gitleaks exceptions for historical file checksums after verifying that a fresh clone of all rewritten branches passes the full-history scan.
 
 ## 2026-11-25
 
