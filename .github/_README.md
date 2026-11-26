@@ -86,7 +86,7 @@ policy. Do not weaken protections to accept a PR.
 
 ### Deferred OpenAI migration
 
-Follow the [exact key mapping and cutover sequence](README.md#-credential-ownership). Configure the three new secrets before merging the source change; retain the legacy key until usage and all consumers are verified.
+Follow the [exact key mapping and cutover sequence](_README.md#-credential-ownership). Configure the three new secrets before merging the source change; retain the legacy key until usage and all consumers are verified.
 
 ## 🔑 Credential ownership
 
@@ -208,7 +208,7 @@ acceptance evidence still dependent on default-branch activation.
 
 ### Dependabot reviewer acceptance
 
-Follow the [six-secret setup and four-repository parity contract](README.md#-credential-ownership).
+Follow the [six-secret setup and four-repository parity contract](_README.md#-credential-ownership).
 Use original GitHub App PEM contents in Dependabot; existing Actions secret
 values cannot be retrieved/copied through GitHub. OpenAI placeholder values
 must be replaced with real repository-specific keys. Configure the shared App
@@ -227,9 +227,9 @@ required. The protected follow-up verifies all three approvals for the current D
 
 ## 🤝 Shared engineering ownership and rollout
 
-Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
-[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
 Preserve app-specific profiles and Infrastructure's separate owner authorization,
 Required CI and host operations. A shared parent closes only after required downstream
 adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.
