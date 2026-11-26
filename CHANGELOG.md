@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-25
 
+### Fixed
+
+- Keep the gateway SSH key out of child-process environments and provide the GitHub token only to the GitHub CLI.
+
 ### Changed
 
 - Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.
