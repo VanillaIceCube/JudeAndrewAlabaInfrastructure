@@ -11,7 +11,73 @@ function docker(...args) {
   return execFileSync('docker', args, { encoding: 'utf8', timeout: 120_000 }).trim();
 }
 
-test('gateway configuration, recovery state, forwarding and exact proxy trust', async t => {
+test('gateway transport isolates credentials and rejects unauthorized deployments before connecting', t => {
+  const dir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'gateway-transport-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sha = 'a'.repeat(40);
+  const repo = 'VanillaIceCube/JudeAndrewAlabaInfrastructure';
+  const ref = 'refs/heads/env-prod';
+  const commands = {
+    gh: `case "$4" in
+      */git/ref/heads/env-prod) printf '{"object":{"sha":"%s"}}' "$FIXTURE_PROD_SHA" ;;
+      */git/ref/heads/main) printf '{"object":{"sha":"%s"}}' "$FIXTURE_MAIN_SHA" ;;
+      */compare/*) printf '{"status":"%s"}' "$FIXTURE_COMPARE_STATUS" ;;
+      */git/commits/*) printf '{"tree":{"sha":"%s"}}' "\${4##*/}" ;;
+      */contents/*) printf '{"sha":"%s"}' "\${4##*=}" ;;
+      *) exit 1 ;;
+    esac`,
+    git: 'case "$1" in rev-parse) echo "$GITHUB_SHA";; archive) touch "${3#--output=}";; *) exit 1;; esac',
+    'ssh-keyscan': 'echo "fixture.invalid ssh-ed25519 fixture-public"',
+    'ssh-keygen': 'echo "256 SHA256:fixture gateway-host"',
+    scp: 'touch "$HOME/remote-contact"; test "$(cat "$(dirname "$2")/key")" = fixture-key',
+    ssh: 'touch "$HOME/remote-contact"; case "$4" in systemd-run*) echo "Gateway launched $GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT";; esac',
+  };
+  for (const [name, command] of Object.entries(commands)) {
+    const tokenCheck = name === 'gh' ? 'test "$GH_TOKEN" = fixture-token' : 'test -z "${GH_TOKEN+x}"';
+    const script = ['#!/bin/sh', 'set -eu', 'test -z "${DEPLOY_SSH_KEY+x}"', tokenCheck, command];
+    fs.writeFileSync(path.join(dir, name), script.join('\n') + '\n', { mode: 0o700 });
+  }
+  const env = {
+    PATH: dir + path.delimiter + process.env.PATH, HOME: dir, TMPDIR: dir,
+    GH_TOKEN: 'fixture-token', DEPLOY_SSH_KEY: 'fixture-key', DEPLOY_ENABLED: 'true',
+    DEPLOY_HOST: 'fixture.invalid', DEPLOY_PORT: '22', DEPLOY_USER: 'operator', DEPLOY_HOST_FINGERPRINT: 'SHA256:fixture',
+    GITHUB_REPOSITORY: repo, GITHUB_REF: ref, GITHUB_SHA: sha, GITHUB_EVENT_NAME: 'push',
+    GITHUB_ACTOR: 'VanillaIceCube', GITHUB_TRIGGERING_ACTOR: 'VanillaIceCube',
+    GITHUB_WORKFLOW_REF: repo + '/.github/workflows/deploy-gateway.yml@' + ref, GITHUB_WORKFLOW_SHA: sha,
+    GITHUB_RUN_ID: '1', GITHUB_RUN_ATTEMPT: '1',
+    FIXTURE_PROD_SHA: sha, FIXTURE_MAIN_SHA: sha, FIXTURE_COMPARE_STATUS: 'identical',
+  };
+  function transport(args, environment) {
+    return spawnSync('python3', ['gateway/scripts/gateway_transport.py', ...args], { env: environment, encoding: 'utf8', timeout: 15000 });
+  }
+  for (const args of [['authorize'], []]) {
+    const result = transport(args, env);
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+    if (!args.length) assert.match(result.stdout, /Gateway launched from reviewed source/);
+  }
+
+  const contact = path.join(dir, 'remote-contact');
+  fs.unlinkSync(contact);
+  const otherSha = 'b'.repeat(40);
+  const rejected = [
+    [{ GITHUB_ACTOR: 'contributor' }, 'Only the owner may authorize'],
+    [{ GITHUB_TRIGGERING_ACTOR: 'contributor' }, 'Only the owner may authorize'],
+    [{ FIXTURE_PROD_SHA: otherSha }, 'Promotion advanced'],
+    [{ FIXTURE_MAIN_SHA: otherSha, FIXTURE_COMPARE_STATUS: 'diverged' }, 'Promotion must belong to reviewed main history'],
+    [{ GITHUB_WORKFLOW_SHA: otherSha }, 'Executing workflow differs'],
+    [{ DEPLOY_HOST_FINGERPRINT: 'SHA256:other' }, 'Expected one SSH host key matching the configured fingerprint'],
+  ];
+  for (const [overrides, message] of rejected) {
+    const result = transport([], { ...env, ...overrides });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1, result.stderr);
+    assert.ok(result.stderr.includes(message), result.stderr);
+    assert.equal(fs.existsSync(contact), false, `Unexpected SSH or SCP call for ${message}`);
+  }
+});
+
+test('gateway configuration, forwarding and exact proxy trust', async t => {
   const root = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'gateway-check-'));
   const cleanups = [() => fs.rmSync(root, { recursive: true, force: true })];
   t.after(() => {
@@ -29,7 +95,7 @@ test('gateway configuration, recovery state, forwarding and exact proxy trust', 
     { encoding: 'utf8', env: { ...process.env, INGRESS_CERTS_DIR: root } }));
   const proxy = model.services.proxy;
   function checkConfig(config, ...args) {
-    const result = spawnSync('python3', ['nginx/gateway_release.py', 'check-config', '--directory', process.cwd(),
+    const result = spawnSync('python3', ['gateway/scripts/gateway_release.py', 'check-config', '--directory', process.cwd(),
       '--certificates', root, ...args], { input: JSON.stringify(config), encoding: 'utf8', timeout: 240_000 });
     if (result.error) throw result.error;
     assert.equal(result.signal, null);
@@ -38,18 +104,12 @@ test('gateway configuration, recovery state, forwarding and exact proxy trust', 
 
   const validated = checkConfig(model, '--syntax');
   assert.equal(validated.status, 0, validated.stderr);
-  const record = JSON.parse(validated.stdout);
-  const recordFile = path.join(root, 'record.json');
-  fs.writeFileSync(recordFile, JSON.stringify(record));
-  assert.equal(checkConfig(model, '--record', recordFile).status, 0);
-  fs.writeFileSync(recordFile, JSON.stringify({ ...record, profile: 'unexpected' }));
-  assert.equal(checkConfig(model, '--record', recordFile).status, 1);
   const invalid = structuredClone(model);
   invalid.services.proxy.networks.macromapper.ipv4_address = '172.20.0.99';
   assert.equal(checkConfig(invalid).status, 1);
 
-  const configs = fs.readdirSync('nginx/vhosts').filter(file => file.endsWith('.conf'))
-    .map(file => fs.readFileSync(path.join('nginx/vhosts', file), 'utf8'));
+  const configs = fs.readdirSync('gateway/nginx/vhosts').filter(file => file.endsWith('.conf'))
+    .map(file => fs.readFileSync(path.join('gateway/nginx/vhosts', file), 'utf8'));
   for (const app of ['notoli', 'macromapper']) {
     const matches = configs.filter(conf => conf.includes('server_name ' + app + '.judeandrewalaba.com;'));
     assert.equal(matches.length, 1, 'Expected one vhost for ' + app);

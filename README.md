@@ -10,7 +10,7 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 - Shared HTTPS ingress and application routing.
 - Independent application releases with pinned common tooling.
-- Explicit verification and recovery procedures.
+- Verified application and gateway launches.
 - Application onboarding and optional MCP routing.
 - Automated validation, security checks, and AI reviews.
 
@@ -22,8 +22,8 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 ## 📚 Documentation
 
-- [Gateway and routing](nginx/README.md) — configuration and routing ownership.
-- [Application release standard](app-release/README.md) — shared release tooling.
+- [Gateway and routing](gateway/README.md) — configuration and routing ownership.
+- [Application release standard](deploy/README.md) — shared release tooling.
 - [GitHub setup and workflows](.github/README.md) — configuration and automation.
 - [Changelog](CHANGELOG.md) — project updates.
 

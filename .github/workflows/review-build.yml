@@ -9,35 +9,11 @@ on:
       test_result:
         required: false
         type: string
-      lint_infrastructure_status:
-        required: false
+      lint_evidence:
+        description: Status and bounded log outputs from the lint gate.
         type: string
-      lint_infrastructure_log:
-        required: false
-        type: string
-      lint_automation_status:
-        required: false
-        type: string
-      lint_automation_log:
-        required: false
-        type: string
-      test_ingress_status:
-        required: false
-        type: string
-      test_ingress_log:
-        required: false
-        type: string
-      test_recovery_status:
-        required: false
-        type: string
-      test_recovery_log:
-        required: false
-        type: string
-      test_automation_status:
-        required: false
-        type: string
-      test_automation_log:
-        required: false
+      test_evidence:
+        description: Status and bounded log outputs from the test gate.
         type: string
     secrets:
       LINT_EASTWOOD_OPENAI_API_KEY:
@@ -91,6 +67,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'JudeAndrewAlabaInfrastructure' && 'true' || 'false' }}
 
       - name: Write build review context
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -101,17 +78,9 @@ jobs:
           PRIOR_REVIEWS_PATH: ${{ runner.temp }}/build-prior-reviews.json
           LINT_RESULT: ${{ inputs.lint_result || 'unknown' }}
           TEST_RESULT: ${{ inputs.test_result || 'unknown' }}
-          LINT_INFRASTRUCTURE_STATUS: ${{ inputs.lint_infrastructure_status || 'not-applicable' }}
-          LINT_INFRASTRUCTURE_LOG: ${{ inputs.lint_infrastructure_log }}
-          LINT_AUTOMATION_STATUS: ${{ inputs.lint_automation_status || 'not-applicable' }}
-          LINT_AUTOMATION_LOG: ${{ inputs.lint_automation_log }}
-          TEST_INGRESS_STATUS: ${{ inputs.test_ingress_status || 'not-applicable' }}
-          TEST_INGRESS_LOG: ${{ inputs.test_ingress_log }}
-          TEST_RECOVERY_STATUS: ${{ inputs.test_recovery_status || 'not-applicable' }}
-          TEST_RECOVERY_LOG: ${{ inputs.test_recovery_log }}
-          TEST_AUTOMATION_STATUS: ${{ inputs.test_automation_status || 'not-applicable' }}
-          TEST_AUTOMATION_LOG: ${{ inputs.test_automation_log }}
-        run: node .github/scripts/write-build-review-context.js LINT_INFRASTRUCTURE LINT_AUTOMATION TEST_INGRESS TEST_RECOVERY TEST_AUTOMATION
+          LINT_EVIDENCE: ${{ inputs.lint_evidence || '{}' }}
+          TEST_EVIDENCE: ${{ inputs.test_evidence || '{}' }}
+        run: node .github/scripts/write-build-review-context.js
 
       - name: Call Lint Eastwood
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -131,12 +100,6 @@ jobs:
             quietly wry. Let a light western touch color the summary without staging an entire scene. Avoid
             forced jokes and theatrical CI prose. Keep technical findings exact and trustworthy.
           prompt_prefix: |
-            This repository owns shared ingress and app-release/v1. Preserve independent app releases, existing
-            networks, exact Notoli proxy trust, immutable images, SQLite journal recovery, and explicit
-            rollback. Verified eligible Dependabot updates may enter native auto-merge through the protected
-            main-branch policy. Other merges and every production promotion require owner authorization.
-            Reviewers never edit files, merge, or deploy.
-
             Review this pull request as Lint Eastwood, the AI Build Sheriff.
 
             Focus only on build, lint, test, formatting, type-check style, and CI failure interpretation. Do not

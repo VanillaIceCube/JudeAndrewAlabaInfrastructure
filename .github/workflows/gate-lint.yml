@@ -2,7 +2,10 @@ name: Infrastructure Lint Gate
 on:
   workflow_call:
     outputs:
-      log:
+      lint_infrastructure_status:
+        description: Infrastructure lint result.
+        value: ${{ jobs.lint.outputs.status }}
+      lint_infrastructure_log:
         description: Bounded diagnostic log for Lint Eastwood.
         value: ${{ jobs.lint.outputs.log }}
 
@@ -18,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
+      status: ${{ steps.lint.outcome }}
       log: ${{ steps.report.outputs.log }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -29,6 +33,8 @@ jobs:
           node-version-file: .github/package.json
       - name: Set up locked Python tooling
         uses: ./.github/actions/setup-uv
+        with:
+          project-directory: .
       - name: Install locked workflow dependencies
         run: npm ci --prefix .github --ignore-scripts --no-audit --no-fund
       - name: Install verified actionlint

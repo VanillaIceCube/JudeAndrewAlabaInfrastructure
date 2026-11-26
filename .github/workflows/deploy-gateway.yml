@@ -3,16 +3,6 @@ on:
   push:
     branches: [env-prod]
   workflow_dispatch:
-    inputs:
-      operation:
-        description: Gateway operation (select env-prod above; rollback requires explicit authorization).
-        type: choice
-        options: [deploy, rollback]
-        default: deploy
-      recovery:
-        description: For rollback, exact retained failed/current release ID from the host journal.
-        type: string
-        default: ''
 concurrency:
   group: gateway-production
   cancel-in-progress: false
@@ -37,22 +27,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
-        run: python3 nginx/gateway_transport.py authorize
-      - name: Execute gateway transaction
+        run: python3 gateway/scripts/gateway_transport.py authorize
+      - name: Launch the gateway
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
-          GATEWAY_OPERATION: ${{ inputs.operation || 'deploy' }}
-          GATEWAY_RECOVERY: ${{ inputs.recovery }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST_FINGERPRINT: ${{ vars.DEPLOY_HOST_FINGERPRINT }}
-        run: python3 nginx/gateway_transport.py
-      - name: Report a failed or cancelled runner without asserting the host outcome
-        if: always() && steps.release.outcome != 'success'
-        env:
-          GATEWAY_RUNNER_STATUS: ${{ job.status }}
-        run: python3 nginx/gateway_transport.py finalize-failure
+        run: python3 gateway/scripts/gateway_transport.py

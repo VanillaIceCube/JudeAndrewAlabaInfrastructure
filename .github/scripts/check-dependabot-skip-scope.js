@@ -4,6 +4,11 @@ const path = require("node:path");
 const YAML = require("yaml");
 
 const detectors = new Map([
+  ["Lints / Lint Frontend (ESLint + Prettier)", ["gate-lint.yml", "frontend"]],
+  ["Lints / Lint Backend (Ruff)", ["gate-lint.yml", "backend"]],
+  ["Tests / Frontend Tests (React)", ["gate-test.yml", "frontend"]],
+  ["Tests / Backend Tests (Django)", ["gate-test.yml", "backend"]],
+  ["Tests / Automation Tests (Node)", ["gate-test.yml", "automation"]],
   ["CodeQL / Analyze Python", ["gate-codeql.yml", "python"]],
   ["CodeQL / Analyze JavaScript/TypeScript", ["gate-codeql.yml", "javascript"]],
   ["CodeQL / Analyze GitHub Actions", ["gate-codeql.yml", "actions"]],
