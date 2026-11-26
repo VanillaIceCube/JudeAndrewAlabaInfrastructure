@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Group the Nginx routes, private response policy, headers and TLS settings for both sites in `gateway/nginx/helpers/`. Each vhost selects its upstreams and API timeout.
+- Update CodeQL to 4.39.4, Dependency Review to 5.0.1 and GitHub App token creation to 3.4.0. Restore Dependabot updates for the PyYAML development pin and lock 6.0.4.
 - Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
 - Keep the shared application launcher in `deploy/` and Nginx configuration in `gateway/nginx/` and gateway programs in `gateway/scripts/`. Apps compare their release files directly with the pinned Infrastructure commit.
