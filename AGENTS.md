@@ -43,12 +43,10 @@ This repository is intended to be understood, maintained, and owned by humans. A
 
 ### Architectural Consistency
 
-- Understand existing conventions before introducing new patterns.
-- Prefer extending an established, sound pattern over creating another.
-- Maintain appropriate consistency across Notoli, MacroMapper, FullStackTemplate, and shared infrastructure.
-- Where functionality is genuinely shared, maintain a canonical implementation through FullStackTemplate.
-- Do not propagate unnecessary complexity in the name of parity.
-- Respect legitimate product-specific requirements.
+- Before changing shared behavior, compare the applicable entry points, callers and failure paths in Notoli, MacroMapper, FullStackTemplate and JudeAndrewAlabaInfrastructure.
+- Use FullStackTemplate as the baseline for shared app foundations. Where contracts match, adopt the simplest proven implementation, including improvements found in a product app.
+- Keep differences that serve a product, data, lifecycle or operational requirement. Record the concrete reason beside the code or configuration when it would be hard to infer.
+- JudeAndrewAlabaInfrastructure owns shared hosting, routing and release contracts. Verify a changed contract in Infrastructure and in every affected app using that app's configuration.
 
 ### Scope and Ownership
 
