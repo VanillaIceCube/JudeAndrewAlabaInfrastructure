@@ -10,7 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Track security alerts in native GitHub Issues using RoboCop's existing installation token and repository issue fields. Create remediation tickets as Bug and record relative effort as Size.
+- Track security alerts in native GitHub Issues using RoboCop's existing installation token and repository issue fields. Create remediation tickets as Bug, assign the Domain from affected files, and record relative effort as Size.
 - Launch the gateway directly. Before app migrations, save the database and existing app containers. Stop the affected frontend and backend on failed deployment health checks. Retire historical controller replay, gateway adoption and automatic rollback.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
 - Keep the shared application launcher in `deploy/` and Nginx configuration in `gateway/nginx/` and gateway programs in `gateway/scripts/`. Apps compare their release files directly with the pinned Infrastructure commit.
