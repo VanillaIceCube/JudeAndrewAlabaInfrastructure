@@ -85,7 +85,7 @@ versioned application release engine. Each application owns its domain behavior,
 credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
 shared authorization service, cross-application account mapping or YNAB dependency.
 
-Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for reusable framework, automation, test or security changes. One canonical
 FullStackTemplate parent must inventory all four repositories as required,
 not applicable, already satisfied or explicitly deferred with reasons and evidence.
@@ -108,7 +108,7 @@ Keep this file current when its commands or constraints change, and update the
 owning README/reference when setup, routing, environment, deployment or CI changes.
 Record user-visible or operational changes in `CHANGELOG.md`.
 
-GitHub setup belongs in [.github/README.md](.github/README.md), workflow behavior
+GitHub setup belongs in [.github/_README.md](.github/_README.md), workflow behavior
 in [.github/workflows/README.md](.github/workflows/README.md), and the shared
 reviewer/action contract in [.github/actions/README.md](.github/actions/README.md).
 
@@ -126,7 +126,7 @@ history and valid UTF-8 text when editing or merging entries.
 
 This repository owns shared ingress and release tooling rather than a Django/React
 application. Use the locked uv Python 3.12 tooling project, Node.js, Docker Engine/Compose and OpenSSL with a
-disposable local/CI daemon; follow [.github/README.md](.github/README.md) and
+disposable local/CI daemon; follow [.github/_README.md](.github/_README.md) and
 [workflow checks](.github/workflows/README.md#-checks-and-diagnostics). Read the architecture and release standard
 before changing topology or shared release behavior.
 
@@ -172,7 +172,7 @@ review before the next ordinary promotion. Preserve both histories and newer mai
 work; never reset or force-push to manufacture parity. Intentional release lag is
 allowed while prerequisites or acceptance remain unfinished. History reconciliation
 does not authorize deployment, and an absent production branch is not a reason
-to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
 Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
@@ -232,7 +232,7 @@ Secret-dependent workflows fail visibly when credentials are unavailable.
 RoboCop's short-lived App token reads alerts and authors issue mutations;
 `SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization.
 Keep App IDs/private keys, least-privilege permissions, trigger policy and field
-setup documented in `.github/README.md`. Security-alert variables resolve in the
+setup documented in `.github/_README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
 and token inputs. Run `.github/tests/track-security-alerts.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
@@ -254,7 +254,7 @@ Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
 all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this
 repository's reviewer project. Keep credentials separate across repositories
 and application environments, preserve visible missing-key failures, and follow
-the credential ownership and cutover verification in `.github/README.md`.
+the credential ownership and cutover verification in `.github/_README.md`.
 Store the three reviewer OpenAI keys and three reviewer App private keys in both
 Actions and Dependabot. Keep production, application, SSH and Project-token
 secrets outside Dependabot. A human PR smoke test does not prove Dependabot access.
