@@ -71,6 +71,8 @@ creation never authorizes merging.
 
 Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
 
+**Native issue cutover verification, November 25, 2026.** Project 13 contained 56 issues. The read-back matched native field values and issue types on 56 issues, including all 9 security-alert tickets (2 open). Issue numbers, state, closure reasons, and closure dates were preserved. Examples include [#7](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/7), [#8](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/8).
+
 Retain the repository's existing security alert labels and access controls.
 
 Require `Required CI` in the CI workflow after its first green run using the owner's review
