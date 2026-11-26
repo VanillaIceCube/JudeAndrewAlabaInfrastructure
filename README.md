@@ -24,7 +24,7 @@ and MacroMapper. Each application owns its own backend, data, and releases.
 
 - [Gateway and routing](gateway/README.md) — configuration and routing ownership.
 - [Application release standard](deploy/README.md) — shared release tooling.
-- [GitHub setup and workflows](.github/README.md) — configuration and automation.
+- [GitHub setup and workflows](.github/_README.md) — configuration and automation.
 - [Changelog](CHANGELOG.md) — project updates.
 
 ## 📜 License

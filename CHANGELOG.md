@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 - The release test workflow captures parity checks and test output in the same diagnostic log.
 - Keep the shared application launcher in `deploy/` and Nginx configuration in `gateway/nginx/` and gateway programs in `gateway/scripts/`. Apps compare their release files directly with the pinned Infrastructure commit.
 - Infrastructure lint uses the repository’s locked Python environment on Windows and Linux.
+- Rename the GitHub automation guide to `.github/_README.md` so the repository homepage shows the root README.
 
 ## 2026-11-24
 
