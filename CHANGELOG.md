@@ -6,7 +6,6 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Update GitHub repository references for the coordinated repository rename.
 - Link RoboCop tickets to their alert-tracking peers and replacements, and support a designated parent issue.
 - Track security alerts through their source references and native fields, preserve issue labels, and assign a primary Domain even when alerts span components. Use the GitHub issue closure timestamp for completion.
 
