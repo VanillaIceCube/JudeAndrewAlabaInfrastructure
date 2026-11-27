@@ -71,7 +71,7 @@ and push protection where available. Enable native auto-merge only after the pro
 advanced Actions setup, not an overlapping default setup. Security-update PR
 creation never authorizes merging.
 
-Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
+Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
 
 **Native issue cutover verification, November 25, 2026.** Project 13 contained 56 issues. The read-back matched native field values and issue types on 56 issues, including all 9 security-alert tickets (2 open). Issue numbers, state, closure reasons, and closure dates were preserved. Examples include [#7](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/7), [#8](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/8).
 
@@ -223,9 +223,9 @@ required. The protected follow-up verifies all three approvals for the current D
 
 ## 🤝 Shared engineering ownership and rollout
 
-Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
+Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
-[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
+[main-first releases](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#main-first-releases).
 Preserve app-specific profiles and Infrastructure's separate owner authorization,
 Required CI and host operations. A shared parent closes only after required downstream
 adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.

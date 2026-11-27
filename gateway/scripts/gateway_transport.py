@@ -11,7 +11,7 @@ import tempfile
 
 from gateway_release import IDENTITY, SHA, ReleaseError, require, run
 
-REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
+REPOSITORY_ID = "1414122449"
 REMOTE = "/opt/host-ingress-deploy/incoming/"
 
 
@@ -30,8 +30,11 @@ def authorization():
         require(result.returncode == 0, "GitHub source verification API failed")
         return json.loads(result.stdout) if result.stdout.strip() else None
 
+    repository = os.environ["GITHUB_REPOSITORY"]
+    owner = "VanillaIceCube"
     require(
-        os.environ["GITHUB_REPOSITORY"] == REPOSITORY
+        os.environ["GITHUB_REPOSITORY_ID"] == REPOSITORY_ID
+        and repository.split("/", 1)[0] == owner
         and os.environ["GITHUB_REF"] == "refs/heads/env-prod",
         "Only this repository's env-prod branch may deploy",
     )
@@ -39,7 +42,6 @@ def authorization():
         os.environ["GITHUB_EVENT_NAME"] in {"push", "workflow_dispatch"},
         "Unsupported release event",
     )
-    owner = REPOSITORY.split("/")[0]
     require(
         os.environ.get("GITHUB_ACTOR") == owner
         and os.environ.get("GITHUB_TRIGGERING_ACTOR") == owner,
@@ -50,7 +52,7 @@ def authorization():
     workflow_source = os.environ.get("GITHUB_WORKFLOW_SHA", "")
     require(
         os.environ.get("GITHUB_WORKFLOW_REF")
-        == REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod"
+        == repository + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod"
         and SHA.fullmatch(workflow_source),
         "Only the promoted gateway workflow may deploy",
     )
@@ -61,17 +63,17 @@ def authorization():
         run(["git", "rev-parse", "HEAD"]).strip() == source, "Checkout/source mismatch"
     )
     require(
-        api(f"repos/{REPOSITORY}/git/ref/heads/env-prod")["object"]["sha"] == source,
+        api(f"repos/{repository}/git/ref/heads/env-prod")["object"]["sha"] == source,
         "Promotion advanced; approve a fresh run",
     )
-    main = api(f"repos/{REPOSITORY}/git/ref/heads/main")["object"]["sha"]
-    compare = api(f"repos/{REPOSITORY}/compare/{source}...{main}")
+    main = api(f"repos/{repository}/git/ref/heads/main")["object"]["sha"]
+    compare = api(f"repos/{repository}/compare/{source}...{main}")
     reviewed = compare["status"] in {"ahead", "identical"}
     if not reviewed:
         # A regular promotion merge has a new commit ID but must carry exactly
         # the reviewed main tree, including workflow and helper bytes.
-        candidate = api(f"repos/{REPOSITORY}/git/commits/{source}")
-        accepted = api(f"repos/{REPOSITORY}/git/commits/{main}")
+        candidate = api(f"repos/{repository}/git/commits/{source}")
+        accepted = api(f"repos/{repository}/git/commits/{main}")
         reviewed = candidate["tree"]["sha"] == accepted["tree"]["sha"]
     require(
         reviewed,
@@ -80,7 +82,7 @@ def authorization():
     if workflow_source != source:
         # Workflow identity is distinct from application source identity. Accept
         # another workflow commit only when its immutable blob is byte-identical.
-        path = f"repos/{REPOSITORY}/contents/.github/workflows/deploy-gateway.yml?ref="
+        path = f"repos/{repository}/contents/.github/workflows/deploy-gateway.yml?ref="
         require(
             api(path + workflow_source)["sha"] == api(path + source)["sha"],
             "Executing workflow differs from promoted reviewed content",
