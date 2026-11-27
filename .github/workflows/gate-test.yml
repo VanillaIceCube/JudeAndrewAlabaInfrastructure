@@ -96,20 +96,11 @@ jobs:
         with:
           project-directory: .
 
-      - name: Resolve the template repository by its permanent ID
-        if: steps.filter.outputs.release == 'true'
-        id: template
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          template=$(gh api repositories/1313249501 --jq '.full_name')
-          echo "repository=$template" >> "$GITHUB_OUTPUT"
-
       - name: Check out the pinned consumer test fixture
         if: steps.filter.outputs.release == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: ${{ steps.template.outputs.repository }}
+          repository: VanillaIceCube/fullstack-template
           ref: 5556bcbc032fe8201ffb2826e921b70a6a2767df
           path: release-consumer-fixture
           persist-credentials: false
@@ -120,7 +111,10 @@ jobs:
         continue-on-error: true
         working-directory: release-consumer-fixture
         shell: bash
-        run: node "$GITHUB_WORKSPACE/.github/scripts/run-release-consumer-tests.js" 2>&1 | tee "$RUNNER_TEMP/release-tests.log"
+        run: |
+          # The immutable fixture predates the repository rename.
+          sed -i 's|"VanillaIceCube/JudeAndrewAlabaInfrastructure"|"VanillaIceCube/infrastructure"|' deploy/production/app.json
+          node "$GITHUB_WORKSPACE/.github/scripts/run-release-consumer-tests.js" 2>&1 | tee "$RUNNER_TEMP/release-tests.log"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.filter.outputs.automation == 'true'
