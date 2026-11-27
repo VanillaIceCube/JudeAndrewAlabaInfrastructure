@@ -96,21 +96,12 @@ jobs:
         with:
           project-directory: .
 
-      - name: Resolve the template repository by its permanent ID
-        if: steps.filter.outputs.release == 'true'
-        id: template
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          template=$(gh api repositories/1313249501 --jq '.full_name')
-          echo "repository=$template" >> "$GITHUB_OUTPUT"
-
       - name: Check out the pinned consumer test fixture
         if: steps.filter.outputs.release == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: ${{ steps.template.outputs.repository }}
-          ref: 5556bcbc032fe8201ffb2826e921b70a6a2767df
+          repository: VanillaIceCube/fullstack-template
+          ref: 66f977ae422dfea96dc43ae22ce35cba41a36b79
           path: release-consumer-fixture
           persist-credentials: false
 

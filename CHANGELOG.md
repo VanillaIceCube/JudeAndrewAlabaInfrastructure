@@ -6,7 +6,6 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Use the Infrastructure repository ID for reviewer checks and alert classification. Bind gateway authorization and release fixture lookup to their repository IDs.
 - Link RoboCop tickets to their alert-tracking peers and replacements, and support a designated parent issue.
 - Track security alerts through their source references and native fields, preserve issue labels, and assign a primary Domain even when alerts span components. Use the GitHub issue closure timestamp for completion.
 
