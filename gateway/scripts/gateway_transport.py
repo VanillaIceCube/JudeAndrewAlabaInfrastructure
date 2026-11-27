@@ -11,7 +11,7 @@ import tempfile
 
 from gateway_release import IDENTITY, SHA, ReleaseError, require, run
 
-REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
+REPOSITORY = "VanillaIceCube/infrastructure"
 REMOTE = "/opt/host-ingress-deploy/incoming/"
 
 

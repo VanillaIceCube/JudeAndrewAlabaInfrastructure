@@ -16,7 +16,7 @@ test('gateway transport isolates credentials and rejects unauthorized deployment
   const dir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'gateway-transport-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const sha = 'a'.repeat(40);
-  const repo = 'VanillaIceCube/JudeAndrewAlabaInfrastructure';
+  const repo = 'VanillaIceCube/infrastructure';
   const ref = 'refs/heads/env-prod';
   const commands = {
     gh: `case "$4" in

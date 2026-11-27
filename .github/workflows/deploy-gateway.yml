@@ -11,7 +11,7 @@ permissions:
 jobs:
   deploy:
     if: >-
-      github.repository == 'VanillaIceCube/JudeAndrewAlabaInfrastructure' &&
+      github.repository == 'VanillaIceCube/infrastructure' &&
       github.ref == 'refs/heads/env-prod' && vars.DEPLOY_ENABLED == 'true' &&
       github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
     runs-on: ubuntu-latest
