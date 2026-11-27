@@ -105,7 +105,7 @@ flowchart LR
 
 ## 🧪 Checks and diagnostics
 
-The automation lint and test jobs read their Node version from `.github/package.json`. Run from the repository root with Git, Bash, Node and the locked Python environment. The lint workflow installs the pinned Actionlint release and verifies its checksum.
+The automation lint and test jobs read their Node version from `.github/package.json`. Run from the repository root with Git, Bash, Node and the locked Python environment. The Actionlint installer verifies the archive's pinned SHA-256 checksum, then extracts only the `actionlint` binary into a fresh directory under `RUNNER_TEMP`.
 
 ```sh
 npm ci --prefix .github --ignore-scripts --no-audit --no-fund
