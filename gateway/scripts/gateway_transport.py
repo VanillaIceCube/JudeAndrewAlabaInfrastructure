@@ -12,6 +12,7 @@ import tempfile
 from gateway_release import IDENTITY, SHA, ReleaseError, require, run
 
 REPOSITORY = "VanillaIceCube/infrastructure"
+WORKFLOW = ".github/workflows/ci-deploy.yml"
 REMOTE = "/opt/host-ingress-deploy/incoming/"
 
 
@@ -50,7 +51,7 @@ def authorization():
     workflow_source = os.environ.get("GITHUB_WORKFLOW_SHA", "")
     require(
         os.environ.get("GITHUB_WORKFLOW_REF")
-        == REPOSITORY + "/.github/workflows/deploy-gateway.yml@refs/heads/env-prod"
+        == f"{REPOSITORY}/{WORKFLOW}@refs/heads/env-prod"
         and SHA.fullmatch(workflow_source),
         "Only the promoted gateway workflow may deploy",
     )
@@ -80,7 +81,7 @@ def authorization():
     if workflow_source != source:
         # Workflow identity is distinct from application source identity. Accept
         # another workflow commit only when its immutable blob is byte-identical.
-        path = f"repos/{REPOSITORY}/contents/.github/workflows/deploy-gateway.yml?ref="
+        path = f"repos/{REPOSITORY}/contents/{WORKFLOW}?ref="
         require(
             api(path + workflow_source)["sha"] == api(path + source)["sha"],
             "Executing workflow differs from promoted reviewed content",

@@ -1,5 +1,6 @@
 "use strict";
 
+const { treeLanguages } = require("./set-codeql-scope");
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const policyContext = "Dependabot Policy";
@@ -17,6 +18,30 @@ const independentChecks = [
   ...scopedChecks, "Vulnerability / Vulnerability",
   "Secret scan / Gitleaks", ...Object.values(reviewers),
 ];
+
+const appChecks = [
+  "Lints / Detect Changes", "Lints / Lint Results", "Tests / Detect Changes",
+  "Tests / Test Results", "CodeQL / Detect CodeQL Scope",
+  "Vulnerability / Vulnerability", "Malware / Malware", "Auto Merge",
+];
+const appScopedChecks = new Set([
+  ...scopedChecks, "Lints / Lint Frontend (ESLint + Prettier)", "Lints / Lint Backend (Ruff)",
+  "Tests / Frontend Tests (React)", "Tests / Backend Tests (Django)", "Tests / Automation Tests (Node)",
+]);
+
+function repositoryChecks(repo, headSha) {
+  if (repo === "infrastructure") return { independentChecks, scopedChecks, requireAggregate: true };
+  if (repo !== "agent-hub") return { independentChecks: appChecks, scopedChecks: appScopedChecks, requireAggregate: false };
+
+  // AgentHub's matrix scans only languages present in the verified caller tree.
+  if (!/^[a-f0-9]{40}$/.test(headSha)) throw new Error("Expected a full PR head SHA");
+  const languages = treeLanguages(headSha);
+  const checks = ["Required CI", "Workflow lint", "Dependency review", "Secret scan / Gitleaks",
+    "CodeQL / Detect CodeQL Scope", "CodeQL / Analyze actions", ...Object.values(reviewers)];
+  if (languages.python) checks.push("CodeQL / Analyze python");
+  if (languages.javascript) checks.push("CodeQL / Analyze javascript-typescript");
+  return { independentChecks: checks, scopedChecks: new Set(), requireAggregate: true };
+}
 
 function trusted(pr, repository) {
   return pr?.user?.login === "dependabot[bot]" && pr.user.type === "Bot" &&
@@ -56,7 +81,7 @@ function scopeAllowsSkip(name, files) {
   return JSON.parse(result.stdout) === true;
 }
 
-function verifyChecks(rules, checks, files, policyCheckId) {
+function verifyChecks(rules, checks, files, policyCheckId, policy) {
   const required = rules.filter((rule) => rule.type === "required_status_checks")
     .flatMap((rule) => rule.parameters.required_status_checks);
   if (!rules.some((rule) => rule.type === "pull_request") || required.length === 0) {
@@ -65,8 +90,13 @@ function verifyChecks(rules, checks, files, policyCheckId) {
   if (!required.some((check) => check.context === policyContext && check.integration_id === 15368)) {
     throw new Error("Dependabot Policy must be required from GitHub Actions before activation");
   }
-  if (!required.some((check) => check.context === "Required CI" && check.integration_id === 15368)) {
+  if (policy.requireAggregate && !required.some((check) => check.context === "Required CI" && check.integration_id === 15368)) {
     throw new Error("Required CI must be required from GitHub Actions before activation");
+  }
+  if (!policy.requireAggregate) {
+    for (const name of Object.values(reviewers)) {
+      if (!required.some(check => check.context === name)) throw new Error(`Reviewer is not required by branch rules: ${name}`);
+    }
   }
   const externalCheck = required.find((check) => check.integration_id != null &&
     check.integration_id !== 15368);
@@ -74,7 +104,7 @@ function verifyChecks(rules, checks, files, policyCheckId) {
     throw new Error(`Manual merge required: ${externalCheck.context} is bound to a provider outside this policy`);
   }
   const requirements = [...required];
-  for (const context of independentChecks) {
+  for (const context of policy.independentChecks) {
     if (!requirements.some((item) => item.context === context)) requirements.push({ context });
   }
   for (const requirement of requirements) {
@@ -88,7 +118,7 @@ function verifyChecks(rules, checks, files, policyCheckId) {
       error.retryable = !check || check.id < policyCheckId || (check.id === policyCheckId && check.status === "queued");
       throw error;
     }
-    const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
+    const expectedSkip = policy.scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
       scopeAllowsSkip(requirement.context, files);
     if (check?.status !== "completed" || (check.conclusion !== "success" && !expectedSkip)) {
       const error = new Error(`Required check is not passing: ${requirement.context} (status=${check?.status ?? "missing"}, conclusion=${check?.conclusion ?? "none"})`);
@@ -119,6 +149,8 @@ async function resolveRun({ github, context }) {
       pr.head.repo?.full_name !== run.head_repository.full_name || pr.head.sha !== run.head_sha) throw new Error("PR changed after CI");
   return pr.state === "open" ? pr : null;
 }
+
+// Read update types from the API-verified, signed Dependabot commit message.
 
 function parseMetadata(message) {
   const result = spawnSync(process.execPath, [path.join(__dirname, "parse-dependabot-metadata.js")], {
@@ -151,6 +183,7 @@ async function enableAutoMerge({ github, context, core, policyCheckId, expected,
   if (context.eventName !== "workflow_run" || !expected?.headSha ||
       expected.headSha !== context.payload.workflow_run?.head_sha || !Number.isSafeInteger(expected.number) ||
       expected.number <= 0 || !expected.nodeId) throw new Error("Missing verified PR identity for this CI head");
+  const policy = repositoryChecks(repo, expected.headSha);
   const request = { owner, repo, pull_number: expected.number };
   let pr;
   for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -178,7 +211,7 @@ async function enableAutoMerge({ github, context, core, policyCheckId, expected,
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
     try {
-      verifyChecks(rules, checks, paths, policyCheckId);
+      verifyChecks(rules, checks, paths, policyCheckId, policy);
       break;
     } catch (error) {
       if (!error.retryable || attempt === 5) throw error;

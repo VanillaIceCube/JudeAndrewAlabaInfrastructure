@@ -1,6 +1,7 @@
 name: Dependabot Auto Merge
 
 on:
+  workflow_call:
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -9,13 +10,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
+  group: infrastructure-dependabot-policy-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
 
 jobs:
   dependabot-auto-merge:
     name: Dependabot Auto Merge
     if: >-
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
@@ -26,10 +28,18 @@ jobs:
       pull-requests: write
       vulnerability-alerts: read
     steps:
-      # Privileged code comes only from reviewed main. No PR checkout/artifacts/caches.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check out the workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: main
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          persist-credentials: false
+
+      - name: Check out the caller default-branch revision for the grant comparison
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: subject
           persist-credentials: false
 
       - name: Resolve successful CI and hold the required per-head policy check
@@ -43,13 +53,14 @@ jobs:
         if: steps.pr.outputs.policy_id != ''
         run: npm ci --prefix .github --ignore-scripts --no-audit --no-fund
 
-      - name: Compare workflow write grants using reviewed main code
+      - name: Compare caller workflow write grants
         if: steps.pr.outputs.policy_id != ''
         env:
           GH_TOKEN: ${{ github.token }}
           BASE_SHA: ${{ steps.pr.outputs.base_sha }}
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
+        working-directory: subject
         shell: node {0}
         run: |
           const { execFileSync } = require('node:child_process');
@@ -61,7 +72,7 @@ jobs:
           execFileSync('git', ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential',
             'fetch', '--no-tags', '--depth=1', 'origin', BASE_SHA, 'refs/pull/' + PR_NUMBER + '/head'], { stdio: 'inherit' });
           delete process.env.GH_TOKEN;
-          execFileSync(process.execPath, ['.github/scripts/validate-workflows.js', '--compare-workflow-grants',
+          execFileSync(process.execPath, ['../.github/scripts/validate-workflows.js', '--compare-workflow-grants',
             BASE_SHA, HEAD_SHA], { stdio: 'inherit' });
 
       - name: Validate this head and enable native protected-branch auto-merge
