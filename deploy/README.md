@@ -34,15 +34,15 @@ The deployment identity owns the app root and its `incoming/` directory (0700) a
 
 ## Update the source and its consumers
 
-1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Each app compares its six shared files and its rendered workflow directly with the pinned source.
+1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Each app compares its shared release files and its rendered workflow directly with the pinned source.
 
-2. Commit the canonical files and set `deploy/production/app.json` → `shared_source.commit` in each app to that full SHA. When the set of shared files changes, use the new builder in each consumer. Run from the application root.
+2. Commit the canonical files and set `shared_source.commit` in each app’s `deploy/production/app.json` to that SHA. Use the builder from that revision. When shared tests move, remove their old copies in the same change so discovery runs each test once. Run from the application root.
 
    ```sh
    python3 deploy/production/build_bundle.py --check-parity --source-root ../infrastructure --sync
    python3 -m unittest discover -s deploy/tests -v
    ```
 
-3. Publish the canonical commit before remote consumer checks. `--check-parity` without `--source-root` checks the immutable GitHub revision. The pinned template fixture in Infrastructure CI exercises the candidate launcher against real consumer configuration.
+3. Publish the canonical commit before remote consumer checks. `--check-parity` without `--source-root` checks the immutable GitHub revision. Infrastructure CI renders a disposable application using the [example release configuration](tests/fixtures). Each application also runs the release suite against its own configuration. `deploy/tests/unit` covers isolated release rules. `deploy/tests/integration` covers packaging, host checks and Docker launches. The discovery command above runs both directories.
 
 FullStackTemplate provides onboarding examples. Each live app controls its own promotion, credentials and production acceptance. Gateway operations are described in the [gateway guide](../gateway/README.md).

@@ -9,9 +9,9 @@ const detectors = new Map([
   ["Tests / Frontend Tests (React)", ["gate-test.yml", "frontend"]],
   ["Tests / Backend Tests (Django)", ["gate-test.yml", "backend"]],
   ["Tests / Automation Tests (Node)", ["gate-test.yml", "automation"]],
-  ["CodeQL / Analyze Python", ["gate-codeql.yml", "python"]],
-  ["CodeQL / Analyze JavaScript/TypeScript", ["gate-codeql.yml", "javascript"]],
-  ["CodeQL / Analyze GitHub Actions", ["gate-codeql.yml", "actions"]],
+  ["CodeQL / Analyze Python", ["alert-codeql.yml", "python"]],
+  ["CodeQL / Analyze JavaScript/TypeScript", ["alert-codeql.yml", "javascript"]],
+  ["CodeQL / Analyze GitHub Actions", ["alert-codeql.yml", "actions"]],
 ]);
 
 function scopeAllowsSkip(name, files) {

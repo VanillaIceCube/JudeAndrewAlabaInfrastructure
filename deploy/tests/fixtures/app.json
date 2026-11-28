@@ -1,0 +1,101 @@
+{
+  "contract_version": 1,
+  "shared_source": {
+    "repository": "VanillaIceCube/infrastructure",
+    "commit": "aa3e5a03f67ed0e65b137ad45cfee62f83ebe738"
+  },
+  "app": "release-fixture",
+  "domain": "app.example.com",
+  "services": {
+    "backend": "backend",
+    "frontend": "frontend"
+  },
+  "containers": {
+    "backend": "release-fixture-backend",
+    "frontend": "release-fixture-frontend"
+  },
+  "database": {
+    "filename": "db.sqlite3",
+    "target": "/backend/db.sqlite3"
+  },
+  "egress": "release-fixture_default",
+  "backend_networks": [
+    "release-fixture-ingress",
+    "release-fixture_default"
+  ],
+  "frontend_networks": [
+    "release-fixture-ingress",
+    "release-fixture_default"
+  ],
+  "backend_addresses": {},
+  "backend_required_env": [],
+  "frontend_port_bindings": [
+    []
+  ],
+  "gateway": {
+    "container": "host-ingress-proxy",
+    "project": "host-ingress",
+    "addresses": {},
+    "networks": {
+      "release-fixture-ingress": {
+        "internal": false,
+        "subnet": "172.31.240.0/24",
+        "allowed": [
+          "host-ingress-proxy",
+          "release-fixture-backend",
+          "release-fixture-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy",
+          "release-fixture-backend",
+          "release-fixture-frontend"
+        ]
+      }
+    }
+  },
+  "environment": {
+    "required": [
+      "DJANGO_SECRET_KEY",
+      "DJANGO_EMAIL_BACKEND",
+      "DJANGO_EMAIL_HOST_KEY",
+      "DJANGO_DEFAULT_FROM_EMAIL"
+    ],
+    "defaults": {
+      "DJANGO_EMAIL_HOST": "smtp.resend.com",
+      "DJANGO_EMAIL_PORT": "587",
+      "DJANGO_EMAIL_USE_TLS": "1",
+      "DJANGO_EMAIL_HOST_USER": "resend",
+      "DJANGO_EMAIL_TIMEOUT": "10"
+    },
+    "fixed": {
+      "DJANGO_DEBUG": "0",
+      "DJANGO_MCP_ENABLED": "0",
+      "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
+      "DJANGO_ALLOWED_HOSTS": "app.example.com",
+      "DJANGO_CORS_ALLOWED_ORIGINS": "https://app.example.com",
+      "DJANGO_CSRF_TRUSTED_ORIGINS": "https://app.example.com",
+      "DJANGO_FRONTEND_BASE_URL": "https://app.example.com"
+    }
+  },
+  "readiness": {
+    "direct_url": "http://127.0.0.1:8000/api/notifications/",
+    "direct_status": 401,
+    "public": [
+      {
+        "path": "/",
+        "status": 200,
+        "body_contains": "<html",
+        "ignore_case": true
+      },
+      {
+        "path": "/api/notifications/",
+        "status": 401,
+        "content_type": "application/json",
+        "body_contains": "detail"
+      }
+    ]
+  },
+  "workflow": {
+    "extra_env": {}
+  }
+}

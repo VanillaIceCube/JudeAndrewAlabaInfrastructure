@@ -44,7 +44,7 @@ test('gateway transport isolates credentials and rejects unauthorized deployment
     DEPLOY_HOST: 'fixture.invalid', DEPLOY_PORT: '22', DEPLOY_USER: 'operator', DEPLOY_HOST_FINGERPRINT: 'SHA256:fixture',
     GITHUB_REPOSITORY: repo, GITHUB_REF: ref, GITHUB_SHA: sha, GITHUB_EVENT_NAME: 'push',
     GITHUB_ACTOR: 'VanillaIceCube', GITHUB_TRIGGERING_ACTOR: 'VanillaIceCube',
-    GITHUB_WORKFLOW_REF: repo + '/.github/workflows/deploy-gateway.yml@' + ref, GITHUB_WORKFLOW_SHA: sha,
+    GITHUB_WORKFLOW_REF: repo + '/.github/workflows/ci-deploy.yml@' + ref, GITHUB_WORKFLOW_SHA: sha,
     GITHUB_RUN_ID: '1', GITHUB_RUN_ATTEMPT: '1',
     FIXTURE_PROD_SHA: sha, FIXTURE_MAIN_SHA: sha, FIXTURE_COMPARE_STATUS: 'identical',
   };
@@ -62,6 +62,7 @@ test('gateway transport isolates credentials and rejects unauthorized deployment
   fs.unlinkSync(contact);
   const otherSha = 'b'.repeat(40);
   const rejected = [
+    [{ GITHUB_WORKFLOW_REF: repo + '/.github/workflows/other.yml@' + ref }, 'Only the promoted gateway workflow may deploy'],
     [{ GITHUB_ACTOR: 'contributor' }, 'Only the owner may authorize'],
     [{ GITHUB_TRIGGERING_ACTOR: 'contributor' }, 'Only the owner may authorize'],
     [{ FIXTURE_PROD_SHA: otherSha }, 'Promotion advanced'],

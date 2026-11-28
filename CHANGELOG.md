@@ -4,10 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-27
 
+### Added
+
+- Share the lint and test gates with application CI and provide the reusable malware gate.
+
 ### Fixed
 
 - Restrict AI review requests to the generated review context and security-alert files.
 - Extract the verified Actionlint binary into a fresh runner directory on each install.
+
+### Changed
+
+- Run shared gates and Dependabot policy at the defining Infrastructure revision. Use AgentHub for reviews and alert reconciliation. Test app releases against a local example policy and Compose configuration.
+- Run CodeQL PR and scheduled scans through `alert-codeql.yml`. All five repositories send their three alert feeds to AgentHub’s shared `triage-security.yml`.
+- Name the gateway deployment workflow `ci-deploy.yml` and verify that path during promotion.
+- Group automation and deployment tests into `unit/` and `integration/`, with test data in `tests/fixtures/`. The ingress step runs the gateway suite, and application CI tests each app’s Dockerfiles.
 
 ## 2026-11-26
 
