@@ -10,9 +10,7 @@ const consumer = fs.mkdtempSync(path.join(os.tmpdir(), "release-consumer-"));
 const production = path.join(consumer, "deploy/production");
 const python = process.platform === "win32" ? "python" : "python3";
 try {
-  for (const folder of [production, path.join(consumer, ".github/workflows")]) {
-    fs.mkdirSync(folder, { recursive: true });
-  }
+  fs.mkdirSync(production, { recursive: true });
   for (const file of ["app.json", "compose.yml"]) {
     fs.copyFileSync(path.join(source, "deploy/tests/fixtures", file), path.join(production, file));
   }

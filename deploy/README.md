@@ -36,7 +36,7 @@ The deployment identity owns the app root and its `incoming/` directory (0700) a
 
 1. Change [the launcher](release.py), [bundle builder](build_bundle.py), [workflow template](workflow.yml), or [tests](tests/) here. Each app compares its shared release files and its rendered workflow directly with the pinned source.
 
-2. Commit the canonical files and set `deploy/production/app.json` → `shared_source.commit` in each app to that full SHA. When the set of shared files changes, use the new builder in each consumer. Run from the application root.
+2. Commit the canonical files and set `shared_source.commit` in each app’s `deploy/production/app.json` to that SHA. Use the builder from that revision. When shared tests move, remove their old copies in the same change so discovery runs each test once. Run from the application root.
 
    ```sh
    python3 deploy/production/build_bundle.py --check-parity --source-root ../infrastructure --sync
