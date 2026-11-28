@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-28
+
+### Changed
+
+- Apply the accepted internal `@main` exception to CodeQL Actions reports before upload.
+
 ## 2026-11-27
 
 ### Added

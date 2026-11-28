@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const YAML = require("yaml");
@@ -12,6 +13,37 @@ const ci = workflow("ci-orchestrator");
 const app = fs.existsSync("deploy/production/app.json");
 const owner = "VanillaIceCube/";
 const shared = (repo, file) => owner + repo + "/.github/workflows/" + file + ".yml@main";
+
+test("the Actions upload omits only accepted shared workflow findings", t => {
+  const file = path.join(__dirname, "../../workflows/alert-codeql.yml");
+  const steps = YAML.parse(fs.readFileSync(file, "utf8")).jobs["analyze-actions"].steps;
+  const [analyze, filter, upload] = steps.slice(-3);
+  assert.equal(analyze.with.upload, "failure-only");
+  assert.equal(upload.with.sarif_file, analyze.with.output);
+  assert.equal(upload.with.category, analyze.with.category);
+  const unpinned = "actions/unpinned-tag";
+  const finding = (repo, ref = "main", ruleId = unpinned) => ({
+    ruleId, message: { text: "Job [Job: scan](1) in 'CI' uses reusable workflow '" + repo +
+      "/.github/workflows/scan.yml' with ref '" + ref + "', not a pinned commit hash" },
+  });
+  const keep = [finding("third-party/infrastructure"), finding("VanillaIceCube/other"),
+    finding("VanillaIceCube/infrastructure", "feature"), finding("VanillaIceCube/agent-hub", "main", "other-rule"),
+    { ruleId: unpinned, message: { text: "Unpinned 3rd party Action step" } }];
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "codeql-actions-"));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const directory = path.join(temp, "codeql-actions");
+  fs.mkdirSync(directory);
+  const report = path.join(directory, "actions.sarif");
+  const metadata = { tool: { driver: { name: "CodeQL" } } };
+  fs.writeFileSync(report, JSON.stringify({ runs: [{ ...metadata, results: [
+    finding("VanillaIceCube/infrastructure"), ...keep, finding("VanillaIceCube/agent-hub"),
+  ] }, metadata] }));
+  const bash = process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash";
+  const run = spawnSync(bash, ["-e", "-c", filter.run], { encoding: "utf8",
+    env: { ...process.env, ...filter.env, RUNNER_TEMP: temp.replaceAll("\\", "/") } });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(report)), { runs: [{ ...metadata, results: keep }, metadata] });
+});
 
 test("PR gates deliver independent results to the same three trusted reviewers", () => {
   assert.deepEqual(ci.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);

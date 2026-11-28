@@ -223,6 +223,30 @@ jobs:
         uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           category: "/language:actions"
+          output: ${{ runner.temp }}/codeql-actions
+          upload: failure-only
+
+      - name: Apply the shared workflow pinning policy
+        env:
+          ACCEPTED_WORKFLOW: >-
+            ^Job .* uses reusable workflow '(?i:VanillaIceCube/(infrastructure|agent-hub))/\.github/workflows/[a-z0-9-]+\.ya?ml' with ref 'main', not a pinned commit hash$
+        shell: bash
+        run: |
+          for report in "$RUNNER_TEMP"/codeql-actions/*.sarif; do
+            jq '
+              def accepted_workflow:
+                .ruleId == "actions/unpinned-tag" and
+                ((.message.text // "") | test(env.ACCEPTED_WORKFLOW));
+              (.runs[] | select(.results != null) | .results) |= map(select(accepted_workflow | not))
+            ' "$report" > "$RUNNER_TEMP/filtered.sarif"
+            mv "$RUNNER_TEMP/filtered.sarif" "$report"
+          done
+
+      - name: Upload CodeQL Actions results
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-actions
+          category: "/language:actions"
 
   aggregate:
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.scan_only

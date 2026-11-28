@@ -43,6 +43,8 @@ Each application keeps six event workflows. PRs call the shared gates and AgentH
 
 Cross-repository calls to Infrastructure and AgentHub use reusable workflows at `@main`. AgentHub also checks out Infrastructure’s validation tools from `main`. Each new run picks up compatible changes merged in the provider. GitHub’s full-SHA policy applies to remote actions, so shared workflows run their own composite actions at the resolved workflow commit. Third-party actions and reusable workflows use full commit SHAs. [GitHub Actions settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#managing-github-actions-permissions-for-your-repository)
 
+The Actions analysis runs the full query suite. Before upload, it removes only `actions/unpinned-tag` results for reusable workflows called at `@main` in those two repositories. Other references and other CodeQL rules remain visible.
+
 The CodeQL migration transferred the retired gate’s upload permission to the analyzer jobs in Infrastructure and the scan job in each caller’s `alert-codeql.yml`. The current workflows retain those job-level grants.
 
 Merge a new reusable workflow in the provider before switching callers to it. Keep the named secrets, job names and trigger policy. Compare candidate checks on the same head with lint pushes and review publication disabled. Verify human and Dependabot PRs, failed scans and stale or missing evidence. Revert shared changes in the provider to roll them back for all callers. [Deterministic CI](https://github.com/VanillaIceCube/infrastructure/issues/193) · [Agent migration](https://github.com/VanillaIceCube/agent-hub/issues/8)
