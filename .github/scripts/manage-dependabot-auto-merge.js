@@ -10,9 +10,12 @@ const reviewers = {
   "lint-eastwood-build-sheriff[bot]": "AI Build Sheriff Review / Lint Eastwood build sheriff review",
   "robocop-security-officer[bot]": "AI Security Review / RoboCop security review",
 };
-const scopedChecks = new Set([
-  "CodeQL / Analyze Python", "CodeQL / Analyze JavaScript/TypeScript", "CodeQL / Analyze GitHub Actions",
-]);
+const codeqlChecks = {
+  python: "CodeQL / Analyze Python",
+  javascript: "CodeQL / Analyze JavaScript/TypeScript",
+  actions: "CodeQL / Analyze GitHub Actions",
+};
+const scopedChecks = new Set(Object.values(codeqlChecks));
 const independentChecks = [
   "Required CI", "Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope",
   ...scopedChecks, "Vulnerability / Vulnerability",
@@ -33,13 +36,13 @@ function repositoryChecks(repo, headSha) {
   if (repo === "infrastructure") return { independentChecks, scopedChecks, requireAggregate: true };
   if (repo !== "agent-hub") return { independentChecks: appChecks, scopedChecks: appScopedChecks, requireAggregate: false };
 
-  // AgentHub's matrix scans only languages present in the verified caller tree.
+  // AgentHub scans every language present at the PR head.
   if (!/^[a-f0-9]{40}$/.test(headSha)) throw new Error("Expected a full PR head SHA");
   const languages = treeLanguages(headSha);
-  const checks = ["Required CI", "Workflow lint", "Dependency review", "Secret scan / Gitleaks",
-    "CodeQL / Detect CodeQL Scope", "CodeQL / Analyze actions", ...Object.values(reviewers)];
-  if (languages.python) checks.push("CodeQL / Analyze python");
-  if (languages.javascript) checks.push("CodeQL / Analyze javascript-typescript");
+  const checks = ["Required CI", "Workflow lint", "Vulnerability / Vulnerability", "Secret scan / Gitleaks",
+    "CodeQL / Detect CodeQL Scope", codeqlChecks.actions, ...Object.values(reviewers)];
+  if (languages.python) checks.push(codeqlChecks.python);
+  if (languages.javascript) checks.push(codeqlChecks.javascript);
   return { independentChecks: checks, scopedChecks: new Set(), requireAggregate: true };
 }
 

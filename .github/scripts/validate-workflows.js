@@ -1,4 +1,4 @@
-// Check workflow permissions, immutable action revisions and repository automation layout.
+// Check workflow permissions, shared CI references, third-party pins and automation layout.
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -15,6 +15,7 @@ const tests = ".github/tests";
 const workflowIntegrationTests = ["integration/gateway.test.js", "integration/uv-bootstrap.test.js"];
 const fixtures = tests + "/fixtures";
 const workflowFile = /^\.github\/workflows\/[^/]+\.ya?ml$/;
+const sharedCiRepository = /^VanillaIceCube\/(?:infrastructure|agent-hub)$/i;
 const kebab = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const yamlOptions = { schema: "failsafe", stringKeys: true };
 const permissionScopes = new Set([
@@ -55,6 +56,14 @@ function check(source, name) {
           }
           const ref = value.value;
           if (ref.startsWith("./")) break;
+          const [target] = ref.split("@");
+          const [owner, repository, ...entry] = target.split("/");
+          if (sharedCiRepository.test(owner + "/" + repository)) {
+            if (!workflowFile.test(entry.join("/")) || ref !== target + "@main") {
+              error(value, "call shared CI through a reusable workflow on @main");
+            }
+            break;
+          }
           const pin = ref.startsWith("docker://") ? /^.+@sha256:[a-f0-9]{64}$/ : /^.+@[a-f0-9]{40}$/;
           const line = lines[lineCounter.linePos(value.range[0]).line - 1];
           if (!pin.test(ref) || !/\s+#\s*\S/.test(line)) {
@@ -329,7 +338,7 @@ function manifestProblems(document, name, source, files) {
   return problems;
 }
 
-// A job can load shared tools from an explicitly pinned second checkout.
+// A job can load tools from shared CI main or an immutable third-party checkout.
 function missingWorkflowScripts(document, files) {
   const missing = new Set();
   const script = /(?:([\w.-]+)\/)?(\.github\/(?:workflows\/)?scripts\/[a-z0-9-]+\.(?:m?js|cjs|py|sh))\b/g;
@@ -340,8 +349,9 @@ function missingWorkflowScripts(document, files) {
         if (!files.has(file) && !checkouts.has(directory)) missing.add(file);
       }
       const inputs = step.with ?? {};
+      const validRef = sharedCiRepository.test(inputs.repository) ? inputs.ref === "main" : /^[a-f0-9]{40}$/.test(inputs.ref);
       if (/^actions\/checkout@[a-f0-9]{40}$/.test(step.uses) &&
-          /^[\w.-]+\/[\w.-]+$/.test(inputs.repository) && /^[a-f0-9]{40}$/.test(inputs.ref) &&
+          /^[\w.-]+\/[\w.-]+$/.test(inputs.repository) && validRef &&
           /^[a-z0-9][a-z0-9-]*$/.test(inputs.path ?? "")) {
         checkouts.add(inputs.path);
       }

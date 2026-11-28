@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-28
+
+### Changed
+
+- Apply the accepted internal `@main` exception to CodeQL Actions reports before upload.
+
 ## 2026-11-27
 
 ### Added
@@ -10,11 +16,13 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Use fixed CodeQL check names so Dependabot can verify skipped scans on frontend-only and backend-only pull requests.
 - Restrict AI review requests to the generated review context and security-alert files.
 - Extract the verified Actionlint binary into a fresh runner directory on each install.
 
 ### Changed
 
+- Follow `main` for shared CI and expose branch rule verification through a reusable workflow.
 - Run shared gates and Dependabot policy at the defining Infrastructure revision. Use AgentHub for reviews and alert reconciliation. Test app releases against a local example policy and Compose configuration.
 - Run CodeQL PR and scheduled scans through `alert-codeql.yml`. All five repositories send their three alert feeds to AgentHub’s shared `triage-security.yml`.
 - Name the gateway deployment workflow `ci-deploy.yml` and verify that path during promotion.
