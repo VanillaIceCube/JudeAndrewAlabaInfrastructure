@@ -1,24 +1,27 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+"use strict";
 
-const workspace = process.env.GITHUB_WORKSPACE;
-// Exercise the candidate builder against the pinned application's policy and Compose file.
-fs.copyFileSync(path.join(workspace, 'deploy/build_bundle.py'), 'deploy/production/build_bundle.py');
-execFileSync('python3', ['deploy/production/build_bundle.py', '--check-parity', '--source-root', workspace, '--sync'],
-  { stdio: 'inherit' });
-const canonical = path.join(workspace, 'deploy/tests');
-const consumer = path.resolve('deploy/tests');
-const files = fs.readdirSync(canonical).filter(file => /^test_.*\.py$/.test(file)).sort();
-assert.ok(files.length, 'Missing canonical release tests');
-for (const file of files) {
-  assert.ok(fs.readFileSync(path.join(canonical, file)).equals(fs.readFileSync(path.join(consumer, file))),
-    'Consumer test differs from canonical source: ' + file);
+const { execFileSync } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const source = path.resolve(__dirname, "../..");
+const consumer = fs.mkdtempSync(path.join(os.tmpdir(), "release-consumer-"));
+const production = path.join(consumer, "deploy/production");
+const python = process.platform === "win32" ? "python" : "python3";
+try {
+  for (const folder of [production, path.join(consumer, ".github/workflows")]) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
+  for (const file of ["app.json", "compose.yml"]) {
+    fs.copyFileSync(path.join(source, "deploy/tests/fixtures", file), path.join(production, file));
+  }
+  const builder = path.join(production, "build_bundle.py");
+  fs.copyFileSync(path.join(source, "deploy/build_bundle.py"), builder);
+  const options = { cwd: consumer, stdio: "inherit" };
+  execFileSync(python, [builder, "--check-parity", "--source-root", source, "--sync"], options);
+  execFileSync(python, [builder, "--check-parity", "--source-root", source], options);
+  execFileSync(python, ["-m", "unittest", "discover", "-s", "deploy/tests", "-v"], options);
+} finally {
+  fs.rmSync(consumer, { recursive: true, force: true });
 }
-
-const modules = files.map(file => path.basename(file, '.py'));
-const result = spawnSync('python3', ['-m', 'unittest', '-v', ...modules], { cwd: consumer, stdio: 'inherit' });
-if (result.error) throw result.error;
-if (result.signal) console.error('Release tests stopped by ' + result.signal);
-process.exitCode = result.status ?? 1;

@@ -1,0 +1,11 @@
+name: Verify branch rules
+description: Check the read-only branch rules and native auto-merge API used by CI.
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        ACTION_DIRECTORY: ${{ github.action_path }}
+      with:
+        script: |
+          await require(process.env.ACTION_DIRECTORY + '/verify-branch-rules.js')({ github, context, core });

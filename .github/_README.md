@@ -11,7 +11,7 @@ Source-controlled configuration and GitHub account/repository settings are separ
 | [scripts](scripts) | Standalone automation programs that workflows or people run, and their supporting modules. |
 | [actions](actions/README.md) | Reusable composite steps, each with its own `action.yml` and implementation. |
 | [tests](tests) | One suite per tested JavaScript implementation or workflow, named after its source. |
-| [fixtures](fixtures) | Saved test inputs and expected output. Use lowercase, hyphen-separated nouns for the data and add the scenario last when variants exist. |
+| [tests/fixtures](tests/fixtures) | Saved test inputs and expected output. Use lowercase, hyphen-separated nouns for the data and add the scenario last when variants exist. |
 | [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
 | [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
@@ -222,6 +222,10 @@ required. The protected follow-up verifies all three approvals for the current D
 - [Gateway setup and launches](../gateway/README.md#-operations).
 
 ## 🤝 Shared engineering ownership and rollout
+
+Shared CI and releases are maintained in Infrastructure. AgentHub maintains the
+reviewers and alert triage. This repository owns its triggers, credentials and
+required checks. [Migration tracker](https://github.com/VanillaIceCube/infrastructure/issues/191)
 
 Follow fullstack-template's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
