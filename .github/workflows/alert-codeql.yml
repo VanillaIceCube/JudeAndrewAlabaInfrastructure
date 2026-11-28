@@ -143,7 +143,7 @@ jobs:
         run: node .github/scripts/set-codeql-scope.js
 
   analyze-python:
-    name: ${{ inputs.languages_in_tree && 'Analyze python' || 'Analyze Python' }}
+    name: Analyze Python
     needs: changes
     if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
           category: "/language:python"
 
   analyze-javascript:
-    name: ${{ inputs.languages_in_tree && 'Analyze javascript-typescript' || 'Analyze JavaScript/TypeScript' }}
+    name: Analyze JavaScript/TypeScript
     needs: changes
     if: needs.changes.outputs.javascript == 'true'
     runs-on: ubuntu-latest
@@ -198,7 +198,7 @@ jobs:
           category: "/language:javascript-typescript"
 
   analyze-actions:
-    name: ${{ inputs.languages_in_tree && 'Analyze actions' || 'Analyze GitHub Actions' }}
+    name: Analyze GitHub Actions
     needs: changes
     if: needs.changes.outputs.actions == 'true'
     runs-on: ubuntu-latest
@@ -229,7 +229,7 @@ jobs:
     concurrency: security-alerts-codeql
     permissions:
       contents: read
-    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@main
     with:
       feed: codeql
       publish: true

@@ -1,23 +1,29 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
+const YAML = require("yaml");
 const { scopeAllowsSkip } = require("../../scripts/check-dependabot-skip-scope");
 
-test("matches changed files against CodeQL filters", () => {
-  const python = "CodeQL / Analyze Python";
-  const javascript = "CodeQL / Analyze JavaScript/TypeScript";
-  const actions = "CodeQL / Analyze GitHub Actions";
+test("recognizes the published CodeQL check names when a language is skipped", () => {
+  const workflow = path.join(__dirname, "../../workflows/alert-codeql.yml");
+  const { jobs } = YAML.parse(fs.readFileSync(workflow, "utf8"));
+  const python = `CodeQL / ${jobs["analyze-python"].name}`;
+  const javascript = `CodeQL / ${jobs["analyze-javascript"].name}`;
+  const actions = `CodeQL / ${jobs["analyze-actions"].name}`;
   for (const name of [python, javascript, actions]) {
     assert.equal(scopeAllowsSkip(name, ["README.md"]), true);
     assert.equal(scopeAllowsSkip(name, []), true);
     assert.equal(scopeAllowsSkip(name, [".github/workflows/ci-auto-merge.yml"]), false);
   }
-  for (const file of ["root.py", "tools/worker.py", "pyproject.toml", "uv.lock"]) {
+  for (const file of ["backend/uv.lock", "root.py", "tools/worker.py", "pyproject.toml", "uv.lock"]) {
     assert.equal(scopeAllowsSkip(python, [file]), false);
+    assert.equal(scopeAllowsSkip(javascript, [file]), true);
     assert.equal(scopeAllowsSkip(actions, [file]), false);
   }
-  for (const file of ["tool.ts", "nested/script.cjs"]) {
+  for (const file of ["frontend/package-lock.json", "tool.ts", "nested/script.cjs"]) {
     assert.equal(scopeAllowsSkip(javascript, [file]), false);
     assert.equal(scopeAllowsSkip(actions, [file]), false);
     assert.equal(scopeAllowsSkip(python, [file]), true);

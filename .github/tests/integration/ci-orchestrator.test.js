@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -10,8 +11,7 @@ const workflow = name => YAML.parse(fs.readFileSync(path.join(".github/workflows
 const ci = workflow("ci-orchestrator");
 const app = fs.existsSync("deploy/production/app.json");
 const owner = "VanillaIceCube/";
-const shared = (repo, file) => owner + repo + "/.github/workflows/" + file + ".yml";
-const target = job => job.uses.split("@")[0];
+const shared = (repo, file) => owner + repo + "/.github/workflows/" + file + ".yml@main";
 
 test("PR gates deliver independent results to the same three trusted reviewers", () => {
   assert.deepEqual(ci.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);
@@ -19,7 +19,7 @@ test("PR gates deliver independent results to the same three trusted reviewers",
   assert.deepEqual(Object.keys(ci.on), ["pull_request"]);
   const security = ["codeql", "dependency-vulnerability", ...(app ? ["dependency-malware"] : []), "secrets"];
   for (const [job, file] of [["lints", "gate-lint"], ["tests", "gate-test"]]) {
-    assert.equal(target(ci.jobs[job]), app ? shared("infrastructure", file) : `./.github/workflows/${file}.yml`);
+    assert.equal(ci.jobs[job].uses, app ? shared("infrastructure", file) : `./.github/workflows/${file}.yml`);
     assert.equal(ci.jobs[job].with.application, app);
   }
   for (const [id, file, name, needs, secrets] of [
@@ -28,7 +28,7 @@ test("PR gates deliver independent results to the same three trusted reviewers",
     ["security-review", "review-security", "AI Security Review", security, ["ROBOCOP_OPENAI_API_KEY", "ROBOCOP_PRIVATE_KEY"]],
   ]) {
     const job = ci.jobs[id];
-    assert.equal(target(job), shared("agent-hub", file));
+    assert.equal(job.uses, shared("agent-hub", file));
     assert.equal(job.name, name);
     assert.deepEqual(job.needs ?? [], needs);
     assert.equal(job.with.publish, true);
@@ -47,9 +47,35 @@ test("PR gates deliver independent results to the same three trusted reviewers",
     for (const [id, gate] of Object.entries({
       codeql: "alert-codeql", secrets: "gate-secrets",
       "dependency-vulnerability": "gate-vulnerability", "dependency-malware": "gate-malware",
-    })) assert.equal(target(ci.jobs[id]), shared("infrastructure", gate));
+    })) assert.equal(ci.jobs[id].uses, shared("infrastructure", gate));
     assert.equal(ci.jobs["security-review"].with.dependency_malware_report,
       "${{ needs.dependency-malware.outputs.malware_report }}");
+  }
+});
+
+test("branch rule verification uses the provider revision and reports failures to the required check", () => {
+  const gate = path.resolve(__dirname, "../../workflows/gate-branch-rules.yml");
+  const [checkout, probe] = YAML.parse(fs.readFileSync(gate, "utf8")).jobs.verify.steps;
+  assert.equal(checkout.with.repository, "${{ job.workflow_repository }}");
+  assert.equal(checkout.with.ref, "${{ job.workflow_sha }}");
+  assert.equal(checkout.with["persist-credentials"], false);
+  assert.equal(probe.if, "github.event.pull_request.head.repo.full_name == github.repository");
+  assert.equal(probe.uses, "./.github/actions/verify-branch-rules");
+  if (!app) return;
+
+  const gateCaller = ci.jobs["branch-rules"];
+  const required = ci.jobs["auto-merge"];
+  assert.equal(gateCaller.uses, shared("infrastructure", "gate-branch-rules"));
+  assert.equal(gateCaller.if, "always()");
+  assert.equal(required.name, "Auto Merge");
+  assert.equal(required.needs, "branch-rules");
+  assert.equal(required.if, "always()");
+  const [report] = required.steps;
+  assert.equal(report.env.RESULT, "${{ needs.branch-rules.result }}");
+  const shell = process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash";
+  for (const result of ["success", "failure", "cancelled", "skipped", ""]) {
+    const run = spawnSync(shell, ["-c", report.run], { env: { ...process.env, RESULT: result } });
+    assert.equal(run.status, result === "success" ? 0 : 1);
   }
 });
 
@@ -64,7 +90,7 @@ test("CodeQL can scan and update tickets independently, with a scan-only manual 
   assert.equal(scan.needs, undefined);
   assert.equal(ci.jobs.codeql.name, "CodeQL");
   assert.equal(ci.jobs.codeql.with.scan_only, true);
-  assert.equal(target(ci.jobs.codeql), app ? shared("infrastructure", "alert-codeql") : "./.github/workflows/alert-codeql.yml");
+  assert.equal(ci.jobs.codeql.uses, app ? shared("infrastructure", "alert-codeql") : "./.github/workflows/alert-codeql.yml");
   if (app) {
     assert.equal(scan.uses, ci.jobs.codeql.uses);
     assert.equal(scan.with.scan_only, true);
@@ -84,7 +110,7 @@ test("all three feeds update tickets independently at midnight Pacific or on man
     assert.deepEqual(alerts.on.schedule, [{ cron: "0 0 * * *", timezone: "America/Los_Angeles" }]);
     assert.equal(job.needs, undefined);
     if (feed !== "codeql") assert.equal(job.if, undefined);
-    assert.equal(target(job), shared("agent-hub", "triage-security"));
+    assert.equal(job.uses, shared("agent-hub", "triage-security"));
     assert.equal(job.with.feed, feed);
     assert.deepEqual(job.permissions, { contents: "read" });
     assert.equal(job.with.publish, true);

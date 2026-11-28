@@ -74,6 +74,25 @@ test("local references and pinned actions are valid", () => {
   assert.match(check("jobs: {}", workflow)[0], /explicit workflow-level permissions/);
 });
 
+test("shared CI follows main and third-party actions still require a commit", () => {
+  const checkUse = ref => check("permissions: {}\nsteps:\n- uses: " + ref, workflow);
+  for (const target of [
+    "VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml",
+    "VanillaIceCube/agent-hub/.github/workflows/review-code.yml",
+    "vanillaicecube/infrastructure/.github/workflows/gate-branch-rules.yml",
+  ]) {
+    assert.deepEqual(checkUse(target + "@main"), []);
+    for (const other of [revision, "v1", "feature/main"]) {
+      assert.match(checkUse(target + "@" + other + " # version")[0], /reusable workflow on @main/);
+    }
+  }
+  assert.match(checkUse("VanillaIceCube/infrastructure/.github/actions/review-dependencies@main")[0], /reusable workflow on @main/);
+  for (const target of ["actions/checkout", "another-owner/agent-hub", "VanillaIceCube/infrastructure-fork"]) {
+    assert.match(checkUse(target + "@main # main")[0], /immutable SHA/);
+    assert.deepEqual(checkUse(target + "@" + revision + " # v1"), []);
+  }
+});
+
 test("write permission is scoped to the same workflow and job", () => {
   const base = "permissions: {checks: write}\njobs: {lint: {}, build: {permissions: {contents: read}}}";
   for (const [proposal, problem] of [
@@ -334,7 +353,7 @@ test("CodeQL entry points use one immutable revision across YAML files", (t) => 
   assert.throws(() => checkCodeqlPins(root), /Missing CodeQL analyze/);
 });
 
-test("only a preceding pinned checkout in the same job supplies external scripts", t => {
+test("external scripts come from an earlier checkout of shared main or a pinned third party in the same job", t => {
   const { root, write } = fixture(t);
   const checkout = { uses: "actions/checkout@" + revision,
     with: { repository: "owner/policy", ref: revision, path: "policy" } };
@@ -346,6 +365,12 @@ test("only a preceding pinned checkout in the same job supplies external scripts
   }
   assert.deepEqual(inspect({ lint: { steps: [checkout, use] } }), []);
   const error = workflow + ": missing workflow script .github/scripts/external.js";
+  for (const repository of ["VanillaIceCube/infrastructure", "VanillaIceCube/agent-hub"]) {
+    const shared = { ...checkout, with: { ...checkout.with, repository, ref: "main" } };
+    assert.deepEqual(inspect({ lint: { steps: [shared, use] } }), []);
+    assert.ok(inspect({ lint: { steps: [use, shared] } }).includes(error));
+    assert.ok(inspect({ lint: { steps: [{ ...shared, with: { ...shared.with, ref: revision } }, use] } }).includes(error));
+  }
   assert.ok(inspect({ lint: { steps: [use, checkout] } }).includes(error));
   assert.ok(inspect({ lint: { steps: [checkout] }, test: { steps: [use] } }).includes(error));
   assert.ok(inspect({ lint: { steps: [{ ...checkout, with: { ...checkout.with, ref: "main" } }, use] } }).includes(error));

@@ -32,6 +32,7 @@ The applications and Infrastructure call the same lint and test gates. The requi
 | Vulnerability | [gate-vulnerability.yml](gate-vulnerability.yml) | Runs Dependency Review and returns a bounded report. A failed scanner still fails the gate. |
 | Malware | [gate-malware.yml](gate-malware.yml) | Reads npm and Python lockfiles as Git objects at the caller’s base and head. The scanner and its locked parser come from Infrastructure. |
 | Secret scan | [gate-secrets.yml](gate-secrets.yml) | Runs Gitleaks against the caller’s history. |
+| Branch rules | [gate-branch-rules.yml](gate-branch-rules.yml) | Checks branch rule access and GitHub’s expected-head auto-merge API on same-repository PRs. The app reports the result as its required `Auto Merge` check. |
 | Dependabot follow-up | [ci-auto-merge.yml](ci-auto-merge.yml) | Validates a successful CI run, its PR head, independent checks, reviews and branch policy before requesting native auto-merge. The caller owns the `workflow_run` trigger and permissions. |
 
 Inside a shared job, `job.workflow_sha` selects the revision containing its scripts and actions. Jobs that need both checkouts put the calling repository in `subject/`. CodeQL analysis and Gitleaks run on the caller. The application keeps its test suites, trigger policy and secrets. [GitHub workflow identity](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#example-usage-of-job-context-workflow-identity)
@@ -40,11 +41,11 @@ Inside a shared job, `job.workflow_sha` selects the revision containing its scri
 
 Each application keeps six event workflows. PRs call the shared gates and AgentHub reviewers directly so required check names stay stable. All five repositories keep the same three alert entry points. Each passes its feed to AgentHub’s `triage-security.yml` at midnight Pacific or on manual dispatch. CodeQL Alert also calls the shared scanner. The Dependabot completion workflow calls this repository’s policy. Application deployment is generated from the separate release revision in `deploy/production/app.json`.
 
-Infrastructure pins the AgentHub commit that provides the reviewers and ticket triage. AgentHub’s own CI and the three applications pin the Infrastructure commit that provides the gates and scanner. Publish the provider commits before activating their callers on GitHub.
+Cross-repository calls to Infrastructure and AgentHub use reusable workflows at `@main`. AgentHub also checks out Infrastructure’s validation tools from `main`. Each new run picks up compatible changes merged in the provider. GitHub’s full-SHA policy applies to remote actions, so shared workflows run their own composite actions at the resolved workflow commit. Third-party actions and reusable workflows use full commit SHAs. [GitHub Actions settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#managing-github-actions-permissions-for-your-repository)
 
-Publish the CodeQL permission policy on each repository’s trusted `main` before retiring `gate-codeql.yml`. Infrastructure transfers upload access to the existing analyzer jobs in `alert-codeql.yml`. The applications and AgentHub transfer it to the scan job in their own `alert-codeql.yml`. Restore the previous reviewed scanner reference to roll back.
+The CodeQL migration transferred the retired gate’s upload permission to the analyzer jobs in Infrastructure and the scan job in each caller’s `alert-codeql.yml`. The current workflows retain those job-level grants.
 
-When changing a provider revision, update the full commit SHA in the consumer’s workflows, including the validation-tool checkout in AgentHub. Keep the named secrets, job names and trigger policy. Compare the existing and candidate checks on the same head with lint pushes and candidate review publication disabled. Verify human and Dependabot PRs, failed scans and stale or missing evidence. Then enable the candidate publisher in that consumer. Revert its caller change to recover the previous implementation and event behavior. [Deterministic CI](https://github.com/VanillaIceCube/infrastructure/issues/193) · [Agent migration](https://github.com/VanillaIceCube/agent-hub/issues/8)
+Merge a new reusable workflow in the provider before switching callers to it. Keep the named secrets, job names and trigger policy. Compare candidate checks on the same head with lint pushes and review publication disabled. Verify human and Dependabot PRs, failed scans and stale or missing evidence. Revert shared changes in the provider to roll them back for all callers. [Deterministic CI](https://github.com/VanillaIceCube/infrastructure/issues/193) · [Agent migration](https://github.com/VanillaIceCube/agent-hub/issues/8)
 
 Use the successful runs before the migration as examples of the expected jobs. [Infrastructure](https://github.com/VanillaIceCube/infrastructure/actions/runs/46078973999) · [FullStackTemplate](https://github.com/VanillaIceCube/fullstack-template/actions/runs/46078966798) · [Notoli](https://github.com/VanillaIceCube/notoli/actions/runs/46078980131) · [MacroMapper](https://github.com/VanillaIceCube/macromapper/actions/runs/46078986088) · [AgentHub](https://github.com/VanillaIceCube/agent-hub/actions/runs/46078423045)
 
@@ -60,6 +61,8 @@ Use the successful runs before the migration as examples of the expected jobs. [
 `Required CI` waits for every independent gate and all three applicable reviews. It checks for failed, cancelled or unexpectedly skipped jobs. A failed path detector cannot excuse a skipped suite. Fork PRs run the independent gates without reviewer credentials. Applicable same-repository reviewers need a usable current-head verdict.
 
 ### Protected Dependabot auto-merge
+
+Give each CodeQL analyzer a literal job name. GitHub can report the unevaluated name expression for a skipped job, and Dependabot Policy looks up the check by its exact name.
 
 The policy uses the changed paths returned by GitHub. An empty list selects no file-specific checks. Fetch errors propagate, and the policy still requires the independent gates and current-head reviewer approvals.
 
