@@ -48,7 +48,7 @@ jobs:
   code-review:
     name: AI Code Review
     if: github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-code.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-code.yml@main
     with:
       publish: true
     secrets:
@@ -63,7 +63,7 @@ jobs:
     name: AI Build Sheriff Review
     needs: [lints, tests]
     if: always() && github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-build.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-build.yml@main
     secrets:
       LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
       LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
@@ -83,7 +83,7 @@ jobs:
     name: AI Security Review
     needs: [codeql, dependency-vulnerability, secrets]
     if: always() && github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-security.yml@main
     secrets:
       ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
       ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}

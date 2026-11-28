@@ -1,0 +1,23 @@
+name: Branch Rules
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify branch rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          persist-credentials: false
+
+      - name: Verify branch rules are readable with the workflow token
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: ./.github/actions/verify-branch-rules

@@ -143,7 +143,7 @@ jobs:
         run: node .github/scripts/set-codeql-scope.js
 
   analyze-python:
-    name: ${{ inputs.languages_in_tree && 'Analyze python' || 'Analyze Python' }}
+    name: Analyze Python
     needs: changes
     if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
           category: "/language:python"
 
   analyze-javascript:
-    name: ${{ inputs.languages_in_tree && 'Analyze javascript-typescript' || 'Analyze JavaScript/TypeScript' }}
+    name: Analyze JavaScript/TypeScript
     needs: changes
     if: needs.changes.outputs.javascript == 'true'
     runs-on: ubuntu-latest
@@ -198,7 +198,7 @@ jobs:
           category: "/language:javascript-typescript"
 
   analyze-actions:
-    name: ${{ inputs.languages_in_tree && 'Analyze actions' || 'Analyze GitHub Actions' }}
+    name: Analyze GitHub Actions
     needs: changes
     if: needs.changes.outputs.actions == 'true'
     runs-on: ubuntu-latest
@@ -223,13 +223,37 @@ jobs:
         uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           category: "/language:actions"
+          output: ${{ runner.temp }}/codeql-actions
+          upload: failure-only
+
+      - name: Apply the shared workflow pinning policy
+        env:
+          ACCEPTED_WORKFLOW: >-
+            ^Job .* uses reusable workflow '(?i:VanillaIceCube/(infrastructure|agent-hub))/\.github/workflows/[a-z0-9-]+\.ya?ml' with ref 'main', not a pinned commit hash$
+        shell: bash
+        run: |
+          for report in "$RUNNER_TEMP"/codeql-actions/*.sarif; do
+            jq '
+              def accepted_workflow:
+                .ruleId == "actions/unpinned-tag" and
+                ((.message.text // "") | test(env.ACCEPTED_WORKFLOW));
+              (.runs[] | select(.results != null) | .results) |= map(select(accepted_workflow | not))
+            ' "$report" > "$RUNNER_TEMP/filtered.sarif"
+            mv "$RUNNER_TEMP/filtered.sarif" "$report"
+          done
+
+      - name: Upload CodeQL Actions results
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-actions
+          category: "/language:actions"
 
   aggregate:
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.scan_only
     concurrency: security-alerts-codeql
     permissions:
       contents: read
-    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@main
     with:
       feed: codeql
       publish: true

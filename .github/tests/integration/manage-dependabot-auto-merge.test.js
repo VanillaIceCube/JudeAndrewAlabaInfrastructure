@@ -432,9 +432,7 @@ test("the policy checks the job contexts emitted by every Required CI dependency
         assert.equal(job.if, "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.scan_only");
         continue;
       }
-      // Infrastructure uses the default CodeQL job names. AgentHub selects the tree-based names.
-      const defaultName = job.name?.match(/\|\| '([^']+)' \}\}$/)?.[1];
-      contexts.push(caller.name + " / " + (defaultName ?? job.name ?? id));
+      contexts.push(caller.name + " / " + (job.name ?? id));
     }
   }
   assert.deepEqual([...independentChecks].sort(), contexts.sort());
